@@ -1,7 +1,7 @@
 import argparse
 import sys
 from .core.config import ensure_roadbook_dir
-from .commands import library, search, executor, script, run
+from .commands import library, search, executor, script, run, editor
 
 class RichHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom help formatter to display commands by category."""
@@ -81,6 +81,14 @@ Command Categories:
     logs_last_parser.set_defaults(func=run.run_last)
 
     # --- Group: Develop ---
+    # Command: edit
+    edit_parser = subparsers.add_parser("edit", help="Start Roadbook Editor (WebUI)")
+    edit_parser.add_argument("id", nargs="?", help="Optional: Open specific roadbook ID")
+    edit_parser.add_argument("--port", type=int, default=8000, help="Port to run server on")
+    edit_parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind server to")
+    edit_parser.add_argument("--dir", type=str, default=None, help="Directory to serve roadbooks from (default: ~/.roadbook/books)")
+    edit_parser.set_defaults(func=editor.start_editor)
+
     # Command: script
     script_parser = subparsers.add_parser("script", help="Manage scripts")
     script_subparsers = script_parser.add_subparsers(dest="subcommand", help="Script subcommands")

@@ -18,6 +18,10 @@ classifiers = [
 dependencies = [
     "pyyaml",
     "rich",  # For pretty output
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "python-multipart",
 ]
 requires-python = ">=3.8"
 

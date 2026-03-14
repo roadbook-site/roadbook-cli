@@ -3,3 +3,4 @@ from . import search
 from . import executor
 from . import script
 from . import run
+from . import editor
