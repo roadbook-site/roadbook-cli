@@ -52,13 +52,15 @@ Command Categories:
     # Command: open
     open_parser = subparsers.add_parser("open", help="Open roadbook interactive session")
     open_parser.add_argument("id", help="Roadbook ID")
-    open_parser.add_argument("--inputs", help="JSON inputs")
+    open_parser.add_argument("--inputs", help="JSON inputs (string)")
+    open_parser.add_argument("--inputs-file", help="JSON inputs file path")
     open_parser.set_defaults(func=executor.start_session)
 
     # Command: run
     run_parser = subparsers.add_parser("run", help="Run roadbook (Script/Auto)")
     run_parser.add_argument("id", help="Roadbook ID")
-    run_parser.add_argument("--inputs", help="JSON inputs")
+    run_parser.add_argument("--inputs", help="JSON inputs (string)")
+    run_parser.add_argument("--inputs-file", help="JSON inputs file path")
     run_parser.set_defaults(func=executor.run_book)
 
     # --- Group: Observe ---

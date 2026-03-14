@@ -73,6 +73,48 @@ def diagnose_error(e: Exception, mode: str = "script") -> str:
         
     return "No specific advice available. Check the logs for details."
 
+def get_inputs(args) -> Optional[Dict[str, Any]]:
+    inputs = {}
+    
+    # 1. Load from file if provided
+    if getattr(args, 'inputs_file', None):
+        try:
+            with open(args.inputs_file, 'r', encoding='utf-8') as f:
+                file_inputs = json.load(f)
+                if isinstance(file_inputs, dict):
+                    inputs.update(file_inputs)
+                else:
+                    print_error(f"Invalid JSON in file (must be object): {args.inputs_file}")
+                    return None
+        except Exception as e:
+            print_error(f"Failed to load inputs from file: {args.inputs_file}")
+            print_info(f"[Detail] {e}")
+            return None
+
+    # 2. Merge/Override with CLI inputs string
+    inputs_str = getattr(args, 'inputs', None)
+    if inputs_str:
+        try:
+            cli_inputs = parse_inputs(inputs_str)
+            inputs.update(cli_inputs)
+        except Exception:
+            print_error("Invalid JSON for --inputs.")
+            print_info(f"[Debug] Received: {inputs_str}")
+            print_info("[Action] Pass a valid JSON string.")
+            if sys.platform == "win32":
+                print_info("  [Windows PowerShell Hint]")
+                print_info("  Your quotes might have been stripped by PowerShell.")
+                print_info("  Try wrapping the JSON in double quotes and using single quotes for keys/values:")
+                print_info("    --inputs \"{'count': 5}\"")
+                print_info("  Or escape inner double quotes:")
+                print_info("    --inputs '{\\\"count\\\": 5}'")
+                print_info("  Or use --inputs-file <path> to avoid quoting issues entirely.")
+            else:
+                print_info("  Example: --inputs '{\"keyword\":\"iphone\"}'")
+            return None
+            
+    return inputs
+
 def run_book(args):
     """
     Runs a roadbook.
@@ -81,26 +123,12 @@ def run_book(args):
     2. If no script, warn user and switch to interactive session (open).
     """
     rb_id = args.id
-    inputs_str = args.inputs or "{}"
     
     if not check_environment():
         print_info("[Guidance] Environment check failed. Please fix issues above before running.")
     
-    try:
-        inputs = parse_inputs(inputs_str)
-    except Exception:
-        print_error("Invalid JSON for --inputs.")
-        print_info(f"[Debug] Received: {inputs_str}")
-        print_info("[Action] Pass a valid JSON string.")
-        if sys.platform == "win32":
-            print_info("  [Windows PowerShell Hint]")
-            print_info("  Your quotes might have been stripped by PowerShell.")
-            print_info("  Try wrapping the JSON in double quotes and using single quotes for keys/values:")
-            print_info("    --inputs \"{'count': 5}\"")
-            print_info("  Or escape inner double quotes:")
-            print_info("    --inputs '{\\\"count\\\": 5}'")
-        else:
-            print_info("  Example: --inputs '{\"keyword\":\"iphone\"}'")
+    inputs = get_inputs(args)
+    if inputs is None:
         return
 
     book = RoadbookManager.get_roadbook(rb_id)
@@ -157,22 +185,8 @@ def run_book(args):
 def start_session(args):
     """Starts a new interactive session."""
     rb_id = args.id
-    inputs_str = args.inputs or "{}"
-    try:
-        inputs = parse_inputs(inputs_str)
-    except Exception:
-        print_error("Invalid JSON for --inputs.")
-        print_info(f"[Debug] Received: {inputs_str}")
-        print_info("[Action] Pass a valid JSON string.")
-        if sys.platform == "win32":
-            print_info("  [Windows PowerShell Hint]")
-            print_info("  Your quotes might have been stripped by PowerShell.")
-            print_info("  Try wrapping the JSON in double quotes and using single quotes for keys/values:")
-            print_info("    --inputs \"{'count': 5}\"")
-            print_info("  Or escape inner double quotes:")
-            print_info("    --inputs '{\\\"count\\\": 5}'")
-        else:
-            print_info("  Example: --inputs '{\"keyword\":\"iphone\"}'")
+    inputs = get_inputs(args)
+    if inputs is None:
         return
 
     book = RoadbookManager.get_roadbook(rb_id)

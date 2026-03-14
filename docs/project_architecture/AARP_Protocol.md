@@ -80,6 +80,8 @@ outputs:                     # 输出数据定义
 | **EXTRACT** | 提取数据 | `EXTRACT "text" FROM ".price"` |
 | **SCROLL** | 滚动页面 | `SCROLL "bottom"` 或 `SCROLL 500` |
 
+> **Note**: Action Primitives support fallback selectors. If you provide a list of selectors (e.g., `CLICK ["#id", ".class"]`), the executor should try them in order until one succeeds.
+
 ### 2.4 Reference Images (参考图片)
 
 路书中可以使用图片来辅助 Agent 定位 (Landmark) 或操作 (Step)。推荐使用标准的 Markdown 图片语法，并支持本地路径与远程 URL。
@@ -197,6 +199,19 @@ Agent 在执行路书时，可能会将其“编译”为可执行脚本（如 P
     *   `placeholder="Search"` (通过占位符定位)
     *   `role="button", name="Submit"` (通过 ARIA 角色定位)
     *   `data-testid="submit-btn"` (通过测试专用属性定位)
+
+### 4.7 鲁棒性与多重选择器 (Robustness & Fallback)
+由于现代网页经常变动，单一选择器容易失效。建议在定义关键动作时提供**备选方案 (Fallback)**。
+
+*   **Syntax**: `CLICK ["selector_primary", "selector_secondary"]`
+*   **Example**: `CLICK ["#submit-btn", "button:has-text('Submit')", "input[type='submit']"]`
+*   **Behavior**: 执行器应依次尝试列表中的选择器，直到找到一个可操作的元素为止。如果所有选择器都失败，则抛出异常或寻求人工介入。
+
+### 4.8 显式定义下载行为 (Download Handling)
+虽然路书本身不强制要求具体的下载路径，但在涉及到文件下载时，建议使用明确的指令或描述，指导执行器进行文件管理。
+
+*   **Example**: `CLICK "Download"` (Implicit) -> Executor implies download.
+*   **Better**: `DOWNLOAD_TO "/path/to/save"` (Explicit) -> Executor intercepts the download and saves it to the specific path.
 
 *   **避免 (Avoid)**:
     *   `div > div:nth-child(3) > span` (脆弱的层级结构)

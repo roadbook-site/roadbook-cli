@@ -108,6 +108,7 @@ Deleted roadbook: rb-amazon-v1
 *   **Usage**: `roadbook open <id> [options]`
 *   **Options**:
     *   `--inputs <json>`: 传递给路书的输入参数 (JSON 字符串)。
+    *   `--inputs-file <path>`: 从 JSON 文件读取输入参数（推荐复杂参数使用）。
 *   **Example Output**:
 
 ```text
@@ -148,6 +149,7 @@ Goal: Type "hello" into search box
 *   **Usage**: `roadbook run <id> [options]`
 *   **Options**:
     *   `--inputs <json>`: 输入参数。
+    *   `--inputs-file <path>`: 从 JSON 文件读取输入参数。
     *   `--mode <auto|script|agent>`:
         *   `auto` (Default): 优先尝试脚本，失败后回退到 Agent 语义探索。
         *   `script`: 强制仅运行脚本。
