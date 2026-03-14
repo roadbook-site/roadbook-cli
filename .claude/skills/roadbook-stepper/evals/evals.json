@@ -1,0 +1,15 @@
+{
+  "skill_name": "roadbook-stepper",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "请执行 library/quotes_login.yaml 中的路书文件进行登录",
+      "expected_output": "通过 agent-browser 真实打开浏览器并成功执行相关登录逻辑，在终端中反馈真实的操作步骤结果",
+      "files": ["library/quotes_login.yaml"],
+      "expectations": [
+        "代理使用了真正的 terminal 并调用了 agent-browser 指令，而非纯文本输出",
+        "能够准确反馈遇到的真实 DOM 而非自行臆造的 DOM"
+      ]
+    }
+  ]
+}
