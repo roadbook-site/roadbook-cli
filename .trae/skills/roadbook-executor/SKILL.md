@@ -15,16 +15,15 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
 
 2.  **Start Execution**:
     - **Automatic Mode**: Try `roadbook run <id>` first. This will attempt to use any existing automation scripts.
-    - **Autonomous Explorer Mode**: If no script exists, it will switch to interactive guidance.
+    - **Semantic Guide Mode**: If no script exists, it will switch to interactive guidance.
 
-3.  **Autonomous Explorer Loop**:
-    - Once a session is started, you are the **Explorer**.
-    - Enter the loop:
-        a.  **Get Sheet Context**: Run `roadbook next` to get the context and instructions for the current Sheet (Scene).
-        b.  **Execute Autonomously**: Read the Sheet context. Use your browser automation tools (`agent-browser` or `playwright-cli`) to achieve the goal described in the Sheet. **You are free to execute multiple actions to complete the Sheet.**
-        c.  **Verify Checkpoints**: If the Sheet has `Assertions` or `断言`, run `roadbook check` to review them and ensure your current browser state meets the requirements.
-        d.  **Proceed**: Once you are confident the Sheet's goal is met, run `roadbook next` to get the next Sheet.
-        e.  **Repeat**: Continue until `roadbook next` indicates all sheets are completed.
+3.  **Semantic Guide Execution**:
+    - Once a session is started (via `roadbook run <id>` or `roadbook open <id>`), the **Full Roadbook Content** will be displayed.
+    - You are the **Executor**.
+    - **Read and Execute**: Read the entire Roadbook content (all Sheets) carefully.
+    - **Sequential Execution**: Execute the tasks in each Sheet sequentially using your browser automation tools (`agent-browser` or `playwright-cli`).
+    - **Self-Verification**: Verify the "Assertions" (if any) in each Sheet yourself using browser checks (e.g., checking element visibility or text).
+    - **Completion**: Once you have completed all Sheets, you can consider the task done.
 
 4.  **Error Handling & Script Generation**:
     - If an action fails, report the error to the user and ask for guidance or try to debug using `agent-browser` tools.
@@ -34,10 +33,8 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
 
 - `roadbook list`: List all installed roadbooks.
 - `roadbook inspect <id>`: Show details of a roadbook (alias for `show`).
-- `roadbook run <id>`: Execute a roadbook automatically (script-first).
-- `roadbook open <id>`: Start an interactive session.
-- `roadbook next`: Get the next instruction in an interactive session.
-- `roadbook check`: Check the status of the current step.
+- `roadbook run <id>`: Execute a roadbook automatically (script-first) or open interactive mode.
+- `roadbook open <id>`: Start an interactive session and view the full roadbook.
 - `roadbook logs list <id>`: View run history.
 
 ## Script Management

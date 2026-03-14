@@ -103,7 +103,7 @@ Deleted roadbook: rb-amazon-v1
 
 ### 3.1 启动交互式会话 (`open`)
 
-**推荐的主入口**。打开指定路书，进入交互式指引模式。系统会初始化运行环境、生成会话 ID，并准备第一步指引。
+**推荐的主入口**。打开指定路书，进入语义指引模式 (Semantic Guide Mode)。系统会初始化运行环境、生成会话 ID，并**一次性展示完整的路书内容**。
 
 *   **Usage**: `roadbook open <id> [options]`
 *   **Options**:
@@ -114,18 +114,30 @@ Deleted roadbook: rb-amazon-v1
 == Roadbook Session Started ==
 ID: test-book
 Session: run_20260313_160820_xxxx
-[Mode] Interactive guidance is active.
-[Status] Waiting for step execution.
-[Action] Use 'roadbook next' to get one step at a time.
-[Action] Execute each step with your browser tool (Playwright / agent-browser / other agent tool).
-[Loop] Repeat: next -> execute -> check (optional) -> next.
+[Mode] Semantic Guide Mode is active.
+
+==================== ROADBOOK CONTENT ====================
+
+--- Sheet 1/2: Open Website ---
+Goal: Navigate to https://example.com
+...
+
+--- Sheet 2/2: Search ---
+Goal: Type "hello" into search box
+...
+
+==========================================================
+
+[Agent Action] The entire roadbook has been provided above.
+[Agent Action] Please read through all sheets and execute the task step by step using your browser tools.
+[Agent Action] You do NOT need to call 'roadbook next' repeatedly.
 ```
 
 ### 3.2 自动运行 (`run`)
 
 尝试自动化执行路书。
 *   如果存在脚本 (`scripts/script.py`)：直接执行脚本。
-*   如果不存在脚本：提示用户，并自动降级为交互式会话 (同 `open`)。
+*   如果不存在脚本：提示用户，并自动降级为语义指引模式 (同 `open`)。
 
 **Guidance Behavior (引导行为)**:
 *   **Environment Check**: 在运行前检查环境（如 Python 版本、依赖包）。如果缺失，CLI **必须**明确告知用户如何安装。
@@ -158,40 +170,8 @@ Session: run_20260313_160820_xxxx
 [!] No automation script found for 'test-book'.
 [*] Switching to interactive guidance mode...
 == Roadbook Session Started ==
-[Mode] Interactive guidance is active.
-...
-```
-
-### 3.3 下一步指引 (`next`)
-
-在交互式会话中，获取并执行下一步骤。
-
-*   **Usage**: `roadbook next`
-*   **Prerequisite**: 必须先执行 `open` 或 `run` 启动会话。
-*   **Example Output**:
-
-```text
-== Step 1 ==
-Instruction: Open URL: https://www.example.com
-Validation: Page loaded
-[Action] Execute this step with your browser tool, then run 'roadbook next'.
-[Action] If you need status confirmation, run 'roadbook check'.
-```
-
-### 3.4 状态检查 (`check`)
-
-检查当前步骤的执行状态或环境连接情况。
-
-*   **Usage**: `roadbook check`
-*   **Example Output**:
-
-```text
-== Status Check ==
-Roadbook ID: test-book
-Run ID: run_20260313_160820_xxxx
-Current Step Index: 1
-Status: Interactive session is active.
-[Action] Continue with 'roadbook next' to get the next instruction.
+[Mode] Semantic Guide Mode is active.
+... (Full Roadbook Content) ...
 ```
 
 ---

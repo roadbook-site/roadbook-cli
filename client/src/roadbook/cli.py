@@ -20,8 +20,6 @@ Command Categories:
   [Navigate]  Execute and interact with roadbooks
     open      Start an interactive guidance session (Recommended)
     run       Execute automation script (Auto-fallback to interactive)
-    next      Proceed to the next step (Session required)
-    check     Check current step status (Session required)
 
   [Observe]   Review execution history and logs
     logs      Manage and inspect run logs
@@ -62,14 +60,6 @@ Command Categories:
     run_parser.add_argument("id", help="Roadbook ID")
     run_parser.add_argument("--inputs", help="JSON inputs")
     run_parser.set_defaults(func=executor.run_book)
-
-    # Command: next
-    next_parser = subparsers.add_parser("next", help="Proceed to next step")
-    next_parser.set_defaults(func=executor.next_step)
-
-    # Command: check
-    check_parser = subparsers.add_parser("check", help="Check current step status")
-    check_parser.set_defaults(func=executor.check_step)
 
     # --- Group: Observe ---
     # Command: logs

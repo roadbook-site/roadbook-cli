@@ -191,116 +191,19 @@ def start_session(args):
     print_info("== Roadbook Session Started ==")
     print_info(f"ID: {rb_id}")
     print_info(f"Session: {run_id}")
-    print_info("[Mode] Interactive guidance is active.")
-    print_info("[Status] Waiting for step execution.")
-    print_info("[Action] Use 'roadbook next' to get one step at a time.")
-    print_info("[Action] Execute each step with your browser tool (Playwright / agent-browser / other agent tool).")
-    print_info("[Loop] Repeat: next -> execute -> check (optional) -> next.")
-
-def next_step(args):
-    session = RuntimeManager.load_active_session()
-    if not session:
-        print_error("No active session found.")
-        print_info("[Action] Start one with 'roadbook open <id>' or 'roadbook run <id>'.")
-        return
-        
-    rb_id = session['roadbook_id']
-    roadbook_dir = session.get('roadbook_dir')
-    run_id = session['run_id']
-    current_step = session['current_step']
+    print_info("[Mode] Semantic Guide Mode is active.")
     
-    book = RoadbookManager.get_roadbook(rb_id)
-    if not book:
-        print_error(f"Roadbook '{rb_id}' not found.")
-        return
-        
-    sheets = book.sheets
-    
-    if not sheets:
+    if not book.sheets:
         print_error("No valid Sheets found in this Roadbook.")
-        print_info("[Action] Ensure your roadbook.md has '## Title' sections for each sheet.")
         return
-    
-    if current_step >= len(sheets):
-        print_info("== All sheets completed! ==")
-        RuntimeManager.log_run_result(rb_id, run_id, "completed", {"total_sheets": len(sheets)}, book_dir=roadbook_dir)
-        RuntimeManager.clear_active_session()
-        print_info("[Status] Autonomous Explorer session closed.")
-        print_info("[Action] Use 'roadbook logs last' to review the latest run.")
-        print_info("[Action] If the execution was successful, consider saving the generated script.")
-        return
-        
-    sheet = sheets[current_step]
-    print_info(f"== Sheet {current_step + 1}/{len(sheets)}: {sheet.title} ==")
-    
-    # Output the raw content of the sheet for the agent to read
-    print_info(sheet.content)
-    
-    print_info("-" * 40)
-    print_info("[Agent Action] Please act autonomously based on the context above.")
-    print_info("[Agent Action] Use browser tools (Playwright/agent-browser) to achieve the goal of this Sheet.")
-    print_info("[Agent Action] When you believe this Sheet is completed, run 'roadbook next' to proceed to the next Sheet.")
-    print_info("[Agent Action] If you need to verify the state, you can run 'roadbook check'.")
-    
-    RuntimeManager.save_active_session(rb_id, run_id, current_step + 1, roadbook_dir=roadbook_dir)
 
-def check_step(args):
-    session = RuntimeManager.load_active_session()
-    if not session:
-        print_error("No active session found.")
-        print_info("[Action] Start one with 'roadbook open <id>' or 'roadbook run <id>'.")
-        return
-        
-    rb_id = session['roadbook_id']
-    current_step = session['current_step']
-    
-    book = RoadbookManager.get_roadbook(rb_id)
-    if not book:
-        print_error(f"Roadbook '{rb_id}' not found.")
-        return
-        
-    sheets = book.sheets
-    
-    print_info("== Status Check ==")
-    print_info(f"Roadbook ID: {rb_id}")
-    print_info(f"Run ID: {session['run_id']}")
-    
-    if not sheets:
-        print_info("Status: Active, but no sheets found in roadbook.")
-        return
-        
-    # session['current_step'] is actually the *next* sheet to be executed because we incremented it in next_step
-    # So the sheet currently being worked on is current_step - 1
-    working_sheet_idx = current_step - 1
-    
-    if working_sheet_idx < 0:
-        print_info("Status: Session started, waiting for first 'roadbook next'.")
-    elif working_sheet_idx >= len(sheets):
-        print_info("Status: All sheets have been handed out.")
-    else:
-        sheet = sheets[working_sheet_idx]
-        print_info(f"Current Sheet: {working_sheet_idx + 1}/{len(sheets)}: {sheet.title}")
-        print_info("Status: Autonomous Explorer is currently executing this sheet.")
-        
-        # Extract and show Assertions if they exist in the sheet content
-        assertions = []
-        in_assertions = False
-        for line in sheet.content.split('\n'):
-            if 'Assertions' in line or '断言' in line:
-                in_assertions = True
-                continue
-            if in_assertions:
-                if line.startswith('##') or line.startswith('---'):
-                    break
-                if line.strip().startswith('- [ ]') or line.strip().startswith('*'):
-                    assertions.append(line.strip())
-                    
-        if assertions:
-            print_info("\n[Checkpoint] Expected Assertions for this Sheet:")
-            for assertion in assertions:
-                print_info(f"  {assertion}")
-            print_info("\n[Agent Action] Verify the above conditions before calling 'roadbook next'.")
-        else:
-            print_info("\n[Agent Action] No explicit assertions defined. Ensure the general goal of this sheet is met.")
-            
-    print_info("\n[Action] Continue with 'roadbook next' to get the next instruction.")
+    print_info("\n" + "="*20 + " ROADBOOK CONTENT " + "="*20)
+    for i, sheet in enumerate(book.sheets):
+        print_info(f"\n--- Sheet {i+1}/{len(book.sheets)}: {sheet.title} ---")
+        print_info(sheet.content)
+    print_info("\n" + "="*58)
+
+    print_info("\n[Agent Action] The entire roadbook has been provided above.")
+    print_info("[Agent Action] Please read through all sheets and execute the task step by step using your browser tools.")
+    print_info("[Agent Action] You do NOT need to call 'roadbook next' repeatedly.")
+    print_info("[Agent Action] Once you have completed all tasks, you can simply finish your turn.")
