@@ -1,7 +1,7 @@
 import argparse
 import sys
 from .core.config import ensure_roadbook_dir
-from .commands import library, search, executor, script, run, editor, auth, remote
+from .commands import library, search, executor, script, run, editor, auth, remote, config
 
 class RichHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom help formatter to display commands by category."""
@@ -27,6 +27,9 @@ Command Categories:
   [Develop]   Manage automation scripts
     script    Manage local scripts
     
+  [Configure] Manage CLI settings
+    config    Get/Set/List configuration values
+
   [Remote]    Interact with Roadbook Server
     login     Login to server
     push      Push roadbook to server
@@ -111,10 +114,31 @@ Command Categories:
     script_clean_parser.add_argument("id", help="Roadbook ID")
     script_clean_parser.set_defaults(func=script.script_clean)
 
+    # --- Group: Configure ---
+    # Command: config
+    config_parser = subparsers.add_parser("config", help="Manage configuration")
+    config_subparsers = config_parser.add_subparsers(dest="subcommand", help="Config subcommands")
+
+    # config list
+    config_list_parser = config_subparsers.add_parser("list", help="List all configurations")
+    config_list_parser.set_defaults(func=config.config_list)
+
+    # config get
+    config_get_parser = config_subparsers.add_parser("get", help="Get configuration value")
+    config_get_parser.add_argument("key", help="Configuration key (e.g. scaffold_defaults.language)")
+    config_get_parser.set_defaults(func=config.config_get)
+
+    # config set
+    config_set_parser = config_subparsers.add_parser("set", help="Set configuration value")
+    config_set_parser.add_argument("key", help="Configuration key")
+    config_set_parser.add_argument("value", help="Configuration value")
+    config_set_parser.set_defaults(func=config.config_set)
+
     # --- Group: Remote ---
     # Command: login
     login_parser = subparsers.add_parser("login", help="Login to Roadbook Server")
     login_parser.set_defaults(func=auth.login)
+
 
     # Command: push
     push_parser = subparsers.add_parser("push", help="Push roadbook to server")

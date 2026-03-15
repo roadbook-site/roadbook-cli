@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import yaml
+from typing import Dict, Any
 
 # Default paths
 HOME_DIR = Path.home()
@@ -10,24 +11,32 @@ else:
     ROADBOOK_DIR = HOME_DIR / ".roadbook"
 
 BOOKS_DIR = ROADBOOK_DIR / "books"
-CONFIG_FILE = ROADBOOK_DIR / "config.yaml"
+USER_CONFIG_FILE = ROADBOOK_DIR / "config.yaml"
+PROJECT_CONFIG_FILE = Path.cwd() / ".roadbook" / "config.yaml"
+
+DEFAULT_CONFIG = {
+    "server_url": "http://localhost:8000",
+    "token": None,
+    "scaffold_defaults": {
+        "language": "python",
+        "headless": False,
+        "browser_type": "chromium"
+    }
+}
 
 def ensure_roadbook_dir():
     """Ensure the ~/.roadbook directory structure exists."""
     if not ROADBOOK_DIR.exists():
         ROADBOOK_DIR.mkdir(parents=True)
-        print(f"Created roadbook directory at: {ROADBOOK_DIR}")
+        # print(f"Created roadbook directory at: {ROADBOOK_DIR}")
     
     if not BOOKS_DIR.exists():
         BOOKS_DIR.mkdir()
-        print(f"Created books directory at: {BOOKS_DIR}")
+        # print(f"Created books directory at: {BOOKS_DIR}")
     
-    if not CONFIG_FILE.exists():
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            f.write("# Roadbook CLI Configuration\n")
-            f.write("server_url: http://localhost:8000\n")
-            f.write("token: null\n")
-        print(f"Created config file at: {CONFIG_FILE}")
+    if not USER_CONFIG_FILE.exists():
+        save_user_config(DEFAULT_CONFIG)
+        # print(f"Created config file at: {USER_CONFIG_FILE}")
 
 def get_roadbook_dir() -> Path:
     ensure_roadbook_dir()
@@ -37,26 +46,65 @@ def get_books_dir() -> Path:
     ensure_roadbook_dir()
     return BOOKS_DIR
 
-def load_config():
+def _merge_config(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively merge dictionary configurations."""
+    result = base.copy()
+    for key, value in override.items():
+        if isinstance(value, dict) and key in result and isinstance(result[key], dict):
+            result[key] = _merge_config(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+def load_user_config() -> Dict[str, Any]:
     ensure_roadbook_dir()
-    if CONFIG_FILE.exists():
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
+    if USER_CONFIG_FILE.exists():
+        try:
+            with open(USER_CONFIG_FILE, "r", encoding="utf-8") as f:
+                return yaml.safe_load(f) or {}
+        except Exception:
+            pass
     return {}
 
-def save_config(config):
+def load_project_config() -> Dict[str, Any]:
+    if PROJECT_CONFIG_FILE.exists():
+        try:
+            with open(PROJECT_CONFIG_FILE, "r", encoding="utf-8") as f:
+                return yaml.safe_load(f) or {}
+        except Exception:
+            pass
+    return {}
+
+def load_config() -> Dict[str, Any]:
+    """
+    Load configuration with priority:
+    1. Project Config (./.roadbook/config.yaml)
+    2. User Config (~/.roadbook/config.yaml)
+    3. Default Config
+    """
+    config = DEFAULT_CONFIG.copy()
+    user_config = load_user_config()
+    config = _merge_config(config, user_config)
+    
+    project_config = load_project_config()
+    config = _merge_config(config, project_config)
+    
+    return config
+
+def save_user_config(config: Dict[str, Any]):
     ensure_roadbook_dir()
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        yaml.dump(config, f)
+    with open(USER_CONFIG_FILE, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, default_flow_style=False)
 
 def get_token():
     config = load_config()
     return config.get("token")
 
 def set_token(token):
-    config = load_config()
+    # Only update user config for token
+    config = load_user_config()
     config["token"] = token
-    save_config(config)
+    save_user_config(config)
 
 def get_server_url():
     config = load_config()
