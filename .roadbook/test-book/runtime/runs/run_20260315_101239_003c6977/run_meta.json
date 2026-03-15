@@ -1,0 +1,16 @@
+{
+  "id": "run_20260315_101239_003c6977",
+  "roadbook_id": "test-book",
+  "status": "success",
+  "timestamp": 1773540759.8119423,
+  "details": {
+    "mode": "script",
+    "outputs": {},
+    "timing": {
+      "start_time": 1773540759.7858148,
+      "end_time": 1773540759.8104274,
+      "duration": 0.0246126651763916
+    },
+    "scaffold_version": "1.0.0"
+  }
+}

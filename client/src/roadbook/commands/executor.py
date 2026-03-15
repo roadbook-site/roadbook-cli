@@ -163,6 +163,7 @@ def run_book(args):
         print_info(f"[Runtime] Run ID: {run_id}")
         print_info(f"[*] Executing script...")
         
+        start_time = time.time()
         try:
             if script_path.suffix == ".py":
                 subprocess.run([sys.executable, str(script_path)], check=True, env=env)
@@ -184,7 +185,9 @@ def run_book(args):
                 print_error(f"Unsupported script type: {script_path.suffix}")
                 return
             
-            print_info("[Success] Script executed successfully.")
+            end_time = time.time()
+            duration = end_time - start_time
+            print_info(f"[Success] Script executed successfully in {duration:.2f}s.")
             
             # Try to capture outputs
             outputs = {}
@@ -196,15 +199,35 @@ def run_book(args):
                 except Exception:
                     pass
 
-            RuntimeManager.log_run_result(rb_id, run_id, "success", {"mode": "script", "outputs": outputs}, book_dir=book_dir)
+            RuntimeManager.log_run_result(rb_id, run_id, "success", {
+                "mode": "script", 
+                "outputs": outputs,
+                "timing": {
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "duration": duration
+                },
+                "scaffold_version": SCAFFOLD_VERSION
+            }, book_dir=book_dir)
             print_info("[Action] Use 'roadbook logs inspect <run_id>' to inspect this run.")
             
         except subprocess.CalledProcessError as e:
-            print_error(f"Script execution failed with exit code {e.returncode}")
+            end_time = time.time()
+            duration = end_time - start_time
+            print_error(f"Script execution failed with exit code {e.returncode} (Duration: {duration:.2f}s)")
             diagnosis = diagnose_error(e)
             print_info(f"[Guidance] {diagnosis}")
             
-            RuntimeManager.log_run_result(rb_id, run_id, "failed", {"mode": "script", "error": str(e)}, book_dir=book_dir)
+            RuntimeManager.log_run_result(rb_id, run_id, "failed", {
+                "mode": "script", 
+                "error": str(e),
+                "timing": {
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "duration": duration
+                },
+                "scaffold_version": SCAFFOLD_VERSION
+            }, book_dir=book_dir)
             print_info("[Action] Use 'roadbook logs inspect <run_id>' to inspect failure details.")
         except Exception as e:
             print_error(f"Script execution error: {e}")
@@ -254,23 +277,15 @@ def start_session(args):
     # Use the workspace copy as the book_dir
     book_dir = workspace_roadbook_dir
     
-    run_id = RuntimeManager.create_run(rb_id, book_dir=book_dir)
-    
-from roadbook.core.config import load_config
-
-# ... existing code ...
-
-def start_session(args):
-    rb_id = args.id
-    inputs_str = args.inputs
-    inputs_file = args.inputs_file
-    
-    # ... existing code ...
-    
-    # Check if script exists, if not, scaffold in workspace
+    # Check Script State (4 States)
     script_path = RuntimeManager.find_script(rb_id, book_dir=book_dir)
+    
     if not script_path:
+        # State 1: No Script (Generate Scaffold)
+        print_info(f"[Status] No automation script found for '{rb_id}'.")
+        
         # Load config for defaults
+        from roadbook.core.config import load_config
         config = load_config()
         scaffold_defaults = config.get("scaffold_defaults", {})
         default_lang = scaffold_defaults.get("language", "python")
@@ -278,10 +293,10 @@ def start_session(args):
         # Determine file extension and template based on language
         if default_lang.lower() in ["node", "nodejs", "javascript", "js"]:
             ext = ".js"
-            template = get_js_template(rb_id) # You would need to implement this
+            template = get_js_template(rb_id)
         elif default_lang.lower() in ["typescript", "ts"]:
             ext = ".ts"
-            template = get_ts_template(rb_id) # You would need to implement this
+            template = get_ts_template(rb_id)
         else:
             ext = ".py"
             template = get_python_template(rb_id)
@@ -297,9 +312,54 @@ def start_session(args):
                 runtime_dir.mkdir(parents=True, exist_ok=True)
                 
                 with open(script_file, "w", encoding="utf-8") as f:
+                    f.write(template)
+                    
+                print_info(f"[Action] Script scaffold generated: {script_file}")
+                print_info(f"  -> Please implement automation logic.")
+                print_info(f"  -> Agent Hint: 已为您生成了脚本脚手架 `scripts/script{ext}`。当前处于语义引导模式，请阅读路书内容，并开始编写自动化逻辑。")
+                
+                script_path = script_file
+                
+            except Exception as e:
+                print_error(f"Failed to generate scaffold: {e}")
+                return
+    else:
+        # Script exists, check if scaffold or modified
+        is_scaffold = False
+        try:
+            with open(script_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                if "TODO: Implement your automation logic here" in content:
+                    is_scaffold = True
+        except Exception:
+            pass 
+            
+        last_run = RuntimeManager.get_last_run(rb_id, book_dir=book_dir)
+        has_success_run = last_run and last_run.get("status") == "success"
+        
+        if is_scaffold:
+            # State 2: Scaffold Only
+            print_info(f"[Status] Script exists but appears to be unmodified scaffold.")
+            print_info(f"  -> Agent Hint: 检测到脚本 `scripts/{script_path.name}` 存在，但似乎仍为初始脚手架状态（未检测到有效逻辑实现）。请基于此文件开始编写代码。")
+        elif not has_success_run:
+            # State 3: In Progress
+            print_info(f"[Status] Script exists with modifications but no successful run history found.")
+            print_info(f"  -> Agent Hint: 检测到脚本 `scripts/{script_path.name}` 已有修改，但尚未发现成功的运行记录。请继续完善代码或进行调试验证。")
+        else:
+            # State 4: Verified
+            print_info(f"[Status] Script exists and has been successfully verified.")
+            print_info(f"  -> Agent Hint: 检测到该脚本 `scripts/{script_path.name}` 已有历史成功运行记录。您可以：1. 直接运行脚本：使用 `roadbook run {rb_id}`。 2. 继续修改：在当前模式下编辑并调试代码。")
+
+    run_id = RuntimeManager.create_run(rb_id, book_dir=book_dir)
 # Define templates
+SCAFFOLD_VERSION = "1.1.0"
+
 def get_python_template(rb_id):
+    import datetime
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
     return f"""# Roadbook Automation Script for {rb_id}
+# Scaffold Version: {SCAFFOLD_VERSION}
+# Generated at: {date_str}
 # This script was auto-generated by 'roadbook open'.
 
 import sys
@@ -307,6 +367,7 @@ import json
 import os
 import time
 from pathlib import Path
+from contextlib import contextmanager
 # from playwright.sync_api import sync_playwright
 
 # Runtime artifacts (downloads, screenshots) should be saved to a timestamped output directory
@@ -318,25 +379,43 @@ if SESSION_ID:
 else:
     # Fallback for manual runs
     # Save to the root of the roadbook directory (parent of runtime)
-    OUTPUT_DIR = RUNTIME_DIR.parent / f"output_{time.strftime('%Y_%m_%d_%H_%M')}"
+    OUTPUT_DIR = RUNTIME_DIR.parent / f"output_{{time.strftime('%Y_%m_%d_%H_%M')}}"
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+# Step Profiling Helper
+STEPS_TIMING = {{}}
+
+@contextmanager
+def step(name):
+    print(f"[*] Step Started: {{name}}...")
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        duration = time.time() - start_time
+        STEPS_TIMING[name] = duration
+        print(f"    -> Step Finished: {{name}} (Duration: {{duration:.2f}}s)")
 
 def run(inputs):
     print(f"Running with inputs: {{inputs}}")
     print(f"Artifacts will be saved to: {{OUTPUT_DIR}}")
     
     # Initialize structured outputs
-    outputs = {}
+    outputs = {{}}
 
     # TODO: Implement your automation logic here
     # with sync_playwright() as p:
-    #     browser = p.chromium.launch(headless=False)
-    #     page = browser.new_page()
-    #     page.goto("...")
+    #     with step("Browser Launch"):
+    #         browser = p.chromium.launch(headless=False)
+    #         page = browser.new_page()
+    #     
+    #     with step("Navigate"):
+    #         page.goto("...")
     #     
     #     # Example: Save a screenshot
-    #     # page.screenshot(path=OUTPUT_DIR / "screenshot.png")
+    #     # with step("Capture"):
+    #     #     page.screenshot(path=OUTPUT_DIR / "screenshot.png")
     #
     #     # Example: Set output data
     #     # outputs["title"] = page.title()
@@ -345,6 +424,10 @@ def run(inputs):
 
     # Save structured outputs to outputs.json
     outputs_file = OUTPUT_DIR / "outputs.json"
+    
+    # Attach timing metrics to outputs (optional, but helpful)
+    outputs["_steps_timing"] = STEPS_TIMING
+    
     with open(outputs_file, "w", encoding="utf-8") as f:
         json.dump(outputs, f, indent=2, ensure_ascii=False)
     print(f"Structured outputs saved to: {{outputs_file}}")
@@ -360,7 +443,11 @@ if __name__ == "__main__":
 """
 
 def get_js_template(rb_id):
+    import datetime
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
     return f"""// Roadbook Automation Script for {rb_id}
+// Scaffold Version: {SCAFFOLD_VERSION}
+// Generated at: {date_str}
 // This script was auto-generated by 'roadbook open'.
 
 const fs = require('fs');
@@ -383,6 +470,21 @@ if (!fs.existsSync(OUTPUT_DIR)) {{
     fs.mkdirSync(OUTPUT_DIR, {{ recursive: true }});
 }}
 
+// Step Profiling Helper
+const STEPS_TIMING = {{}};
+
+async function step(name, fn) {{
+    console.log(`[*] Step Started: ${{name}}...`);
+    const startTime = Date.now();
+    try {{
+        return await fn();
+    }} finally {{
+        const duration = (Date.now() - startTime) / 1000;
+        STEPS_TIMING[name] = duration;
+        console.log(`    -> Step Finished: ${{name}} (Duration: ${{duration.toFixed(2)}}s)`);
+    }}
+}}
+
 async function run(inputs) {{
     console.log(`Running with inputs: ${{JSON.stringify(inputs)}}`);
     console.log(`Artifacts will be saved to: ${{OUTPUT_DIR}}`);
@@ -391,20 +493,31 @@ async function run(inputs) {{
     const outputs = {{}};
 
     // TODO: Implement your automation logic here
-    // const browser = await chromium.launch({{ headless: false }});
-    // const page = await browser.newPage();
-    // await page.goto('...');
+    // await step("Browser Launch", async () => {{
+    //     // const browser = await chromium.launch({{ headless: false }});
+    //     // const page = await browser.newPage();
+    // }});
+    
+    // await step("Navigate", async () => {{
+    //     // await page.goto('...');
+    // }});
     //
     // // Example: Save a screenshot
-    // // await page.screenshot({{ path: path.join(OUTPUT_DIR, 'screenshot.png') }});
+    // // await step("Capture", async () => {{
+    // //     await page.screenshot({{ path: path.join(OUTPUT_DIR, 'screenshot.png') }});
+    // // }});
     //
     // // Example: Set output data
     // // outputs['title'] = await page.title();
     //
-    // await browser.close();
+    // // await browser.close();
 
     // Save structured outputs
     const outputsFile = path.join(OUTPUT_DIR, 'outputs.json');
+    
+    // Attach timing metrics to outputs
+    outputs["_steps_timing"] = STEPS_TIMING;
+    
     fs.writeFileSync(outputsFile, JSON.stringify(outputs, null, 2));
     console.log(`Structured outputs saved to: ${{outputsFile}}`);
 }}
@@ -431,7 +544,11 @@ def run(inputs):
     pass
 
 def get_ts_template(rb_id):
+    import datetime
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
     return f"""// Roadbook Automation Script for {rb_id}
+// Scaffold Version: {SCAFFOLD_VERSION}
+// Generated at: {date_str}
 // This script was auto-generated by 'roadbook open'.
 
 import * as fs from 'fs';
@@ -454,6 +571,21 @@ if (!fs.existsSync(OUTPUT_DIR)) {{
     fs.mkdirSync(OUTPUT_DIR, {{ recursive: true }});
 }}
 
+// Step Profiling Helper
+const STEPS_TIMING: Record<string, number> = {{}};
+
+async function step<T>(name: string, fn: () => Promise<T>): Promise<T> {{
+    console.log(`[*] Step Started: ${{name}}...`);
+    const startTime = Date.now();
+    try {{
+        return await fn();
+    }} finally {{
+        const duration = (Date.now() - startTime) / 1000;
+        STEPS_TIMING[name] = duration;
+        console.log(`    -> Step Finished: ${{name}} (Duration: ${{duration.toFixed(2)}}s)`);
+    }}
+}}
+
 async function run(inputs: any) {{
     console.log(`Running with inputs: ${{JSON.stringify(inputs)}}`);
     console.log(`Artifacts will be saved to: ${{OUTPUT_DIR}}`);
@@ -462,20 +594,31 @@ async function run(inputs: any) {{
     const outputs: Record<string, any> = {{}};
 
     // TODO: Implement your automation logic here
-    // const browser = await chromium.launch({{ headless: false }});
-    // const page = await browser.newPage();
-    // await page.goto('...');
+    // await step("Browser Launch", async () => {{
+    //     // const browser = await chromium.launch({{ headless: false }});
+    //     // const page = await browser.newPage();
+    // }});
+    
+    // await step("Navigate", async () => {{
+    //     // await page.goto('...');
+    // }});
     //
     // // Example: Save a screenshot
-    // // await page.screenshot({{ path: path.join(OUTPUT_DIR, 'screenshot.png') }});
+    // // await step("Capture", async () => {{
+    // //     await page.screenshot({{ path: path.join(OUTPUT_DIR, 'screenshot.png') }});
+    // // }});
     //
     // // Example: Set output data
     // // outputs['title'] = await page.title();
     //
-    // await browser.close();
+    // // await browser.close();
 
     // Save structured outputs
     const outputsFile = path.join(OUTPUT_DIR, 'outputs.json');
+    
+    // Attach timing metrics to outputs
+    outputs["_steps_timing"] = STEPS_TIMING;
+    
     fs.writeFileSync(outputsFile, JSON.stringify(outputs, null, 2));
     console.log(`Structured outputs saved to: ${{outputsFile}}`);
 }}

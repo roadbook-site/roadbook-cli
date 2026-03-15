@@ -1,0 +1,22 @@
+{
+  "id": "run_20260315_102741_74ea16cd",
+  "roadbook_id": "test-book",
+  "status": "success",
+  "timestamp": 1773541661.7403684,
+  "details": {
+    "mode": "script",
+    "outputs": {
+      "status": "processed",
+      "_steps_timing": {
+        "Initialization": 0.10077309608459473,
+        "Processing": 0.2004859447479248
+      }
+    },
+    "timing": {
+      "start_time": 1773541661.3885348,
+      "end_time": 1773541661.732714,
+      "duration": 0.3441791534423828
+    },
+    "scaffold_version": "1.1.0"
+  }
+}
