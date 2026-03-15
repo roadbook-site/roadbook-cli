@@ -22,6 +22,7 @@ dependencies = [
     "uvicorn",
     "pydantic",
     "python-multipart",
+    "requests",
 ]
 requires-python = ">=3.8"
 

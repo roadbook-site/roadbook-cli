@@ -29,6 +29,12 @@ def print_info(msg: str):
     else:
         print(f"[INFO] {msg}")
 
+def print_success(msg: str):
+    if HAS_RICH:
+        console.print(f"[bold green]{msg}[/bold green]")
+    else:
+        print(f"[SUCCESS] {msg}")
+
 def print_error(msg: str):
     if HAS_RICH:
         console.print(f"[bold red]{msg}[/bold red]")

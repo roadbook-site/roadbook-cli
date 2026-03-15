@@ -15,7 +15,7 @@ def script_ls(args):
     
     if not scripts:
         print_info(f"No scripts found for {rb_id}.")
-        print_info("[Action] Run 'roadbook run <id>' to trigger interactive fallback and generate script candidates.")
+        print_info(f"[Action] Run 'roadbook run {rb_id}' to trigger semantic guide mode and generate candidate scripts.")
         return
 
     print_info(f"Scripts for {rb_id}:")

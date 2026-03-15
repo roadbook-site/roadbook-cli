@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://roadbook:roadbook_secret@db:5432/roadbook_db
+      - SECRET_KEY=dev_secret_key_change_in_production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=1440
+    depends_on:
+      - db
+
+  db:
+    image: pgvector/pgvector:pg16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=roadbook
+      - POSTGRES_PASSWORD=roadbook_secret
+      - POSTGRES_DB=roadbook_db
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:

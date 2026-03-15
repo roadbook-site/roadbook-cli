@@ -24,7 +24,9 @@ CLI 旨在提供“路书库管理”与“运行时可观测性”，核心执�
 
 ### 2.1 列出路书 (`list`)
 
-列出本地 `~/.roadbook/books/` 下已安装的路书。
+列出已安装的路书。支持从以下位置加载：
+1.  **当前工作区 (Workspace)**: `./.roadbook/books/` (优先)
+2.  **全局库 (Global)**: `~/.roadbook/books/`
 
 *   **Usage**: `roadbook list [options]`
 *   **Options**:
@@ -97,21 +99,26 @@ Deleted roadbook: rb-amazon-v1
 
 ---
 
-## 3. 核心交互与执行 (Navigate & Execute)
+## 3. 核心导航与执行 (Navigate & Execute)
 
-执行路书的核心命令组，支持交互式导航与自动化执行。
+执行路书的核心命令组，支持语义引导与自动化执行。
 
-### 3.1 启动交互式会话 (`open`)
+### 3.1 启动语义引导会话 (`open`)
 
 **推荐的主入口**。打开指定路书，进入语义指引模式 (Semantic Guide Mode)。系统会初始化运行环境、生成会话 ID，并**一次性展示完整的路书内容**。
 
+*   **Auto-Scaffolding (自动脚手架)**: 如果未检测到关联脚本，系统会自动在当前工作区的 `.roadbook/<id>/scripts/script.py` 生成一个基础脚本模板，方便用户直接开始编写自动化逻辑。
+
 *   **Usage**: `roadbook open <id> [options]`
-*   **Options**:
+*   **Options**: 
     *   `--inputs <json>`: 传递给路书的输入参数 (JSON 字符串)。
     *   `--inputs-file <path>`: 从 JSON 文件读取输入参数（推荐复杂参数使用）。
 *   **Example Output**:
 
 ```text
+[Setup] Initializing roadbook workspace: ./.roadbook/test-book
+[Scaffold] Created workspace script: ./.roadbook/test-book/scripts/script.py
+[Action] Outputs will be saved to: ./.roadbook/test-book/output_<timestamp>
 == Roadbook Session Started ==
 ID: test-book
 Session: run_20260313_160820_xxxx
@@ -131,20 +138,23 @@ Goal: Type "hello" into search box
 
 [Agent Action] The entire roadbook has been provided above.
 [Agent Action] Please read through all sheets and execute the task step by step using your browser tools.
-[Agent Action] You do NOT need to call 'roadbook next' repeatedly.
 ```
 
 ### 3.2 自动运行 (`run`)
 
 尝试自动化执行路书。
-*   如果存在脚本 (`scripts/script.py`)：直接执行脚本。
-*   如果不存在脚本：提示用户，并自动降级为语义指引模式 (同 `open`)。
+*   **脚本查找优先级**:
+    1.  当前工作区: `./scripts/script.py` (推荐)
+    2.  当前工作区: `./<id>.py`
+    3.  路书目录: `<book_dir>/scripts/script.py`
+*   如果存在脚本：直接执行。
+*   如果不存在脚本：提示用户，并自动降级为语义指引模式 (`open`)，触发自动脚手架生成。
 
 **Guidance Behavior (引导行为)**:
 *   **Environment Check**: 在运行前检查环境（如 Python 版本、依赖包）。如果缺失，CLI **必须**明确告知用户如何安装。
     *   *Example*: `[!] Missing dependency 'pandas'. Run 'pip install pandas' to fix.`
-*   **Script Location**: 如果运行的是新生成的脚本，或者用户想保存当前会话为脚本，CLI **必须**输出脚本的推荐保存路径。
-    *   *Example*: `[Hint] To save this run as a script, write to: ~/.roadbook/books/test-book/scripts/<hash>.py`
+*   **Script Location**: 系统会自动在工作区生成脚本模板，并提示用户编辑。
+    *   *Example*: `[Scaffold] Created workspace script: .roadbook/test-book/scripts/script.py`
 
 *   **Usage**: `roadbook run <id> [options]`
 *   **Options**:
@@ -170,7 +180,7 @@ Goal: Type "hello" into search box
 
 ```text
 [!] No automation script found for 'test-book'.
-[*] Switching to interactive guidance mode...
+[*] 正在切换到语义引导模式，协助您构建脚本...
 == Roadbook Session Started ==
 [Mode] Semantic Guide Mode is active.
 ... (Full Roadbook Content) ...

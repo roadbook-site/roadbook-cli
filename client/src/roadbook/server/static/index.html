@@ -92,7 +92,125 @@
             }
         };
 
+        // Translations
+        const translations = {
+            'en': {
+                'title': 'Roadbook Explorer',
+                'workspace': 'WORKSPACE',
+                'no_roadbooks': 'No Roadbooks',
+                'create_via_cli': '(Create one via CLI)',
+                'protocol': 'AARP v4.0 Protocol',
+                'welcome': 'Welcome',
+                'untitled': 'Untitled Roadbook',
+                'save': 'Save',
+                'saving': 'Saving...',
+                'saved': 'Saved to local',
+                'save_failed': 'Save failed: ',
+                'load_failed': 'Load failed: ',
+                'loading': 'Reading roadbook...',
+                'base_info': 'Basic Info',
+                'description': 'Description',
+                'sheets': 'Sheets',
+                'add_sheet': 'Add Sheet',
+                'continue_writing': 'Continue writing journey...',
+                'select_roadbook': 'Select a roadbook from the shelf to start editing',
+                'confirm_delete_sheet': 'Are you sure you want to tear off this sheet?',
+                'new_page_title': 'New Page',
+                'sheet_title_placeholder': 'Scene Title (e.g. Login Page)',
+                'delete_sheet': 'Delete Sheet',
+                'url_optional': 'URL (Optional)',
+                'url_placeholder': 'Leave empty to inherit previous URL (for location)',
+                'locators_optional': 'Locators (Optional)',
+                'description_goal': 'Description (Goal)',
+                'description_placeholder': 'Describe the main goal of this page...',
+                'reference_image': 'Reference Image (Optional)',
+                'uploading': 'Uploading...',
+                'paste_placeholder': 'Support Markdown or Ctrl+V to paste image',
+                'paste_hint': 'Support Ctrl+V / Cmd+V to paste clipboard image.',
+                'click_to_zoom': 'Click to zoom',
+                'close_preview': 'Close Preview (Esc)',
+                'action_steps': 'Action Steps',
+                'add_action_step': 'Add Action Step',
+                'drag_sort': 'Drag to sort',
+                'insert_before': 'Insert step before',
+                'delete_step': 'Delete step',
+                'step_placeholder': 'ACTION "Selector" "Value"',
+                'directory_changed': 'Directory changed',
+                'image_upload_failed': 'Image upload failed: ',
+                'drag_to_sort': 'Drag to sort',
+                'language': 'Language',
+            },
+            'zh': {
+                'title': 'Roadbook Explorer',
+                'workspace': '工作区',
+                'no_roadbooks': '暂无路书',
+                'create_via_cli': '(请通过 CLI 创建)',
+                'protocol': 'AARP v4.0 Protocol',
+                'welcome': '欢迎使用',
+                'untitled': '未命名路书',
+                'save': '保存',
+                'saving': '保存中...',
+                'saved': '已保存到本地',
+                'save_failed': '保存失败: ',
+                'load_failed': '加载失败: ',
+                'loading': '正在翻阅手稿...',
+                'base_info': '基础信息',
+                'description': '描述',
+                'sheets': '旅程手稿 (Sheets)',
+                'add_sheet': '添加新页',
+                'continue_writing': '继续书写旅程...',
+                'select_roadbook': '从左侧书架选择一本路书开始编辑',
+                'confirm_delete_sheet': '确定要撕掉这一页手稿吗？',
+                'new_page_title': '新的一页',
+                'sheet_title_placeholder': '场景标题 (例如: 登录页面)',
+                'delete_sheet': '删除此页',
+                'url_optional': 'URL (可选)',
+                'url_placeholder': '留空则继承上一页 URL (用于定位)',
+                'locators_optional': '定位器 (可选)',
+                'description_goal': '描述 (目标)',
+                'description_placeholder': '描述这一页的主要任务目标...',
+                'reference_image': '参考图片 (可选)',
+                'uploading': '上传中...',
+                'paste_placeholder': '支持 Markdown 语法或直接在此处 Ctrl+V 粘贴图片',
+                'paste_hint': '支持直接按 Ctrl+V / Cmd+V 粘贴剪贴板图片。',
+                'click_to_zoom': '点击放大预览',
+                'close_preview': '关闭预览 (Esc)',
+                'action_steps': '操作步骤',
+                'add_action_step': '添加操作步骤',
+                'drag_sort': '拖动排序',
+                'insert_before': '在此前插入步骤',
+                'delete_step': '删除步骤',
+                'step_placeholder': 'ACTION "Selector" "Value"',
+                'directory_changed': '目录已切换',
+                'image_upload_failed': '图片上传失败: ',
+                'drag_to_sort': '拖动排序',
+                'language': '语言',
+            }
+        };
+
+        const useLanguage = () => {
+            const [lang, setLang] = useState(() => {
+                const saved = localStorage.getItem('roadbook_lang');
+                if (saved) return saved;
+                const sys = navigator.language;
+                return sys.startsWith('zh') ? 'zh' : 'en';
+            });
+
+            useEffect(() => {
+                localStorage.setItem('roadbook_lang', lang);
+                document.documentElement.lang = lang;
+            }, [lang]);
+
+            const t = (key) => {
+                const dict = translations[lang] || translations['en'];
+                return dict[key] || key;
+            };
+
+            return { lang, setLang, t };
+        };
+
         function App() {
+            const { lang, setLang, t } = useLanguage();
             const [config, setConfig] = useState({ work_dir: '' });
             const [files, setFiles] = useState([]);
             const [currentFile, setCurrentFile] = useState(null);
@@ -133,7 +251,7 @@
                     setCurrentFile(null);
                     setRoadbook(null);
                     loadFiles();
-                    setMsg({ type: 'success', text: 'Directory changed' });
+                    setMsg({ type: 'success', text: t('directory_changed') });
                 }).catch(err => {
                     setMsg({ type: 'error', text: err.message });
                 });
@@ -153,7 +271,7 @@
                 }).catch(err => {
                     console.error(err);
                     setLoading(false);
-                    setMsg({ type: 'error', text: '加载失败: ' + err.message });
+                    setMsg({ type: 'error', text: t('load_failed') + err.message });
                 });
             };
 
@@ -162,11 +280,11 @@
                 setSaving(true);
                 api.save(currentFile, roadbook).then(() => {
                     setSaving(false);
-                    setMsg({ type: 'success', text: '已保存到本地' });
+                    setMsg({ type: 'success', text: t('saved') });
                     setTimeout(() => setMsg(null), 3000);
                 }).catch(err => {
                     setSaving(false);
-                    setMsg({ type: 'error', text: '保存失败: ' + err.message });
+                    setMsg({ type: 'error', text: t('save_failed') + err.message });
                 });
             };
 
@@ -190,7 +308,7 @@
                 } while (roadbook.sheets.some(s => s.id === newId));
 
                 const newSheet = {
-                    title: "新的一页",
+                    title: t('new_page_title'),
                     id: newId,
                     steps: [],
                     extra_content: ""
@@ -202,7 +320,7 @@
             };
 
             const deleteSheet = (index) => {
-                if(!confirm("确定要撕掉这一页手稿吗？")) return;
+                if(!confirm(t('confirm_delete_sheet'))) return;
                 const newSheets = [...roadbook.sheets];
                 newSheets.splice(index, 1);
                 setRoadbook(prev => ({ ...prev, sheets: newSheets }));
@@ -213,14 +331,23 @@
                     {/* Sidebar */}
                     <div className="w-64 bg-[#eee8dc] border-r border-[#e5e0d6] flex flex-col shadow-inner">
                         <div className="p-4 border-b border-[#e5e0d6]">
-                            <div className="flex items-center space-x-2 text-[#2d2a26] font-bold text-lg mb-1">
-                                <i className="ph ph-map-trifold text-xl"></i>
-                                <span>Roadbook Explorer</span>
+                            <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center space-x-2 text-[#2d2a26] font-bold text-lg">
+                                    <i className="ph ph-map-trifold text-xl"></i>
+                                    <span>{t('title')}</span>
+                                </div>
+                                <button 
+                                    onClick={() => setLang(lang === 'en' ? 'zh' : 'en')}
+                                    className="text-xs font-bold px-2 py-1 rounded bg-white/50 hover:bg-white border border-transparent hover:border-gray-200 transition-colors uppercase"
+                                    title={t('language')}
+                                >
+                                    {lang === 'en' ? 'EN' : '中'}
+                                </button>
                             </div>
                             
                             {/* Directory Switcher */}
                             <div className="mt-4">
-                                <div className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wider">工作区</div>
+                                <div className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wider">{t('workspace')}</div>
                                 {editingDir ? (
                                     <div className="flex items-center space-x-1">
                                         <input 
@@ -249,7 +376,7 @@
                         <div className="flex-1 overflow-y-auto p-2 space-y-1">
                             {files.length === 0 && (
                                 <div className="text-center text-gray-400 mt-10 text-xs">
-                                    暂无路书<br/>(Create one via CLI)
+                                    {t('no_roadbooks')}<br/>{t('create_via_cli')}
                                 </div>
                             )}
                             {files.map(file => (
@@ -269,7 +396,7 @@
                         </div>
                         
                         <div className="p-4 border-t border-[#e5e0d6] text-xs text-gray-400 text-center">
-                            AARP v4.0 Protocol
+                            {t('protocol')}
                         </div>
                     </div>
 
@@ -279,7 +406,7 @@
                         <div className="h-16 bg-white/80 backdrop-blur border-b border-[#e5e0d6] px-8 flex items-center justify-between shadow-sm z-10 shrink-0">
                             <div>
                                 <h1 className="font-serif font-bold text-xl text-[#2d2a26] flex items-center">
-                                    {roadbook ? roadbook.meta.name || 'Untitled Roadbook' : '欢迎使用'}
+                                    {roadbook ? roadbook.meta.name || t('untitled') : t('welcome')}
                                 </h1>
                                 {currentFile && <div className="text-xs text-gray-400 mt-0.5 font-mono">{currentFile}</div>}
                             </div>
@@ -299,7 +426,7 @@
                                     }`}
                                 >
                                     <i className="ph ph-floppy-disk text-lg"></i>
-                                    <span>{saving ? '保存中...' : '保存'}</span>
+                                    <span>{saving ? t('saving') : t('save')}</span>
                                 </button>
                             </div>
                         </div>
@@ -309,7 +436,7 @@
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center h-64 text-gray-400">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400 mb-4"></div>
-                                    <span>正在翻阅手稿...</span>
+                                    <span>{t('loading')}</span>
                                 </div>
                             ) : roadbook ? (
                                 <div className="max-w-4xl mx-auto space-y-10 pb-32">
@@ -321,27 +448,27 @@
                                         
                                         <div className="grid grid-cols-12 gap-6">
                                             <div className="col-span-12 mb-2">
-                                                <h2 className="text-lg font-bold text-gray-800 border-b-2 border-gray-100 pb-2 inline-block">基础信息</h2>
+                                                <h2 className="text-lg font-bold text-gray-800 border-b-2 border-gray-100 pb-2 inline-block">{t('base_info')}</h2>
                                             </div>
                                             
                                             <Field label="ID" value={roadbook.meta.id} onChange={v => updateMeta('id', v)} readOnly col="col-span-4" />
                                             <Field label="Name" value={roadbook.meta.name} onChange={v => updateMeta('name', v)} required col="col-span-6" />
                                             <Field label="Ver" value={roadbook.meta.version} onChange={v => updateMeta('version', v)} required col="col-span-2" />
                                             
-                                            <Field label="Description" value={roadbook.meta.description} onChange={v => updateMeta('description', v)} col="col-span-12" textarea />
+                                            <Field label={t('description')} value={roadbook.meta.description} onChange={v => updateMeta('description', v)} col="col-span-12" textarea />
                                         </div>
                                     </div>
 
                                     {/* Sheets Section */}
                                     <div className="space-y-8">
                                         <div className="flex items-center justify-between px-2 border-b border-gray-200 pb-4">
-                                            <h2 className="text-2xl font-serif font-bold text-[#2d2a26]">旅程手稿 (Sheets)</h2>
+                                            <h2 className="text-2xl font-serif font-bold text-[#2d2a26]">{t('sheets')}</h2>
                                             <button 
                                                 onClick={addSheet} 
                                                 className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded hover:bg-blue-50 transition-colors"
                                             >
                                                 <i className="ph ph-plus-circle text-lg"></i>
-                                                <span>添加新页</span>
+                                                <span>{t('add_sheet')}</span>
                                             </button>
                                         </div>
                                         
@@ -353,6 +480,7 @@
                                                 currentFile={currentFile}
                                                 onChange={(newSheet) => updateSheet(idx, newSheet)}
                                                 onDelete={() => deleteSheet(idx)}
+                                                t={t}
                                             />
                                         ))}
                                         
@@ -361,7 +489,7 @@
                                                 <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 group-hover:border-blue-400 flex items-center justify-center">
                                                     <i className="ph ph-plus text-xl"></i>
                                                 </div>
-                                                <span className="text-sm">继续书写旅程...</span>
+                                                <span className="text-sm">{t('continue_writing')}</span>
                                             </button>
                                         </div>
                                     </div>
@@ -369,7 +497,7 @@
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
                                     <i className="ph ph-book-open text-6xl mb-4 opacity-20"></i>
-                                    <p>从左侧书架选择一本路书开始编辑</p>
+                                    <p>{t('select_roadbook')}</p>
                                 </div>
                             )}
                         </div>
@@ -406,7 +534,7 @@
             );
         }
 
-        function SheetEditor({ index, sheet, currentFile, onChange, onDelete }) {
+        function SheetEditor({ index, sheet, currentFile, onChange, onDelete, t }) {
             const [isCollapsed, setIsCollapsed] = useState(false);
             const [draggedIdx, setDraggedIdx] = useState(null);
             const [dragOverIdx, setDragOverIdx] = useState(null);
@@ -534,7 +662,7 @@
                             const res = await api.upload(renamedFile, currentFile);
                             updateField('reference', `![Image](${res.url})`);
                         } catch (err) {
-                            alert('图片上传失败: ' + err.message);
+                            alert(t('image_upload_failed') + err.message);
                         } finally {
                             setUploadingImage(false);
                         }
@@ -587,7 +715,7 @@
                                     value={sheet.title} 
                                     onChange={e => { e.stopPropagation(); updateField('title', e.target.value); }}
                                     className="font-bold text-lg bg-transparent border-none focus:ring-0 p-0 w-full placeholder-gray-400 text-[#2d2a26]"
-                                    placeholder="场景标题 (例如: 登录页面)"
+                                    placeholder={t('sheet_title_placeholder')}
                                     onClick={e => e.stopPropagation()}
                                 />
                                 <div className="text-xs text-gray-400 mt-0.5 font-mono">ID: {sheet.id || 'N/A'}</div>
@@ -597,7 +725,7 @@
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onDelete(); }} 
                                 className="w-8 h-8 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500 flex items-center justify-center transition-colors"
-                                title="删除此页"
+                                title={t('delete_sheet')}
                             >
                                 <i className="ph ph-trash text-lg"></i>
                             </button>
@@ -610,13 +738,13 @@
                         <div className="p-6 space-y-6">
                             <div className="grid grid-cols-2 gap-6">
                                 <Field 
-                                    label="URL (Optional)" 
+                                    label={t('url_optional')} 
                                     value={sheet.url} 
                                     onChange={v => updateField('url', v)} 
-                                    placeholder="留空则继承上一页 URL (用于定位)" 
+                                    placeholder={t('url_placeholder')}
                                 />
                                 <Field 
-                                    label="Locators (Optional)" 
+                                    label={t('locators_optional')} 
                                     value={sheet.locators} 
                                     onChange={v => updateField('locators', v)} 
                                     placeholder='text="Login"'
@@ -624,18 +752,18 @@
                             </div>
                             
                             <Field 
-                                label="Description (Goal)" 
+                                label={t('description_goal')}
                                 value={sheet.description} 
                                 onChange={v => updateField('description', v)} 
                                 textarea 
-                                placeholder="描述这一页的主要任务目标..."
+                                placeholder={t('description_placeholder')}
                             />
                             
                             {/* Reference Image */}
                             <div className="bg-gray-50 rounded-lg p-4 border border-dashed border-gray-300" onPaste={handlePaste}>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center justify-between">
-                                    <span>Reference Image (Optional)</span>
-                                    {uploadingImage && <span className="text-blue-500 normal-case text-xs"><i className="ph ph-spinner animate-spin inline-block mr-1"></i>上传中...</span>}
+                                    <span>{t('reference_image')}</span>
+                                    {uploadingImage && <span className="text-blue-500 normal-case text-xs"><i className="ph ph-spinner animate-spin inline-block mr-1"></i>{t('uploading')}</span>}
                                 </label>
                                 <div className="flex items-start space-x-4">
                                     <div className="flex-1">
@@ -644,9 +772,9 @@
                                             value={sheet.reference || ''} 
                                             onChange={e => updateField('reference', e.target.value)}
                                             className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono text-gray-600 mb-2"
-                                            placeholder="支持 Markdown 语法或直接在此处 Ctrl+V 粘贴图片"
+                                            placeholder={t('paste_placeholder')}
                                         />
-                                        <p className="text-xs text-gray-400">支持直接按 Ctrl+V / Cmd+V 粘贴剪贴板图片。</p>
+                                        <p className="text-xs text-gray-400">{t('paste_hint')}</p>
                                     </div>
                                     {previewUrl && (
                                         <div className="w-72 bg-white rounded overflow-hidden relative group-image border border-gray-300 shadow-sm transition-all hover:shadow-md">
@@ -655,7 +783,7 @@
                                                 className="w-full h-auto object-contain cursor-zoom-in"
                                                 onError={(e) => e.target.style.display = 'none'} 
                                                 onClick={() => setShowImageModal(true)}
-                                                title="点击放大预览"
+                                                title={t('click_to_zoom')}
                                             />
                                         </div>
                                     )}
@@ -677,7 +805,7 @@
                                         <button 
                                             className="absolute -top-12 right-0 text-white/70 hover:text-white transition-colors"
                                             onClick={() => setShowImageModal(false)}
-                                            title="关闭预览 (Esc)"
+                                            title={t('close_preview')}
                                         >
                                             <i className="ph ph-x text-3xl"></i>
                                         </button>
@@ -689,7 +817,7 @@
                             <div>
                                 <div className="flex items-center justify-between mb-3">
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                        Action Steps
+                                        {t('action_steps')}
                                     </label>
                                 </div>
                                 <div className="space-y-2 relative">
@@ -711,6 +839,7 @@
                                                 onDragLeave={handleDragLeave}
                                                 onDrop={(e) => handleDrop(e, idx)}
                                                 onDragEnd={handleDragEnd}
+                                                t={t}
                                             />
                                         </React.Fragment>
                                     ))}
@@ -724,7 +853,7 @@
                                         className="w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium transition-all flex items-center justify-center space-x-2"
                                     >
                                         <i className="ph ph-plus"></i>
-                                        <span>Add Action Step</span>
+                                        <span>{t('add_action_step')}</span>
                                     </button>
                                 </div>
                             </div>
@@ -734,7 +863,7 @@
             );
         }
 
-        function StepEditor({ index, step, isDragging, onChange, onRemove, onInsert, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd }) {
+        function StepEditor({ index, step, isDragging, onChange, onRemove, onInsert, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd, t }) {
             return (
                 <div 
                     draggable="true"
@@ -747,7 +876,7 @@
                         isDragging ? 'opacity-40 border-dashed border-gray-400 scale-[0.98]' : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
                     }`}
                 >
-                    <div className="cursor-grab text-gray-300 hover:text-gray-600 px-1 opacity-0 group-hover:opacity-100" title="拖动排序">
+                    <div className="cursor-grab text-gray-300 hover:text-gray-600 px-1 opacity-0 group-hover:opacity-100" title={t('drag_sort')}>
                         <i className="ph ph-dots-six-vertical text-lg"></i>
                     </div>
                     <span className="text-gray-400 font-mono w-4 text-center text-xs">{index + 1}.</span>
@@ -756,20 +885,20 @@
                         value={step.original_text || ''} 
                         onChange={e => onChange({ ...step, original_text: e.target.value })}
                         className="flex-1 bg-transparent border-none p-0 font-mono text-sm text-[#2d2a26] focus:ring-0 placeholder-gray-300"
-                        placeholder='ACTION "Selector" "Value"'
+                        placeholder={t('step_placeholder')}
                     />
                     <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-1 px-1">
                         <button 
                             onClick={onInsert}
                             className="text-gray-300 hover:text-blue-500 transition-colors p-1"
-                            title="在此前插入步骤"
+                            title={t('insert_before')}
                         >
                             <i className="ph ph-plus"></i>
                         </button>
                         <button 
                             onClick={onRemove}
                             className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                            title="删除步骤"
+                            title={t('delete_step')}
                         >
                             <i className="ph ph-x"></i>
                         </button>

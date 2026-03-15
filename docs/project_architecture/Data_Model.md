@@ -19,11 +19,15 @@
 │       ├── scripts/            # 编译后的脚本缓存 (可执行)
 │       │   ├── <hash>.py
 │       │   └── <hash>.js
-│       └── runtime/            # [Runtime] 运行时数据 (动态素材与产物)
+│       ├── output_<date>/      # [Output] 执行产物 (下载文件、截图等)，位于 runtime 同级
+│       └── runtime/            # [Runtime] 运行时数据 (状态、日志)
 │           └── runs/           # 运行历史 (进化素材)
-│               ├── last.json   # 最近一次运行结果
+│               ├── last_run.json   # 最近一次运行结果 (System Metadata Copy)
 │               └── <run_id>/   # 单次运行完整记录
-│                   ├── trace.json
+│                   ├── run_meta.json # [System] 系统元数据 (Status, Time, Logs)
+│                   ├── artifacts/    # [User] 脚本生成的产物
+│                   │   ├── outputs.json # [User] 结构化业务结果
+│                   │   └── ...
 │                   └── screenshots/
 ```
 
@@ -59,8 +63,8 @@
 }
 ```
 
-### 3.2 运行结果记录 (`books/<book_dir>/runtime/runs/<run_id>/trace.json`)
-记录一次执行的完整生命周期。
+### 3.2 运行元数据 (`books/<book_dir>/runtime/runs/<run_id>/run_meta.json`)
+记录一次执行的完整生命周期及结果摘要。
 
 ```json
 {
@@ -69,31 +73,17 @@
   "status": "completed",  // pending | running | completed | failed
   "start_time": "2023-10-27T10:01:23Z",
   "end_time": "2023-10-27T10:02:45Z",
-  "mode": "auto",         // auto | script | agent
+  "mode": "script",       // auto | script | agent
   "inputs": {
     "keyword": "iphone 15"
   },
-  "outputs": {
+  "outputs": {            // 从 artifacts/outputs.json 读取并合并
     "order_id": "123-4567890-1234567",
     "total_price": "9999.00"
   },
-  "steps": [
-    {
-      "step_id": "login_01",
-      "status": "success",
-      "action": "input",
-      "target": "#username",
-      "value": "***",
-      "timestamp": "2023-10-27T10:01:25Z",
-      "screenshot": "screenshots/step_01.png"
-    },
-    {
-      "step_id": "search_02",
-      "status": "success",
-      "action": "click",
-      "target": "#search-btn",
-      "timestamp": "2023-10-27T10:01:30Z"
-    }
+  "artifacts": [          // 生成的文件列表
+      "outputs.json",
+      "screenshot.png"
   ],
   "error": null // { "code": "ElementNotFound", "message": "...", "stack": "..." }
 }

@@ -38,7 +38,14 @@ description: Roadbook Stepper (路书单步执行器)。使用此 skill 在终�
 3.  **A (Action / Command)**: 拿到 ID 后使用终端下发真实的交互操作指令（如交互操作 `agent-browser type @e20 "user"`）。
 4.  **R (Result Report)**: 在终端确认执行完成且成功后再组织汇报，严禁在未起终端的情况下通过纯文本臆想过程。
 
-## 4. 输出格式规范 (Output Format)
+## 4. 结果验证 (Result Verification)
+
+在执行完关键步骤或整个流程后，你应当检查生成的运行元数据和业务结果，以确认执行状态。
+
+*   **系统元数据**: 检查 `runtime/runs/<run_id>/run_meta.json` (原 `result.json`)，确认 `status` 为 `success`。
+*   **业务输出**: 检查 `runtime/runs/<run_id>/artifacts/outputs.json`，确认是否包含了预期的结构化数据。
+
+## 5. 输出格式规范 (Output Format)
 
 请严格按照以下 Markdown 格式输出执行过程：
 

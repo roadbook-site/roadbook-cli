@@ -26,56 +26,71 @@ class RoadbookMeta:
 
 class RoadbookManager:
     @staticmethod
-    def list_roadbooks() -> List[RoadbookMeta]:
-        books_dir = get_books_dir()
-        roadbooks = []
+    def get_search_paths() -> List[Path]:
+        paths = []
+        # Workspace (High priority)
+        cwd = Path.cwd()
+        # 1. Check .roadbook/books in cwd
+        local_books = cwd / ".roadbook" / "books"
+        if local_books.exists():
+            paths.append(local_books)
         
-        if not books_dir.exists():
-            return []
+        # 2. Check global books (Low priority)
+        global_books = get_books_dir()
+        if global_books.exists():
+            paths.append(global_books)
+            
+        return paths
 
-        # Recursive search for roadbook.md
-        for rb_path in books_dir.rglob("roadbook.md"):
-            meta = RoadbookManager._parse_meta(rb_path)
-            roadbooks.append(meta)
+    @staticmethod
+    def list_roadbooks() -> List[RoadbookMeta]:
+        search_paths = RoadbookManager.get_search_paths()
+        roadbooks = []
+        seen_ids = set()
+        
+        for books_dir in search_paths:
+            if not books_dir.exists():
+                continue
+
+            # Recursive search for roadbook.md
+            for rb_path in books_dir.rglob("roadbook.md"):
+                meta = RoadbookManager._parse_meta(rb_path)
+                if meta.id not in seen_ids:
+                    roadbooks.append(meta)
+                    seen_ids.add(meta.id)
         
         return roadbooks
 
     @staticmethod
     def get_roadbook(rb_id: str) -> Optional[RoadbookMeta]:
-        books_dir = get_books_dir()
+        search_paths = RoadbookManager.get_search_paths()
         
-        # 1. Try direct path (standard structure: books/{id}/roadbook.md)
-        direct_path = books_dir / rb_id / "roadbook.md"
-        if direct_path.exists():
-            meta = RoadbookManager._parse_meta(direct_path)
-            # Only return if ID matches (or if parsing failed but we want to return the error object)
-            # If meta.id is inferred from folder name, it will match.
-            # If meta.id is in YAML and differs, we should respect the file content?
-            # If user asks for 'foo' and we found 'books/foo/roadbook.md' which says 'id: bar',
-            # technically that's not 'foo'. But usually users imply path or ID.
-            # Let's check if meta.id matches.
-            if meta.id == rb_id:
-                return meta
-        
-        # 2. Search recursively if not found or ID mismatch
-        for rb_path in books_dir.rglob("roadbook.md"):
-            # Skip the direct path we already checked
-            if rb_path == direct_path:
-                continue
+        for books_dir in search_paths:
+            # 1. Try direct path (standard structure: books/{id}/roadbook.md)
+            direct_path = books_dir / rb_id / "roadbook.md"
+            if direct_path.exists():
+                meta = RoadbookManager._parse_meta(direct_path)
+                if meta.id == rb_id:
+                    return meta
+            
+            # 2. Search recursively if not found or ID mismatch
+            for rb_path in books_dir.rglob("roadbook.md"):
+                if rb_path == direct_path:
+                    continue
+                    
+                # Optimization: Check if parent directory name matches ID
+                if rb_path.parent.name == rb_id:
+                    meta = RoadbookManager._parse_meta(rb_path)
+                    if meta.id == rb_id:
+                        return meta
+
+            # 3. Full scan
+            for rb_path in books_dir.rglob("roadbook.md"):
+                if rb_path == direct_path: continue
                 
-            # Optimization: Check if parent directory name matches ID
-            if rb_path.parent.name == rb_id:
                 meta = RoadbookManager._parse_meta(rb_path)
                 if meta.id == rb_id:
                     return meta
-
-        # 3. Full scan (slowest, but finds ID regardless of folder name)
-        for rb_path in books_dir.rglob("roadbook.md"):
-            if rb_path == direct_path: continue
-            
-            meta = RoadbookManager._parse_meta(rb_path)
-            if meta.id == rb_id:
-                return meta
                 
         return None
 
@@ -110,37 +125,50 @@ class RoadbookManager:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            sheets = RoadbookManager._parse_sheets(content)
-            
             # Simple Frontmatter parser
+            yaml_content = ""
             if content.startswith('---'):
                 end_idx = content.find('---', 3)
                 if end_idx != -1:
-                    yaml_content = content[3:end_idx]
-                    data = yaml.safe_load(yaml_content)
-                    
-                    # Validate required fields
-                    required = ['id', 'name', 'version']
-                    for req in required:
-                        if req not in data:
-                            return RoadbookMeta(
-                                id=file_path.parent.name,
-                                name="Invalid Roadbook",
-                                version="?",
-                                description="Missing required metadata fields.",
-                                path=file_path,
-                                valid=False,
-                                error=f"Missing field: {req}"
-                            )
+                    yaml_str = content[3:end_idx]
+                    try:
+                        data = yaml.safe_load(yaml_str)
+                        if not isinstance(data, dict):
+                             raise ValueError("YAML frontmatter must be a dictionary")
+                    except yaml.YAMLError as e:
+                        return RoadbookMeta(
+                            id=file_path.parent.name,
+                            name="Invalid YAML",
+                            version="?",
+                            description=str(e),
+                            path=file_path,
+                            valid=False,
+                            error=f"YAML Error: {e}"
+                        )
 
+                    # Validate required fields
+                    # id is optional, can be inferred from directory name
+                    # name is required
+                    
+                    rb_id = data.get('id', file_path.parent.name)
+                    name = data.get('name', 'Unknown')
+                    version = str(data.get('version', '0.0.0'))
+                    description = data.get('description', '')
+                    
+                    sheets = RoadbookManager._parse_sheets(content)
+                    
                     return RoadbookMeta(
-                        id=data.get('id', file_path.parent.name),
-                        name=data.get('name', 'Unknown'),
-                        version=str(data.get('version', '0.0.0')),
-                        description=data.get('description', ''),
+                        id=rb_id,
+                        name=name,
+                        version=version,
+                        description=description,
                         path=file_path,
                         sheets=sheets
                     )
+            
+            # Fallback if no frontmatter or not starting with ---
+            # Try to parse as pure YAML if file extension is .yaml/.yml? 
+            # But standard is .md with frontmatter.
             
             return RoadbookMeta(
                 id=file_path.parent.name,
@@ -150,7 +178,7 @@ class RoadbookManager:
                 path=file_path,
                 valid=False,
                 error="No frontmatter found",
-                sheets=sheets
+                sheets=[]
             )
             
         except Exception as e:

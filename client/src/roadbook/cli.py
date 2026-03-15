@@ -1,7 +1,7 @@
 import argparse
 import sys
 from .core.config import ensure_roadbook_dir
-from .commands import library, search, executor, script, run, editor
+from .commands import library, search, executor, script, run, editor, auth, remote
 
 class RichHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom help formatter to display commands by category."""
@@ -18,14 +18,20 @@ Command Categories:
     show      Show details of a roadbook
 
   [Navigate]  Execute and interact with roadbooks
-    open      Start an interactive guidance session (Recommended)
-    run       Execute automation script (Auto-fallback to interactive)
+    open      Start semantic guide mode (Interactive)
+    run       Execute automation script (Auto-downgrade to semantic mode)
 
   [Observe]   Review execution history and logs
     logs      Manage and inspect run logs
 
   [Develop]   Manage automation scripts
     script    Manage local scripts
+    
+  [Remote]    Interact with Roadbook Server
+    login     Login to server
+    push      Push roadbook to server
+    pull      Pull roadbook from server
+    remote    Manage remote resources
 """
     parser = argparse.ArgumentParser(
         description=description,
@@ -50,7 +56,7 @@ Command Categories:
 
     # --- Group: Navigate ---
     # Command: open
-    open_parser = subparsers.add_parser("open", help="Open roadbook interactive session")
+    open_parser = subparsers.add_parser("open", help="Open roadbook in semantic guide mode")
     open_parser.add_argument("id", help="Roadbook ID")
     open_parser.add_argument("--inputs", help="JSON inputs (string)")
     open_parser.add_argument("--inputs-file", help="JSON inputs file path")
@@ -104,6 +110,29 @@ Command Categories:
     script_clean_parser = script_subparsers.add_parser("clean", help="Clean scripts")
     script_clean_parser.add_argument("id", help="Roadbook ID")
     script_clean_parser.set_defaults(func=script.script_clean)
+
+    # --- Group: Remote ---
+    # Command: login
+    login_parser = subparsers.add_parser("login", help="Login to Roadbook Server")
+    login_parser.set_defaults(func=auth.login)
+
+    # Command: push
+    push_parser = subparsers.add_parser("push", help="Push roadbook to server")
+    push_parser.add_argument("id", help="Roadbook ID")
+    push_parser.set_defaults(func=remote.push)
+    
+    # Command: pull
+    pull_parser = subparsers.add_parser("pull", help="Pull roadbook from server")
+    pull_parser.add_argument("id", help="Roadbook ID")
+    pull_parser.set_defaults(func=remote.pull)
+
+    # Command: remote
+    remote_parser = subparsers.add_parser("remote", help="Manage remote roadbooks")
+    remote_subparsers = remote_parser.add_subparsers(dest="subcommand", help="Remote subcommands")
+    
+    # remote list
+    remote_list_parser = remote_subparsers.add_parser("list", help="List remote roadbooks")
+    remote_list_parser.set_defaults(func=remote.remote_list)
 
     # Ensure environment is ready
     ensure_roadbook_dir()

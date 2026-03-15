@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import yaml
 
 # Default paths
 HOME_DIR = Path.home()
@@ -24,6 +25,7 @@ def ensure_roadbook_dir():
     if not CONFIG_FILE.exists():
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             f.write("# Roadbook CLI Configuration\n")
+            f.write("server_url: http://localhost:8000\n")
             f.write("token: null\n")
         print(f"Created config file at: {CONFIG_FILE}")
 
@@ -34,3 +36,28 @@ def get_roadbook_dir() -> Path:
 def get_books_dir() -> Path:
     ensure_roadbook_dir()
     return BOOKS_DIR
+
+def load_config():
+    ensure_roadbook_dir()
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    return {}
+
+def save_config(config):
+    ensure_roadbook_dir()
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        yaml.dump(config, f)
+
+def get_token():
+    config = load_config()
+    return config.get("token")
+
+def set_token(token):
+    config = load_config()
+    config["token"] = token
+    save_config(config)
+
+def get_server_url():
+    config = load_config()
+    return config.get("server_url", "http://localhost:8000")

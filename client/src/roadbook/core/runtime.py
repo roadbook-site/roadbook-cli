@@ -74,31 +74,65 @@ class RuntimeManager:
         return path
 
     @staticmethod
-    def find_script(rb_id: str, lang: str = "python", book_dir: Optional[Path] = None) -> Optional[Path]:
-        scripts_dir = RuntimeManager.get_scripts_dir(rb_id, book_dir)
-        # Simple lookup: check for script.py or script.js
-        # In real implementation, might check hash
-        ext = ".py" if lang == "python" else ".js"
-        script_path = scripts_dir / f"script{ext}"
+    def find_script(rb_id: str, lang: str = None, book_dir: Optional[Path] = None) -> Optional[Path]:
+        """
+        Finds a script for the given roadbook ID.
+        If lang is provided, looks for that specific language extension.
+        If lang is None, looks for any supported script type (priority: .py > .js > .ts).
+        """
+        cwd = Path.cwd()
         
-        if script_path.exists():
-            return script_path
+        # Define search extensions
+        extensions = []
+        if lang:
+            if lang.lower() == "python": extensions = [".py"]
+            elif lang.lower() in ["node", "nodejs", "javascript"]: extensions = [".js"]
+            elif lang.lower() in ["typescript", "ts"]: extensions = [".ts"]
+        else:
+            extensions = [".py", ".js", ".ts"]
+
+        for ext in extensions:
+            # 1. Check workspace .roadbook (New Standard)
+            workspace_roadbook_script = cwd / ".roadbook" / rb_id / "scripts" / f"script{ext}"
+            if workspace_roadbook_script.exists():
+                return workspace_roadbook_script
+            
+            # 2. Check current workspace (Legacy High priority)
+            # Check ./scripts/script<ext>
+            workspace_script = cwd / "scripts" / f"script{ext}"
+            if workspace_script.exists():
+                return workspace_script
+
+            # Check ./<rb_id><ext>
+            workspace_script_direct = cwd / f"{rb_id}{ext}"
+            if workspace_script_direct.exists():
+                return workspace_script_direct
+
+            # 3. Check roadbook directory (Standard location)
+            scripts_dir = RuntimeManager.get_scripts_dir(rb_id, book_dir)
+            script_path = scripts_dir / f"script{ext}"
+            
+            if script_path.exists():
+                return script_path
+                
         return None
 
     @staticmethod
     def list_scripts(rb_id: str, book_dir: Optional[Path] = None) -> List[Dict[str, Any]]:
         scripts_dir = RuntimeManager.get_scripts_dir(rb_id, book_dir)
         results = []
-        for item in scripts_dir.iterdir():
-            if item.is_file() and item.suffix in ['.py', '.js']:
-                stats = item.stat()
-                results.append({
-                    "name": item.name,
-                    "lang": "Python" if item.suffix == ".py" else "NodeJS",
-                    "size": stats.st_size,
-                    "mtime": stats.st_mtime,
-                    "path": str(item)
-                })
+        if scripts_dir.exists():
+            for item in scripts_dir.iterdir():
+                if item.is_file() and item.suffix in ['.py', '.js', '.ts']:
+                    lang_map = {".py": "Python", ".js": "NodeJS", ".ts": "TypeScript"}
+                    stats = item.stat()
+                    results.append({
+                        "name": item.name,
+                        "lang": lang_map.get(item.suffix, "Unknown"),
+                        "size": stats.st_size,
+                        "mtime": stats.st_mtime,
+                        "path": str(item)
+                    })
         return results
 
     @staticmethod
@@ -129,7 +163,7 @@ class RuntimeManager:
             "details": details
         }
         
-        with open(run_dir / "result.json", "w", encoding="utf-8") as f:
+        with open(run_dir / "run_meta.json", "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
             
         # Update 'last' symlink or copy
@@ -142,9 +176,9 @@ class RuntimeManager:
         runs_dir = RuntimeManager.get_runs_dir(rb_id, book_dir)
         results = []
         for item in runs_dir.iterdir():
-            if item.is_dir() and (item / "result.json").exists():
+            if item.is_dir() and (item / "run_meta.json").exists():
                 try:
-                    with open(item / "result.json", "r", encoding="utf-8") as f:
+                    with open(item / "run_meta.json", "r", encoding="utf-8") as f:
                         data = json.load(f)
                         results.append(data)
                 except Exception:
@@ -172,7 +206,7 @@ class RuntimeManager:
     
     @staticmethod
     def get_run(rb_id: str, run_id: str, book_dir: Optional[Path] = None) -> Optional[Dict[str, Any]]:
-        run_file = RuntimeManager.get_runs_dir(rb_id, book_dir) / run_id / "result.json"
+        run_file = RuntimeManager.get_runs_dir(rb_id, book_dir) / run_id / "run_meta.json"
         if run_file.exists():
             try:
                 with open(run_file, "r", encoding="utf-8") as f:

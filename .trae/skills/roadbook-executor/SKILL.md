@@ -20,6 +20,7 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
 3.  **Semantic Guide Execution**:
     - Once a session is started (via `roadbook run <id>` or `roadbook open <id>`), the **Full Roadbook Content** will be displayed.
     - You are the **Executor**.
+    - **Session Context**: The CLI provides a Session ID (e.g., `run_20260315_...`). Use this ID to organize artifacts if you are running manual commands.
     - **Read and Execute**: Read the entire Roadbook content (all Sheets) carefully.
     - **Sequential Execution**: Execute the tasks in each Sheet sequentially using your browser automation tools (`agent-browser` or `playwright-cli`).
     - **Self-Verification**: Verify the "Assertions" (if any) in each Sheet yourself using browser checks (e.g., checking element visibility or text).
@@ -48,8 +49,19 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
 - `roadbook open <id>`: Start an interactive session and view the full roadbook.
 - `roadbook logs list <id>`: View run history.
 
-## Script Management
+## Script Management & Artifacts
 
-- **Do not delete generated scripts**: If you successfully generate a script that completes the task, **save it** instead of deleting it.
-- **Installation**: Move the working script to the roadbook's script directory (usually found via `roadbook inspect`) so `roadbook run` can use it in the future.
+- **IMPORTANT - Reusability & Token Efficiency**: Scripts are the core of Roadbook's efficiency. They can be reused without consuming tokens. **Always strive to generate a robust script instead of relying on interactive semantic execution every time.**
+- **Workspace Structure**: Roadbooks are executed in a dedicated workspace directory: `.roadbook/<roadbook_id>/`.
+    - **Scripts**: Located in `.roadbook/<roadbook_id>/scripts/script.py`.
+    - **Runtime Artifacts**: Located in `.roadbook/<roadbook_id>/runtime/`.
+- **Auto-Scaffolding**: When `roadbook open <id>` is executed:
+    1.  The system copies the roadbook from the global library to `.roadbook/<id>/` in the current workspace.
+    2.  It scaffolds a template script in `.roadbook/<id>/scripts/script.py`.
+    3.  **Edit this file directly** to implement automation logic.
+- **Output Management**:
+    - All execution outputs (downloads, screenshots, logs) MUST be saved in `.roadbook/<id>/runtime/runs/<session_id>/artifacts/`.
+    - The scaffolded script automatically detects the `ROADBOOK_RUN_ID` environment variable and sets `OUTPUT_DIR` accordingly.
+    - If running manually without CLI context, it falls back to a timestamped directory.
+- **Do not move to global**: Keep the script and artifacts in the workspace `.roadbook/` directory.
 - **Verification**: Always verify the script works before finalizing.
