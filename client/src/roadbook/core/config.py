@@ -10,8 +10,15 @@ if os.environ.get("ROADBOOK_HOME"):
 else:
     ROADBOOK_DIR = HOME_DIR / ".roadbook"
 
-BOOKS_DIR = ROADBOOK_DIR / "books"
-USER_CONFIG_FILE = ROADBOOK_DIR / "config.yaml"
+# New Structure:
+# ~/.roadbook/
+#   .core/        (System files)
+#     config.yaml
+#   <rb-id>/      (Roadbooks)
+
+CORE_DIR = ROADBOOK_DIR / ".core"
+BOOKS_DIR = ROADBOOK_DIR  # Books are now direct children
+USER_CONFIG_FILE = CORE_DIR / "config.yaml"
 PROJECT_CONFIG_FILE = Path.cwd() / ".roadbook" / "config.yaml"
 
 DEFAULT_CONFIG = {
@@ -28,15 +35,30 @@ def ensure_roadbook_dir():
     """Ensure the ~/.roadbook directory structure exists."""
     if not ROADBOOK_DIR.exists():
         ROADBOOK_DIR.mkdir(parents=True)
-        # print(f"Created roadbook directory at: {ROADBOOK_DIR}")
     
-    if not BOOKS_DIR.exists():
-        BOOKS_DIR.mkdir()
-        # print(f"Created books directory at: {BOOKS_DIR}")
+    if not CORE_DIR.exists():
+        CORE_DIR.mkdir()
     
+    # Config Migration
     if not USER_CONFIG_FILE.exists():
-        save_user_config(DEFAULT_CONFIG)
-        # print(f"Created config file at: {USER_CONFIG_FILE}")
+        legacy_config = ROADBOOK_DIR / "config.yaml"
+        if legacy_config.exists():
+            try:
+                legacy_config.rename(USER_CONFIG_FILE)
+            except Exception:
+                pass
+        
+        if not USER_CONFIG_FILE.exists():
+            save_user_config(DEFAULT_CONFIG)
+            
+    # Session Migration
+    legacy_session = ROADBOOK_DIR / "active_session.json"
+    new_session = CORE_DIR / "active_session.json"
+    if legacy_session.exists() and not new_session.exists():
+        try:
+            legacy_session.rename(new_session)
+        except Exception:
+            pass
 
 def get_roadbook_dir() -> Path:
     ensure_roadbook_dir()
@@ -92,7 +114,8 @@ def load_config() -> Dict[str, Any]:
     return config
 
 def save_user_config(config: Dict[str, Any]):
-    ensure_roadbook_dir()
+    if not CORE_DIR.exists():
+        CORE_DIR.mkdir(parents=True, exist_ok=True)
     with open(USER_CONFIG_FILE, "w", encoding="utf-8") as f:
         yaml.dump(config, f, default_flow_style=False)
 

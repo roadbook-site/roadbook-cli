@@ -112,3 +112,6 @@ Thumbs.db
 
 # Project specific
 test/
+
+# Roadbook
+.roadbook/

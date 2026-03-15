@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-from .config import get_books_dir, get_roadbook_dir
+from .config import get_books_dir, get_roadbook_dir, CORE_DIR
 
 class RuntimeManager:
     @staticmethod
@@ -26,7 +26,18 @@ class RuntimeManager:
     @staticmethod
     def get_active_session_file() -> Path:
         """Returns the path to the file storing the active session info."""
-        return get_roadbook_dir() / "active_session.json"
+        # Use new core location first
+        new_path = CORE_DIR / "active_session.json"
+        
+        # Migration check
+        legacy_path = get_roadbook_dir() / "active_session.json"
+        if legacy_path.exists() and not new_path.exists():
+            try:
+                legacy_path.rename(new_path)
+            except Exception:
+                pass
+                
+        return new_path
 
     @staticmethod
     def save_active_session(rb_id: str, run_id: str, current_step: int = 0, roadbook_dir: Optional[Path] = None):

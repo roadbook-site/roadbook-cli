@@ -91,6 +91,17 @@ Command Categories:
     logs_last_parser = logs_subparsers.add_parser("last", help="Show last run log")
     logs_last_parser.set_defaults(func=run.run_last)
 
+    # logs cat (New)
+    logs_cat_parser = logs_subparsers.add_parser("cat", help="Print full log content")
+    logs_cat_parser.add_argument("run_id", help="Run ID")
+    logs_cat_parser.set_defaults(func=run.run_cat)
+
+    # logs show (New)
+    logs_show_parser = logs_subparsers.add_parser("show", help="Show structured run details")
+    logs_show_parser.add_argument("run_id", help="Run ID")
+    logs_show_parser.add_argument("--error", action="store_true", help="Show error details only")
+    logs_show_parser.set_defaults(func=run.run_show)
+
     # --- Group: Develop ---
     # Command: edit
     edit_parser = subparsers.add_parser("edit", help="Start Roadbook Editor (WebUI)")

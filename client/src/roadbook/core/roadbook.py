@@ -30,8 +30,8 @@ class RoadbookManager:
         paths = []
         # Workspace (High priority)
         cwd = Path.cwd()
-        # 1. Check .roadbook/books in cwd
-        local_books = cwd / ".roadbook" / "books"
+        # 1. Check .roadbook/ in cwd (New Structure: .roadbook/<id>)
+        local_books = cwd / ".roadbook"
         if local_books.exists():
             paths.append(local_books)
         
@@ -53,7 +53,12 @@ class RoadbookManager:
                 continue
 
             # Recursive search for roadbook.md
+            # Exclude .core and other dot dirs except .roadbook itself (handled by caller)
             for rb_path in books_dir.rglob("roadbook.md"):
+                # Skip hidden directories like .core inside books_dir
+                if ".core" in str(rb_path):
+                    continue
+                    
                 meta = RoadbookManager._parse_meta(rb_path)
                 if meta.id not in seen_ids:
                     roadbooks.append(meta)

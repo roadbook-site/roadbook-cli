@@ -163,27 +163,51 @@ def run_book(args):
         print_info(f"[Runtime] Run ID: {run_id}")
         print_info(f"[*] Executing script...")
         
+        # Prepare log file
+        log_file = run_dir / "run.log"
+        
         start_time = time.time()
         try:
+            cmd = []
             if script_path.suffix == ".py":
-                subprocess.run([sys.executable, str(script_path)], check=True, env=env)
+                cmd = [sys.executable, str(script_path)]
             elif script_path.suffix == ".js":
                 if not shutil.which("node"):
                     print_error("Node.js is not found in PATH but is required for .js scripts.")
                     return
-                subprocess.run(["node", str(script_path)], check=True, env=env)
+                cmd = ["node", str(script_path)]
             elif script_path.suffix == ".ts":
                 # Check for ts-node or other typescript runner
                 if shutil.which("ts-node"):
-                    subprocess.run(["ts-node", str(script_path)], check=True, env=env)
+                    cmd = ["ts-node", str(script_path)]
                 elif shutil.which("npx"):
-                    subprocess.run(["npx", "ts-node", str(script_path)], check=True, env=env)
+                    cmd = ["npx", "ts-node", str(script_path)]
                 else:
                     print_error("TypeScript runtime not found. Please install ts-node (npm install -g ts-node) or ensure npx is available.")
                     return
             else:
                 print_error(f"Unsupported script type: {script_path.suffix}")
                 return
+            
+            # Execute with log capturing (tee behavior)
+            with open(log_file, "wb") as f:
+                process = subprocess.Popen(
+                    cmd, 
+                    env=env, 
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.STDOUT
+                )
+                
+                # Stream output to both console and file
+                for line in iter(process.stdout.readline, b''):
+                    sys.stdout.buffer.write(line)
+                    sys.stdout.flush()
+                    f.write(line)
+                
+                process.wait()
+                
+            if process.returncode != 0:
+                raise subprocess.CalledProcessError(process.returncode, cmd)
             
             end_time = time.time()
             duration = end_time - start_time
@@ -248,6 +272,35 @@ def run_book(args):
         print_info("[*] Switching to Semantic Guide Mode to help you build the script...")
         start_session(args)
 
+from roadbook.core.config import ROADBOOK_DIR
+
+def find_workspace_dot_roadbook(start_path: Path) -> Path:
+    """
+    Locates the .roadbook directory for the current workspace.
+    Logic:
+    1. If start_path is inside a .roadbook dir, return that .roadbook dir.
+    2. Traverse up from start_path to find a directory containing .roadbook.
+    3. If found, return that .roadbook.
+    4. If not found, assume current directory is root and return start_path / .roadbook.
+    """
+    # 1. Check if inside .roadbook
+    current = start_path
+    while current != current.parent:
+        if current.name == ".roadbook":
+            return current
+        current = current.parent
+    
+    # 2. Check upwards for existence of .roadbook
+    current = start_path
+    while current != current.parent:
+        candidate = current / ".roadbook"
+        if candidate.is_dir():
+            return candidate
+        current = current.parent
+        
+    # 3. Not found, default to CWD/.roadbook
+    return start_path / ".roadbook"
+
 def start_session(args):
     """Starts a new semantic guide mode session."""
     rb_id = args.id
@@ -261,25 +314,77 @@ def start_session(args):
         print_info("[Action] Use 'roadbook list' to view installed roadbooks.")
         return
 
-    # User Requirement: Copy roadbook to workspace .roadbook/<id>
     cwd = Path.cwd()
-    workspace_roadbook_dir = cwd / ".roadbook" / rb_id
     
-    if not workspace_roadbook_dir.exists():
-        print_info(f"[Setup] Initializing roadbook workspace: {workspace_roadbook_dir}")
+    # 1. Locate the effective .roadbook directory (Local or Global)
+    dot_roadbook_dir = find_workspace_dot_roadbook(cwd)
+    
+    # 2. Check if we are in Global Environment
+    # If the located .roadbook is the global one (~/.roadbook), we treat it as "Global Mode"
+    is_global_env = False
+    try:
+        if dot_roadbook_dir.resolve() == ROADBOOK_DIR.resolve():
+            is_global_env = True
+    except Exception:
+        pass
+        
+    # 3. Determine Target Book Directory
+    # We check if the book already exists inside the located .roadbook structure
+    # This handles both "Global In-Place" and "Local Existing Copy" scenarios
+    
+    target_book_dir = None
+    
+    # Search for rb_id inside dot_roadbook_dir (recursively, but typically shallow)
+    # We look for roadbook.md with matching ID
+    if dot_roadbook_dir.exists():
+        for path in dot_roadbook_dir.rglob("roadbook.md"):
+            # Optimization: Skip deep nesting if possible, but rglob is okay for .roadbook which is usually clean
+            try:
+                # Check ID matching (simple path name check first for speed)
+                if path.parent.name == rb_id:
+                     target_book_dir = path.parent
+                     break
+                
+                # Fallback: Read content
+                with open(path, "r", encoding="utf-8") as f:
+                    content = f.read(1024)
+                    if f"id: {rb_id}" in content or f"id:{rb_id}" in content:
+                        target_book_dir = path.parent
+                        break
+            except Exception:
+                continue
+    
+    # 4. Copy Logic
+    # Premise: The roadbook MUST be in the .roadbook directory (or its subdirectories).
+    # If it is not found there, we copy it.
+    
+    if target_book_dir:
+        print_info(f"[Setup] Using existing roadbook in workspace: {target_book_dir}")
+        book_dir = target_book_dir
+    else:
+        # Not found in .roadbook, so we copy it to .roadbook/<id>
+        # Note: If dot_roadbook_dir is Global, and book was not found there, 
+        # it means we are installing a new book into Global (if we have permissions/intent).
+        # However, typically 'open' implies a working session.
+        # If is_global_env is True, we are modifying global state.
+        
+        target_book_dir = dot_roadbook_dir / rb_id
+        
+        print_info(f"[Setup] Initializing roadbook workspace: {target_book_dir}")
         try:
-            shutil.copytree(book.path.parent, workspace_roadbook_dir, dirs_exist_ok=True)
+            shutil.copytree(book.path.parent, target_book_dir, dirs_exist_ok=True)
             print_info(f"[Setup] Copied roadbook to workspace.")
+            book_dir = target_book_dir
         except Exception as e:
             print_error(f"Failed to copy roadbook to workspace: {e}")
             return
 
-    # Use the workspace copy as the book_dir
-    book_dir = workspace_roadbook_dir
-    
     # Check Script State (4 States)
     script_path = RuntimeManager.find_script(rb_id, book_dir=book_dir)
-    
+    _handle_script_state(rb_id, book_dir, script_path)
+
+def _handle_script_state(rb_id: str, book_dir: Path, script_path: Optional[Path]):
+    """Extracted logic for handling script state after roadbook dir is determined."""
     if not script_path:
         # State 1: No Script (Generate Scaffold)
         print_info(f"[Status] No automation script found for '{rb_id}'.")
@@ -318,39 +423,62 @@ def start_session(args):
                 print_info(f"  -> Please implement automation logic.")
                 print_info(f"  -> Agent Hint: 已为您生成了脚本脚手架 `scripts/script{ext}`。当前处于语义引导模式，请阅读路书内容，并开始编写自动化逻辑。")
                 
+# Replaced original logic block
+
+
                 script_path = script_file
                 
             except Exception as e:
                 print_error(f"Failed to generate scaffold: {e}")
-                return
-    else:
-        # Script exists, check if scaffold or modified
-        is_scaffold = False
-        try:
-            with open(script_path, "r", encoding="utf-8") as f:
-                content = f.read()
-                if "TODO: Implement your automation logic here" in content:
-                    is_scaffold = True
-        except Exception:
-            pass 
-            
-        last_run = RuntimeManager.get_last_run(rb_id, book_dir=book_dir)
-        has_success_run = last_run and last_run.get("status") == "success"
-        
-        if is_scaffold:
-            # State 2: Scaffold Only
-            print_info(f"[Status] Script exists but appears to be unmodified scaffold.")
-            print_info(f"  -> Agent Hint: 检测到脚本 `scripts/{script_path.name}` 存在，但似乎仍为初始脚手架状态（未检测到有效逻辑实现）。请基于此文件开始编写代码。")
-        elif not has_success_run:
-            # State 3: In Progress
-            print_info(f"[Status] Script exists with modifications but no successful run history found.")
-            print_info(f"  -> Agent Hint: 检测到脚本 `scripts/{script_path.name}` 已有修改，但尚未发现成功的运行记录。请继续完善代码或进行调试验证。")
-        else:
-            # State 4: Verified
-            print_info(f"[Status] Script exists and has been successfully verified.")
-            print_info(f"  -> Agent Hint: 检测到该脚本 `scripts/{script_path.name}` 已有历史成功运行记录。您可以：1. 直接运行脚本：使用 `roadbook run {rb_id}`。 2. 继续修改：在当前模式下编辑并调试代码。")
 
-    run_id = RuntimeManager.create_run(rb_id, book_dir=book_dir)
+    if script_path:
+        print_info("[Status] Script ready. Starting semantic guide...")
+        # TODO: Implement actual semantic guide interaction here
+        # For now just inform user
+        pass
+
+def get_python_template(rb_id):
+    return f"""import os
+from roadbook.runtime import Step, log_result
+
+# Roadbook: {rb_id}
+# Auto-generated scaffold
+
+def main():
+    # Example Step
+    with Step("Initialize"):
+        print("Starting automation...")
+        
+    # TODO: Implement your logic here
+    
+if __name__ == "__main__":
+    main()
+"""
+
+def get_js_template(rb_id):
+    return f"""// Roadbook: {rb_id}
+// Auto-generated scaffold
+
+async function main() {{
+    console.log("Starting automation...");
+    // TODO: Implement your logic here
+}}
+
+main().catch(console.error);
+"""
+
+def get_ts_template(rb_id):
+    return f"""// Roadbook: {rb_id}
+// Auto-generated scaffold
+
+async function main() {{
+    console.log("Starting automation...");
+    // TODO: Implement your logic here
+}}
+
+main().catch(console.error);
+"""
+
 # Define templates
 SCAFFOLD_VERSION = "1.1.0"
 
