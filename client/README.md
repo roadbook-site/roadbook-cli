@@ -19,6 +19,19 @@ Install Roadbook via pip:
 pip install roadbook
 ```
 
+## 🛠️ Development Setup
+
+If you want to contribute or develop locally:
+
+1. Clone the repository
+2. Install in editable mode:
+
+```bash
+pip install -e .
+```
+
+This will install dependencies and link the `roadbook` command to your local source code.
+
 ## 🏁 Quick Start
 
 1. **Start Chrome with Remote Debugging Enabled**

@@ -5,3 +5,4 @@ from . import script
 from . import run
 from . import editor
 from . import doctor
+from . import initialize

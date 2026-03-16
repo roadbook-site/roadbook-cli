@@ -31,7 +31,7 @@ This skill helps you create a new Roadbook by exploring a website and recording 
 
 4.  **Save the Roadbook**:
     - Generate a valid Roadbook YAML/Markdown content.
-    - Ask the user where to save it, or default to `~/.roadbook/books/<new_id>/roadbook.md`.
+    - Ask the user where to save it, or default to `~/.roadbook/<new_id>/roadbook.md`.
     - Use `write` tool to save the file.
 
 5.  **Verify**:

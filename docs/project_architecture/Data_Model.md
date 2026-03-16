@@ -9,26 +9,24 @@
 
 ```text
 ~/.roadbook/
-├── config.yaml                 # 用户全局配置
-├── books/                      # 本地路书库 (Local Registry)
-│   ├── index.json              # 路书索引文件
-│   └── <book_dir>/             # 路书包目录 (自包含工作区，目录名不强制等于 roadbook_id)
-│       ├── roadbook.md         # [Source] 路书协议文件
-│       ├── README.md           # [Source] 说明文档
-│       ├── assets/             # [Source] 图片/附件资源
-│       ├── scripts/            # 编译后的脚本缓存 (可执行)
-│       │   ├── <hash>.py
-│       │   └── <hash>.js
-│       ├── output_<date>/      # [Output] 执行产物 (下载文件、截图等)，位于 runtime 同级
-│       └── runtime/            # [Runtime] 运行时数据 (状态、日志)
-│           └── runs/           # 运行历史 (进化素材)
-│               ├── last_run.json   # 最近一次运行结果 (System Metadata Copy)
-│               └── <run_id>/   # 单次运行完整记录
-│                   ├── run_meta.json # [System] 系统元数据 (Status, Time, Logs)
-│                   ├── artifacts/    # [User] 脚本生成的产物
-│                   │   ├── outputs.json # [User] 结构化业务结果
-│                   │   └── ...
-│                   └── screenshots/
+├── .core/                  # 系统文件 (System files)
+│   └── config.yaml         # CLI 用户配置
+└── <book_dir>/             # 路书包目录 (自包含工作区，目录名不强制等于 roadbook_id)
+    ├── roadbook.md         # [Source] 路书本体
+    ├── README.md           # [Source] 说明文档
+    ├── assets/             # [Source] 图片/附件资源
+    ├── scripts/            # 路书对应的可执行脚本
+    │   ├── <hash>.py
+    │   └── <hash>.js
+    └── runtime/            # [Runtime] 运行时数据 (状态、日志)
+        └── runs/           # 运行历史 (进化素材)
+            ├── last_run.json   # 最近一次运行结果 (System Metadata Copy)
+            └── <run_id>/       # 单次运行完整记录
+                ├── run_meta.json # [System] 系统元数据 (Status, Time, Logs)
+                ├── artifacts/    # [User] 脚本生成的产物
+                │   ├── outputs.json # [User] 结构化业务结果
+                │   └── ...
+                └── screenshots/
 ```
 
 这种结构使得 `books/<book_dir>/` 成为一个完整的“进化单元”。Agent 可以直接读取 `runtime/runs/` 中的历史数据来优化 `roadbook.md`，而无需跨目录寻找素材。

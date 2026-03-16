@@ -272,7 +272,7 @@ def run_book(args):
         print_info("[*] Switching to Semantic Guide Mode to help you build the script...")
         start_session(args)
 
-from .core.config import ROADBOOK_DIR
+from roadbook.core.config import ROADBOOK_DIR
 
 def find_workspace_dot_roadbook(start_path: Path) -> Path:
     """
@@ -390,7 +390,7 @@ def _handle_script_state(rb_id: str, book_dir: Path, script_path: Optional[Path]
         print_info(f"[Status] No automation script found for '{rb_id}'.")
         
         # Load config for defaults
-        from .core.config import load_config
+        from roadbook.core.config import load_config
         config = load_config()
         scaffold_defaults = config.get("scaffold_defaults", {})
         default_lang = scaffold_defaults.get("language", "python")

@@ -56,7 +56,7 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
     - **Scripts**: Located in `.roadbook/<roadbook_id>/scripts/script.py`.
     - **Runtime Artifacts**: Located in `.roadbook/<roadbook_id>/runtime/`.
 - **Auto-Scaffolding**: When `roadbook open <id>` is executed:
-    1.  The system copies the roadbook from the global library to `.roadbook/<id>/` in the current workspace.
+    1.  The system copies the roadbook from the global library (`~/.roadbook/<id>/`) to `.roadbook/<id>/` in the current workspace.
     2.  It scaffolds a template script in `.roadbook/<id>/scripts/script.py`.
     3.  **Edit this file directly** to implement automation logic.
 - **Output Management**:

@@ -147,7 +147,7 @@ server/
 1.  **CLI**: 用户执行 `roadbook install rb-amazon-checkout`。
 2.  **CLI**: 发送 `GET /api/v1/roadbooks/rb-amazon-checkout/download`。
 3.  **Server**: 返回 Zip 文件流。
-4.  **CLI**: 解压至 `~/.roadbook/books/rb-amazon-checkout/`。
+4.  **CLI**: 解压至 `~/.roadbook/rb-amazon-checkout/`。
 
 ### 5.3 搜索流程 (Search)
 1.  **CLI**: 用户执行 `roadbook search amazon`。

@@ -105,7 +105,7 @@ graph TD
 *   **场景一：无路书 (Cold Start)**
     *   Agent 搜索无果 -> 启动探索模式 -> 记录操作 -> 保存为新路书。
 *   **场景二：有路书，无脚本 (First Run / Update)**
-    *   Agent 读取路书协议 -> 视觉语义定位 -> 执行操作 -> 生成缓存脚本。
+    *   Agent 读取路书本体 -> 视觉语义定位 -> 执行操作 -> 生成缓存脚本。
 *   **场景三：有路书，有脚本 (Fast Path)**
     *   直接运行缓存脚本 -> 毫秒级响应，零 Token 消耗。
 
@@ -140,15 +140,14 @@ CLI 将所有运行时数据与状态管理在 `~/.roadbook/` 目录下，实现
 
 ```text
 ~/.roadbook/
-├── books/                  # 本地路书库 (Local Registry)
-│   ├── index.json          # 索引文件
-│   └── rb-amazon-v1/       # 路书包 (完全内聚单元)
-│       ├── roadbook.md     # [Source] 协议本体
-│       ├── assets/         # [Source] 图片资源
-│       ├── scripts/        # [Runtime] 编译后的脚本缓存
-│       └── runtime/        # [Runtime] 运行时数据
-│           └── runs/       # 运行记录 (进化素材)
-└── config.yaml             # CLI 用户配置
+├── .core/                  # 系统文件 (System files)
+│   └── config.yaml         # CLI 用户配置
+└── rb-amazon-v1/           # 路书包 (直接位于根目录)
+    ├── roadbook.md         # [Source] 路书本体
+    ├── assets/             # [Source] 图片资源
+    ├── scripts/            # [Script] 可执行脚本
+    └── runtime/            # [Runtime] 运行时数据
+        └── runs/           # 运行记录 (进化素材)
 ```
 
 这种结构强调了路书的**自进化特性**：`runtime` 中的数据不仅是执行结果，更是 Agent 优化 `roadbook.md` 的重要素材。

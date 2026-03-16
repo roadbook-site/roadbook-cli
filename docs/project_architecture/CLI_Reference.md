@@ -25,8 +25,8 @@ CLI 旨在提供“路书库管理”与“运行时可观测性”，核心执�
 ### 2.1 列出路书 (`list`)
 
 列出已安装的路书。支持从以下位置加载：
-1.  **当前工作区 (Workspace)**: `./.roadbook/books/` (优先)
-2.  **全局库 (Global)**: `~/.roadbook/books/`
+1.  **当前工作区 (Workspace)**: `./.roadbook/` (优先)
+2.  **全局库 (Global)**: `~/.roadbook/`
 
 *   **Usage**: `roadbook list [options]`
 *   **Options**:

@@ -1,6 +1,6 @@
-from .server.app import start_server
-from .core.config import get_books_dir, get_roadbook_dir
-from .core.roadbook import RoadbookManager
+from roadbook.server.app import start_server
+from roadbook.core.config import get_books_dir, get_roadbook_dir
+from roadbook.core.roadbook import RoadbookManager
 import webbrowser
 import threading
 import time
@@ -19,11 +19,32 @@ def start_editor(args):
         if not os.path.isabs(work_dir):
             work_dir = os.path.abspath(work_dir)
     else:
-        # Default to ~/.roadbook/books
-        work_dir = str(get_books_dir())
-        if not Path(work_dir).exists():
-             # If books dir doesn't exist, fallback to roadbook home
-             work_dir = str(get_roadbook_dir())
+        # Determine working directory based on priority:
+        # 1. Local .roadbook in current directory
+        # 2. Global ~/.roadbook directory
+        
+        local_roadbook = Path.cwd() / ".roadbook"
+        global_roadbook = get_books_dir()
+        
+        # Default to global
+        work_dir = str(global_roadbook)
+        
+        if args.id:
+            # If ID provided, try to find it specifically
+            # Check local first
+            if (local_roadbook / args.id).exists() or (local_roadbook / f"{args.id}.md").exists():
+                work_dir = str(local_roadbook)
+            # Check global next
+            elif (global_roadbook / args.id).exists() or (global_roadbook / f"{args.id}.md").exists():
+                work_dir = str(global_roadbook)
+            # If not found, check which directory actually exists and prefer local
+            elif local_roadbook.exists():
+                work_dir = str(local_roadbook)
+        else:
+            # No ID provided, prefer local if it exists
+            if local_roadbook.exists():
+                work_dir = str(local_roadbook)
+
              
     # Ensure work_dir exists
     Path(work_dir).mkdir(parents=True, exist_ok=True)

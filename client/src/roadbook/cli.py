@@ -6,7 +6,7 @@ import warnings
 warnings.filterwarnings("ignore", message="Unable to find acceptable character detection dependency")
 
 from .core.config import ensure_roadbook_dir
-from .commands import library, search, executor, script, run, editor, auth, remote, config, doctor
+from .commands import library, search, executor, script, run, editor, auth, remote, config, doctor, initialize
 
 class RichHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom help formatter to display commands by category."""
@@ -119,8 +119,17 @@ Command Categories:
     edit_parser.add_argument("--dir", type=str, default=None, help="Directory to serve roadbooks from (default: ~/.roadbook/books)")
     edit_parser.set_defaults(func=editor.start_editor)
 
+    # --- Group: Develop ---
+    # Command: init
+    init_parser = subparsers.add_parser("init", help="Initialize a new roadbook scaffold")
+    init_parser.add_argument("name", help="Name of the roadbook")
+    init_parser.add_argument("--description", "-d", help="Optional description of the roadbook", default="")
+    init_parser.add_argument("--goal", "-g", help="Optional goal for autonomous exploration", default="")
+    init_parser.add_argument("--edit", "-e", help="Immediately open in editor after initialization", action="store_true")
+    init_parser.set_defaults(func=initialize.init_book)
+
     # Command: script
-    script_parser = subparsers.add_parser("script", help="Manage scripts")
+    script_parser = subparsers.add_parser("script", help="Manage local scripts")
     script_subparsers = script_parser.add_subparsers(dest="subcommand", help="Script subcommands")
     
     # script ls

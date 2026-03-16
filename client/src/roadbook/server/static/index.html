@@ -13,6 +13,8 @@
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Fabric.js for Image Annotation -->
+    <script src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></script>
     
     <style>
         /* Roadbook Theme Colors */
@@ -126,7 +128,7 @@
                 'reference_image': 'Reference Image (Optional)',
                 'uploading': 'Uploading...',
                 'paste_placeholder': 'Support Markdown or Ctrl+V to paste image',
-                'paste_hint': 'Support Ctrl+V / Cmd+V to paste clipboard image.',
+                'paste_hint': 'Support Ctrl+V / Cmd+V to paste clipboard image, then hover to annotate.',
                 'click_to_zoom': 'Click to zoom',
                 'close_preview': 'Close Preview (Esc)',
                 'action_steps': 'Action Steps',
@@ -139,6 +141,19 @@
                 'image_upload_failed': 'Image upload failed: ',
                 'drag_to_sort': 'Drag to sort',
                 'language': 'Language',
+                'annotate': 'Annotate',
+                'tool_pencil': 'Pencil',
+                'tool_arrow': 'Arrow',
+                'tool_rect': 'Rectangle',
+                'tool_circle': 'Circle',
+                'tool_text': 'Text',
+                'tool_clear': 'Clear',
+                'tool_undo': 'Undo',
+                'color_red': 'Red',
+                'color_yellow': 'Yellow',
+                'color_blue': 'Blue',
+                'save_annotation': 'Save Annotation',
+                'annotation_saved': 'Annotation saved successfully',
             },
             'zh': {
                 'title': 'Roadbook Explorer',
@@ -172,7 +187,7 @@
                 'reference_image': '参考图片 (可选)',
                 'uploading': '上传中...',
                 'paste_placeholder': '支持 Markdown 语法或直接在此处 Ctrl+V 粘贴图片',
-                'paste_hint': '支持直接按 Ctrl+V / Cmd+V 粘贴剪贴板图片。',
+                'paste_hint': '支持直接按 Ctrl+V / Cmd+V 粘贴剪贴板图片，鼠标悬停后可进行标注。',
                 'click_to_zoom': '点击放大预览',
                 'close_preview': '关闭预览 (Esc)',
                 'action_steps': '操作步骤',
@@ -185,6 +200,19 @@
                 'image_upload_failed': '图片上传失败: ',
                 'drag_to_sort': '拖动排序',
                 'language': '语言',
+                'annotate': '标注',
+                'tool_pencil': '画笔',
+                'tool_arrow': '箭头',
+                'tool_rect': '矩形',
+                'tool_circle': '圆形',
+                'tool_text': '文字',
+                'tool_clear': '清空',
+                'tool_undo': '撤销',
+                'color_red': '红色',
+                'color_yellow': '黄色',
+                'color_blue': '蓝色',
+                'save_annotation': '保存标注',
+                'annotation_saved': '标注已保存',
             }
         };
 
@@ -540,6 +568,7 @@
             const [dragOverIdx, setDragOverIdx] = useState(null);
             const [uploadingImage, setUploadingImage] = useState(false);
             const [showImageModal, setShowImageModal] = useState(false);
+            const [showAnnotator, setShowAnnotator] = useState(false);
 
             useEffect(() => {
                 const handleKeyDown = (e) => {
@@ -777,7 +806,7 @@
                                         <p className="text-xs text-gray-400">{t('paste_hint')}</p>
                                     </div>
                                     {previewUrl && (
-                                        <div className="w-72 bg-white rounded overflow-hidden relative group-image border border-gray-300 shadow-sm transition-all hover:shadow-md">
+                                        <div className="w-72 bg-white rounded overflow-hidden relative border border-gray-300 shadow-sm transition-all hover:shadow-md group">
                                             <img 
                                                 src={previewUrl} 
                                                 className="w-full h-auto object-contain cursor-zoom-in"
@@ -785,10 +814,39 @@
                                                 onClick={() => setShowImageModal(true)}
                                                 title={t('click_to_zoom')}
                                             />
+                                            {/* Annotate Button Overlay */}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setShowAnnotator(true); }}
+                                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-black/70 text-white p-1.5 rounded backdrop-blur-sm shadow-sm"
+                                                title={t('annotate')}
+                                            >
+                                                <i className="ph ph-pencil-simple text-lg"></i>
+                                            </button>
                                         </div>
                                     )}
                                 </div>
                             </div>
+                            
+                            {/* Annotator Modal */}
+                            {showAnnotator && previewUrl && (
+                                <ImageAnnotator 
+                                    imageUrl={previewUrl}
+                                    t={t}
+                                    onClose={() => setShowAnnotator(false)}
+                                    onSave={async (file) => {
+                                        setUploadingImage(true);
+                                        try {
+                                            const res = await api.upload(file, currentFile);
+                                            updateField('reference', `![Annotated](${res.url})`);
+                                            setShowAnnotator(false);
+                                        } catch (err) {
+                                            alert(t('image_upload_failed') + err.message);
+                                        } finally {
+                                            setUploadingImage(false);
+                                        }
+                                    }}
+                                />
+                            )}
 
                             {/* Fullscreen Image Modal */}
                             {showImageModal && previewUrl && (
@@ -904,6 +962,281 @@
                         </button>
                     </div>
                 </div>
+            );
+        }
+
+        function ImageAnnotator({ imageUrl, onSave, onClose, t }) {
+            const canvasEl = useRef(null);
+            const fabricCanvas = useRef(null);
+            const [tool, setTool] = useState('select'); 
+            const [color, setColor] = useState('#ef4444');
+            const [isSaving, setIsSaving] = useState(false);
+            const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+            
+            // Undo History
+            const history = useRef([]);
+            const historyProcessing = useRef(false);
+
+            // Initialize Fabric
+            useEffect(() => {
+                if (!canvasEl.current || !window.fabric) return;
+                
+                const canvas = new fabric.Canvas(canvasEl.current, {
+                    selection: true,
+                    isDrawingMode: false
+                });
+                fabricCanvas.current = canvas;
+                
+                // History Logic
+                const saveHistory = () => {
+                    if (historyProcessing.current) return;
+                    const json = JSON.stringify(canvas.toJSON());
+                    history.current.push(json);
+                    if (history.current.length > 20) history.current.shift();
+                };
+
+                canvas.on('object:added', saveHistory);
+                canvas.on('object:modified', saveHistory);
+                canvas.on('object:removed', saveHistory);
+                
+                // Load Image
+                fabric.Image.fromURL(imageUrl, (img) => {
+                    if(!img) return;
+                    
+                    // Fit image to screen (leave space for toolbar)
+                    const maxW = window.innerWidth - 100;
+                    const maxH = window.innerHeight - 150;
+                    
+                    let scale = 1;
+                    if (img.width > maxW || img.height > maxH) {
+                        scale = Math.min(maxW / img.width, maxH / img.height);
+                    }
+                    
+                    const width = img.width * scale;
+                    const height = img.height * scale;
+                    
+                    setCanvasSize({ width, height });
+                    canvas.setWidth(width);
+                    canvas.setHeight(height);
+                    
+                    // Set image as background
+                    canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+                        scaleX: scale,
+                        scaleY: scale
+                    });
+                    
+                    // Save initial state
+                    saveHistory();
+                }, { crossOrigin: 'anonymous' });
+
+                return () => {
+                    canvas.dispose();
+                };
+            }, [imageUrl]);
+            
+            // Tool Switching logic
+            useEffect(() => {
+                const canvas = fabricCanvas.current;
+                if (!canvas) return;
+                
+                canvas.isDrawingMode = (tool === 'pencil');
+                if (tool === 'pencil') {
+                    canvas.freeDrawingBrush.color = color;
+                    canvas.freeDrawingBrush.width = 5;
+                }
+            }, [tool, color]);
+
+            const undo = () => {
+                const canvas = fabricCanvas.current;
+                if (!canvas || history.current.length <= 1) return;
+                
+                historyProcessing.current = true;
+                history.current.pop(); // Remove current state
+                const prevState = history.current[history.current.length - 1];
+                
+                canvas.loadFromJSON(prevState, () => {
+                    canvas.renderAll();
+                    historyProcessing.current = false;
+                });
+            };
+            
+            const addArrow = () => {
+                const canvas = fabricCanvas.current;
+                const triangle = new fabric.Triangle({
+                    width: 20, height: 20, fill: color, left: 50, top: 0, angle: 90, originX: 'center', originY: 'center'
+                });
+                const line = new fabric.Rect({
+                    left: 0, top: 0, width: 100, height: 5, fill: color, originX: 'center', originY: 'center'
+                });
+                const group = new fabric.Group([line, triangle], {
+                    left: canvas.width / 2, top: canvas.height / 2, angle: 0
+                });
+                canvas.add(group);
+                canvas.setActiveObject(group);
+                setTool('select');
+            };
+
+            const addRect = () => {
+                const canvas = fabricCanvas.current;
+                const rect = new fabric.Rect({
+                    left: canvas.width / 2, top: canvas.height / 2,
+                    width: 100, height: 100,
+                    fill: 'transparent', stroke: color, strokeWidth: 5,
+                    originX: 'center', originY: 'center'
+                });
+                canvas.add(rect);
+                canvas.setActiveObject(rect);
+                setTool('select');
+            };
+
+            const addCircle = () => {
+                const canvas = fabricCanvas.current;
+                const circle = new fabric.Circle({
+                    left: canvas.width / 2, top: canvas.height / 2,
+                    radius: 50,
+                    fill: 'transparent', stroke: color, strokeWidth: 5,
+                    originX: 'center', originY: 'center'
+                });
+                canvas.add(circle);
+                canvas.setActiveObject(circle);
+                setTool('select');
+            };
+            
+            const addText = () => {
+                const canvas = fabricCanvas.current;
+                const text = new fabric.IText('Text', {
+                    left: canvas.width / 2, top: canvas.height / 2,
+                    fontFamily: 'arial', fill: color, fontSize: 24,
+                    originX: 'center', originY: 'center'
+                });
+                canvas.add(text);
+                canvas.setActiveObject(text);
+                setTool('select');
+            };
+
+            const deleteSelected = () => {
+                 const canvas = fabricCanvas.current;
+                 const active = canvas.getActiveObject();
+                 if (active) canvas.remove(active);
+            }
+            
+            useEffect(() => {
+                const handleKey = (e) => {
+                    if (e.key === 'Delete' || e.key === 'Backspace') {
+                        // Check if we are editing text
+                        const canvas = fabricCanvas.current;
+                        if (canvas && canvas.getActiveObject() && !canvas.getActiveObject().isEditing) {
+                             deleteSelected();
+                        }
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                        e.preventDefault();
+                        undo();
+                    }
+                };
+                window.addEventListener('keydown', handleKey);
+                return () => window.removeEventListener('keydown', handleKey);
+            }, []);
+
+            const save = () => {
+                if (!fabricCanvas.current) return;
+                setIsSaving(true);
+                // Reset zoom/pan before saving to get full image? 
+                // Currently we fit image to canvas, so toDataURL gets what we see.
+                // But the original image might be larger. 
+                // For simplicity, we save at current canvas resolution.
+                const dataURL = fabricCanvas.current.toDataURL({ format: 'png', quality: 1 });
+                
+                fetch(dataURL)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], "annotated.png", { type: "image/png" });
+                    onSave(file);
+                    setIsSaving(false);
+                });
+            };
+
+            return (
+                <div className="fixed inset-0 z-[200] bg-[#2d2a26] flex flex-col">
+                    {/* Toolbar */}
+                    <div className="h-16 bg-[#1a1816] px-4 flex items-center justify-between shrink-0">
+                        <div className="flex items-center space-x-4">
+                            <button onClick={onClose} className="text-gray-400 hover:text-white px-3 py-1 rounded">
+                                <i className="ph ph-x text-xl"></i>
+                            </button>
+                            <div className="h-6 w-px bg-gray-700"></div>
+                            
+                            {/* Tools */}
+                            <div className="flex bg-gray-800 rounded-lg p-1 space-x-1">
+                                <ToolBtn icon="ph-cursor" active={tool==='select'} onClick={() => setTool('select')} title="Select" />
+                                <ToolBtn icon="ph-pencil-simple" active={tool==='pencil'} onClick={() => setTool('pencil')} title={t('tool_pencil')} />
+                                <ToolBtn icon="ph-arrow-right" active={tool==='arrow'} onClick={() => { addArrow(); }} title={t('tool_arrow')} />
+                                <ToolBtn icon="ph-square" active={tool==='rect'} onClick={() => { addRect(); }} title={t('tool_rect')} />
+                                <ToolBtn icon="ph-circle" active={tool==='circle'} onClick={() => { addCircle(); }} title={t('tool_circle')} />
+                                <ToolBtn icon="ph-text-t" active={tool==='text'} onClick={() => { addText(); }} title={t('tool_text')} />
+                            </div>
+
+                            {/* Colors */}
+                            <div className="flex bg-gray-800 rounded-lg p-1 space-x-1">
+                                <ColorBtn color="#ef4444" active={color==='#ef4444'} onClick={() => setColor('#ef4444')} title={t('color_red')} />
+                                <ColorBtn color="#eab308" active={color==='#eab308'} onClick={() => setColor('#eab308')} title={t('color_yellow')} />
+                                <ColorBtn color="#3b82f6" active={color==='#3b82f6'} onClick={() => setColor('#3b82f6')} title={t('color_blue')} />
+                            </div>
+                            
+                            <div className="flex bg-gray-800 rounded-lg p-1 space-x-1">
+                                <button onClick={undo} className="text-gray-400 hover:text-white px-2 rounded hover:bg-gray-700" title={t('tool_undo')}>
+                                    <i className="ph ph-arrow-u-up-left text-xl"></i>
+                                </button>
+                                <button onClick={deleteSelected} className="text-gray-400 hover:text-red-500 px-2 rounded hover:bg-gray-700" title="Delete Selected">
+                                    <i className="ph ph-trash text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-4">
+                            <button 
+                                onClick={save} 
+                                disabled={isSaving}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 disabled:opacity-50"
+                            >
+                                {isSaving && <i className="ph ph-spinner animate-spin"></i>}
+                                <span>{t('save_annotation')}</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {/* Canvas Container */}
+                    <div className="flex-1 overflow-auto flex items-center justify-center bg-[#2d2a26] p-4">
+                        <div className="bg-white shadow-2xl">
+                            <canvas ref={canvasEl} width={canvasSize.width} height={canvasSize.height} />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function ToolBtn({ icon, active, onClick, title }) {
+            return (
+                <button 
+                    onClick={onClick}
+                    className={`p-2 rounded transition-colors ${active ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                    title={title}
+                >
+                    <i className={`ph ${icon} text-xl`}></i>
+                </button>
+            );
+        }
+
+        function ColorBtn({ color, active, onClick, title }) {
+            return (
+                <button 
+                    onClick={onClick}
+                    className={`w-8 h-8 rounded flex items-center justify-center transition-transform ${active ? 'scale-110 ring-2 ring-white' : 'hover:scale-105'}`}
+                    style={{ backgroundColor: color }}
+                    title={title}
+                >
+                    {active && <i className="ph ph-check text-white text-xs mix-blend-difference"></i>}
+                </button>
             );
         }
 

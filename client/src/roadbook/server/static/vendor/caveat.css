@@ -1,0 +1,14 @@
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./Caveat-6872665595262570962.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./Caveat-3408802032510572469.ttf') format('truetype');
+}
