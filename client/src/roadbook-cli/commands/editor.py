@@ -1,6 +1,6 @@
-from roadbook.server.app import start_server
-from roadbook.core.config import get_books_dir, get_roadbook_dir
-from roadbook.core.roadbook import RoadbookManager
+from .server.app import start_server
+from .core.config import get_books_dir, get_roadbook_dir
+from .core.roadbook import RoadbookManager
 import webbrowser
 import threading
 import time

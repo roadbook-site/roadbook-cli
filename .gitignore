@@ -56,7 +56,6 @@ out.txt
 server/storage/*.zip
 test.txt
 test_e2e_remote.py
-.trae/
 run_meta.json
 outputs/
 node_modules/
