@@ -1,6 +1,6 @@
 import json
 import yaml
-from ..core.config import load_config, load_user_config, save_user_config, DEFAULT_CONFIG
+from ..core.config import load_config, load_user_config, save_user_config, load_project_config, save_project_config, DEFAULT_CONFIG, PROJECT_CONFIG_FILE, USER_CONFIG_FILE
 from ..utils.output import print_info, print_error, print_success
 
 def _get_nested_value(data, path):
@@ -54,7 +54,11 @@ def config_list(args):
     """List all configurations."""
     config = load_config()
     print_info("Current Configuration (Merged):")
+    if PROJECT_CONFIG_FILE.exists():
+        print_info(f" - Includes project config: {PROJECT_CONFIG_FILE}")
+    print_info(f" - Includes global config: {USER_CONFIG_FILE}\n")
     print(yaml.dump(config, default_flow_style=False))
+    print_info("\nTip: Run `roadbook doctor` to verify if the current configuration is valid.")
 
 def config_get(args):
     """Get a configuration value."""
@@ -69,15 +73,36 @@ def config_get(args):
         print_error(f"Key '{args.key}' not found.")
 
 def config_set(args):
-    """Set a user configuration value."""
-    user_config = load_user_config()
+    """Set a configuration value."""
+    is_global = getattr(args, 'global_config', False)
     
-    # Initialize with default structure if empty
-    if not user_config:
-        user_config = {}
-
-    if _set_nested_value(user_config, args.key, args.value):
-        save_user_config(user_config)
-        print_success(f"Updated '{args.key}' to '{args.value}' in user config.")
+    # If -g is not passed, check if we are in a project
+    if is_global:
+        target = "global"
+    elif PROJECT_CONFIG_FILE.parent.exists() or PROJECT_CONFIG_FILE.exists():
+        target = "project"
     else:
-        print_error(f"Failed to set '{args.key}'. Path conflict or invalid structure.")
+        target = "global"
+
+    if target == "project":
+        config_data = load_project_config()
+        if not config_data:
+            config_data = {}
+
+        if _set_nested_value(config_data, args.key, args.value):
+            save_project_config(config_data)
+            print_success(f"Updated '{args.key}' to '{args.value}' in project config.")
+            print_info(f"File updated: {PROJECT_CONFIG_FILE}")
+        else:
+            print_error(f"Failed to set '{args.key}'. Path conflict or invalid structure.")
+    else:
+        config_data = load_user_config()
+        if not config_data:
+            config_data = {}
+
+        if _set_nested_value(config_data, args.key, args.value):
+            save_user_config(config_data)
+            print_success(f"Updated '{args.key}' to '{args.value}' in global config.")
+            print_info(f"File updated: {USER_CONFIG_FILE}")
+        else:
+            print_error(f"Failed to set '{args.key}'. Path conflict or invalid structure.")

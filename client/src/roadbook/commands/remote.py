@@ -37,6 +37,19 @@ def push(args):
         return
 
     client = APIClient()
+    if not client.api_key:
+        from ..core.config import get_server_url, set_api_key
+        server_url = get_server_url()
+        print_error("You are not logged in.")
+        print_info(f"Please get your API key from {server_url}/settings/api-keys")
+        api_key = input("Enter your API key: ").strip()
+        if not api_key:
+            print_error("API key is required.")
+            return
+        set_api_key(api_key)
+        client.api_key = api_key
+        client.session.headers.update({"Authorization": f"Bearer {api_key}"})
+
     try:
         # 1. Push Metadata
         print_info(f"Pushing metadata for '{rb_id}'...")

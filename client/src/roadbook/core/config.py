@@ -23,7 +23,7 @@ PROJECT_CONFIG_FILE = Path.cwd() / ".roadbook" / "config.yaml"
 
 DEFAULT_CONFIG = {
     "server_url": "http://localhost:8000",
-    "token": None,
+    "api_key": None,
     "scaffold_defaults": {
         "language": "python",
         "headless": False,
@@ -119,14 +119,21 @@ def save_user_config(config: Dict[str, Any]):
     with open(USER_CONFIG_FILE, "w", encoding="utf-8") as f:
         yaml.dump(config, f, default_flow_style=False)
 
-def get_token():
-    config = load_config()
-    return config.get("token")
+def save_project_config(config: Dict[str, Any]):
+    project_dir = PROJECT_CONFIG_FILE.parent
+    if not project_dir.exists():
+        project_dir.mkdir(parents=True, exist_ok=True)
+    with open(PROJECT_CONFIG_FILE, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, default_flow_style=False)
 
-def set_token(token):
-    # Only update user config for token
+def get_api_key():
+    config = load_config()
+    return config.get("api_key")
+
+def set_api_key(api_key):
+    # Only update user config for api_key
     config = load_user_config()
-    config["token"] = token
+    config["api_key"] = api_key
     save_user_config(config)
 
 def get_server_url():

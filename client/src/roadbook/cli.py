@@ -1,7 +1,12 @@
 import argparse
 import sys
+import warnings
+
+# Suppress requests dependency warning
+warnings.filterwarnings("ignore", message="Unable to find acceptable character detection dependency")
+
 from .core.config import ensure_roadbook_dir
-from .commands import library, search, executor, script, run, editor, auth, remote, config
+from .commands import library, search, executor, script, run, editor, auth, remote, config, doctor
 
 class RichHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom help formatter to display commands by category."""
@@ -18,7 +23,7 @@ Command Categories:
     show      Show details of a roadbook
 
   [Navigate]  Execute and interact with roadbooks
-    open      Start semantic guide mode (Interactive)
+    open      Start semantic guide mode
     run       Execute automation script (Auto-downgrade to semantic mode)
 
   [Observe]   Review execution history and logs
@@ -27,6 +32,9 @@ Command Categories:
   [Develop]   Manage automation scripts
     script    Manage local scripts
     
+  [Diagnose]  System diagnostics
+    doctor    Check environment health and dependencies
+
   [Configure] Manage CLI settings
     config    Get/Set/List configuration values
 
@@ -125,6 +133,11 @@ Command Categories:
     script_clean_parser.add_argument("id", help="Roadbook ID")
     script_clean_parser.set_defaults(func=script.script_clean)
 
+    # --- Group: Diagnose ---
+    # Command: doctor
+    doctor_parser = subparsers.add_parser("doctor", help="Check environment health")
+    doctor_parser.set_defaults(func=doctor.run_doctor)
+
     # --- Group: Configure ---
     # Command: config
     config_parser = subparsers.add_parser("config", help="Manage configuration")
@@ -143,6 +156,7 @@ Command Categories:
     config_set_parser = config_subparsers.add_parser("set", help="Set configuration value")
     config_set_parser.add_argument("key", help="Configuration key")
     config_set_parser.add_argument("value", help="Configuration value")
+    config_set_parser.add_argument("-g", "--global", dest="global_config", action="store_true", help="Set global configuration")
     config_set_parser.set_defaults(func=config.config_set)
 
     # --- Group: Remote ---

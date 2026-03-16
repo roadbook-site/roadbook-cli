@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .base import CRUDBase
@@ -17,6 +17,23 @@ class CRUDRoadbook(CRUDBase[Roadbook, RoadbookCreate, RoadbookUpdate]):
         result = await db.execute(
             select(Roadbook)
             .filter(Roadbook.author == owner_id)
+            .offset(skip)
+            .limit(limit)
+        )
+        return result.scalars().all()
+
+    async def search(
+        self, db: AsyncSession, *, query: str, skip: int = 0, limit: int = 100
+    ) -> List[Roadbook]:
+        result = await db.execute(
+            select(Roadbook)
+            .filter(
+                or_(
+                    Roadbook.name.ilike(f"%{query}%"),
+                    Roadbook.description.ilike(f"%{query}%"),
+                    Roadbook.id.ilike(f"%{query}%")
+                )
+            )
             .offset(skip)
             .limit(limit)
         )

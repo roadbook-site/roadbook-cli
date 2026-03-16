@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     
+    GOOGLE_CLIENT_ID: str = "" # Add your Google Client ID here
+    
     DATABASE_URL: str
     
     STORAGE_DIR: str = "storage"

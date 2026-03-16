@@ -1,3 +1,4 @@
+import os
 import asyncio
 import uuid
 from app.core.db import AsyncSessionLocal
@@ -9,7 +10,7 @@ async def create_initial_user():
         user_in = UserCreate(
             username="admin",
             email="admin@roadbook.com",
-            password="secret_password"
+            password=os.getenv("ADMIN_PASSWORD", "secret_password")
         )
         # Check if exists
         user = await crud.user.get_by_username(db, username=user_in.username)

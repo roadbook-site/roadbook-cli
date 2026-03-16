@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.context import CryptContext
 from .base import CRUDBase
-from ..models.roadbook import User
+from ..models.user import User
 from ..schemas.user import UserCreate, UserUpdate
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")

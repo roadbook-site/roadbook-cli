@@ -1,35 +1,48 @@
-# Roadbook MVP (Minimum Viable Product)
+# Roadbook
 
-本项目旨在验证“基于语义路标和 CDP 控制的非刚性自动化”是否可行。
+**Roadbook** is a semantic-based, non-rigid web automation framework designed to be resilient against UI changes. 
 
-## 📂 项目结构
+Unlike traditional web automation tools that rely on fragile XPath or CSS selectors, Roadbook uses **semantic landmarks** and natural language cues to interact with web pages via the Chrome DevTools Protocol (CDP). This allows your automation scripts (called "roadbooks") to survive layout redesigns and DOM changes.
 
-```text
-roadbook/
-├── docs/                   # 设计文档与技能沉淀
-│   ├── MVP_Design.md       # 核心架构与设计思考
-│   ├── Test_Plan.md        # 测试靶场与实操路线图
-│   └── Skill_Simulator.md  # 路书模拟器技能 (Agent Skill)
-├── library/                # 路书仓库 (YAML Files)
-│   └── quotes_login.yaml   # Hello World 示例
-├── src/                    # 源代码
-│   └── guide.py            # 核心执行引擎 (The Guide/Sherpa)
-└── tests/                  # 测试用例与日志
+## ✨ Key Features
+
+- **Semantic Landmarks**: Target elements intuitively by their roles, names, and visual context (e.g., "the login button" or "the search input") rather than their exact position in the DOM.
+- **Resilient & Non-Rigid**: Capable of adapting to minor webpage updates without breaking your automation pipelines.
+- **Human-in-the-Loop**: Gracefully handle edge cases, CAPTCHAs, or complex scenarios by pausing execution (`wait_for_human`), allowing human intervention, and resuming seamlessly.
+- **CDP Native**: Fast, precise, and reliable browser control powered directly by the Chrome DevTools Protocol.
+
+## 🚀 Installation
+
+Install Roadbook via pip:
+
+```bash
+pip install roadbook
 ```
 
-## 🚀 快速开始
+## 🏁 Quick Start
 
-1. **环境准备**:
-   - 确保安装 `agent-browser` CLI。
-   - 启动 Chrome 调试模式: `chrome.exe --remote-debugging-port=9224`
+1. **Start Chrome with Remote Debugging Enabled**
+   
+   To allow Roadbook to control your browser, launch Chrome with the CDP port open (e.g., port 9224).
+   ```bash
+   # Windows
+   chrome.exe --remote-debugging-port=9224
+   
+   # macOS
+   /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9224
+   ```
 
-2. **运行路书**:
-   - 模拟执行: 使用 `docs/Skill_Simulator.md` 中的 Prompt 让 AI 模拟执行。
-   - 真实执行: `python src/guide.py run library/quotes_login.yaml`
+2. **Run a Roadbook**
 
-## 🎯 核心目标
+   You can execute a Roadbook YAML file directly using the CLI. By default, it will connect to the open CDP port:
 
-验证以下假设：
-1. **语义路标有效性**: 无需 XPath/CSS，仅凭 `landmark` (role/keyword) 定位元素。
-2. **非刚性容错**: 页面结构变化时，路书依然健壮。
-3. **人机协同**: 遇到无法处理的情况，能够优雅挂起 (`wait_for_human`) 并恢复。
+   ```bash
+   roadbook run library/my_first_roadbook.yaml
+   ```
+
+## 🎯 Why Roadbook?
+
+We built Roadbook to address common pitfalls in modern web automation:
+1. **Semantic Effectiveness**: Elements can be reliably located using natural language landmarks instead of rigid code paths.
+2. **High Fault Tolerance**: Automation can remain robust even when underlying HTML structures shift.
+3. **Synergistic Collaboration**: Bots aren't perfect. Graceful failure and manual handoffs ("wait for human" capabilities) are critical for robust long-running automation tasks.

@@ -3,19 +3,24 @@ from typing import Optional
 from uuid import UUID
 
 class UserBase(BaseModel):
-    username: str
     email: EmailStr
+    username: Optional[str] = None
+    full_name: Optional[str] = None
     is_active: bool = True
 
 class UserCreate(UserBase):
-    password: str
+    password: Optional[str] = None
+    provider: Optional[str] = None
+    provider_id: Optional[str] = None
 
 class UserUpdate(UserBase):
     password: Optional[str] = None
+    full_name: Optional[str] = None
 
 class User(UserBase):
     id: UUID
     api_key: Optional[str] = None
+    provider: Optional[str] = None
 
     class Config:
         from_attributes = True

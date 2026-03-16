@@ -1,22 +1,19 @@
 import requests
-from .config import get_token, get_server_url
+from .config import get_api_key, get_server_url
 
 class APIClient:
     def __init__(self):
         self.base_url = get_server_url().rstrip("/")
-        self.token = get_token()
+        self.api_key = get_api_key()
         self.session = requests.Session()
-        if self.token:
-            self.session.headers.update({"Authorization": f"Bearer {self.token}"})
+        if self.api_key:
+            self.session.headers.update({"Authorization": f"Bearer {self.api_key}"})
 
-    def login(self, username, password):
-        url = f"{self.base_url}/api/v1/auth/login/access-token"
-        response = self.session.post(url, data={"username": username, "password": password})
+    def get_me(self):
+        url = f"{self.base_url}/api/v1/auth/me"
+        response = self.session.get(url)
         response.raise_for_status()
-        data = response.json()
-        self.token = data["access_token"]
-        self.session.headers.update({"Authorization": f"Bearer {self.token}"})
-        return self.token
+        return response.json()
 
     def list_roadbooks(self, query=None):
         url = f"{self.base_url}/api/v1/roadbooks/"

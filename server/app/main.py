@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from .core.config import settings
 from .core.db import engine, Base
 from .api.v1.api import api_router
-from .models import roadbook  # Import models to register them with Base
+from . import models  # Import models to register them with Base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,6 +27,12 @@ app = FastAPI(
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/login")
+async def login_page():
+    # Serve our simple website at /login
+    return FileResponse("static/index.html")
 
 @app.get("/")
 async def root():

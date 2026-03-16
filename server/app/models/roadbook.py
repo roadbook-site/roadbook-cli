@@ -19,12 +19,3 @@ class Roadbook(Base):
     # Vector embedding for semantic search (e.g. 1536 dimensions for OpenAI ada-002)
     embedding = Column(Vector(1536))
 
-class User(Base):
-    __tablename__ = "users"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    is_active = Column(Boolean, default=True)
-    api_key = Column(String, unique=True, index=True)
