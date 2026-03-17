@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 
 from ..core.roadbook import RoadbookManager
 from ..core.runtime import RuntimeManager
+from ..core.parser import RoadbookParser
 from ..utils.output import print_info, print_error
 
 def check_environment() -> bool:
@@ -395,16 +396,34 @@ def _handle_script_state(rb_id: str, book_dir: Path, script_path: Optional[Path]
         scaffold_defaults = config.get("scaffold_defaults", {})
         default_lang = scaffold_defaults.get("language", "python")
         
+        # Read and parse roadbook content
+        roadbook_path = book_dir / "roadbook.md"
+        book_content = ""
+        roadbook_model = None
+        if roadbook_path.exists():
+            try:
+                with open(roadbook_path, "r", encoding="utf-8") as f:
+                    book_content = f.read()
+                
+                # Try to parse into model for structured generation
+                try:
+                    parser = RoadbookParser()
+                    roadbook_model = parser.parse(book_content)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        
         # Determine file extension and template based on language
         if default_lang.lower() in ["node", "nodejs", "javascript", "js"]:
             ext = ".js"
-            template = get_js_template(rb_id)
+            template = get_js_template(rb_id, book_content, roadbook_model)
         elif default_lang.lower() in ["typescript", "ts"]:
             ext = ".ts"
-            template = get_ts_template(rb_id)
+            template = get_ts_template(rb_id, book_content, roadbook_model)
         else:
             ext = ".py"
-            template = get_python_template(rb_id)
+            template = get_python_template(rb_id, book_content, roadbook_model)
 
         # New structure: .roadbook/<id>/scripts/script<ext>
         scripts_dir = book_dir / "scripts"
@@ -437,59 +456,68 @@ def _handle_script_state(rb_id: str, book_dir: Path, script_path: Optional[Path]
         # For now just inform user
         pass
 
-def get_python_template(rb_id):
-    return f"""import os
-from roadbook.runtime import Step, log_result
-
-# Roadbook: {rb_id}
-# Auto-generated scaffold
-
-def main():
-    # Example Step
-    with Step("Initialize"):
-        print("Starting automation...")
-        
-    # TODO: Implement your logic here
-    
-if __name__ == "__main__":
-    main()
-"""
-
-def get_js_template(rb_id):
-    return f"""// Roadbook: {rb_id}
-// Auto-generated scaffold
-
-async function main() {{
-    console.log("Starting automation...");
-    // TODO: Implement your logic here
-}}
-
-main().catch(console.error);
-"""
-
-def get_ts_template(rb_id):
-    return f"""// Roadbook: {rb_id}
-// Auto-generated scaffold
-
-async function main() {{
-    console.log("Starting automation...");
-    // TODO: Implement your logic here
-}}
-
-main().catch(console.error);
-"""
-
 # Define templates
 SCAFFOLD_VERSION = "1.1.0"
 
-def get_python_template(rb_id):
+def get_python_template(rb_id, book_content="", roadbook_model=None):
     import datetime
     date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    
+    commented_content = ""
+    # Only if roadbook_model is NOT provided, use full content dump as header
+    if book_content and not roadbook_model:
+        commented_content = "\\n".join([f"# {line}" for line in book_content.splitlines()])
+
+    # Generate Structured Logic if model is available
+    logic_body = "    # TODO: Implement your automation logic here\\n    pass"
+    if roadbook_model:
+        steps_code = []
+        steps_code.append("    # ==========================================")
+        steps_code.append("    # Structural Guide from Roadbook")
+        steps_code.append("    # ==========================================")
+        
+        # Meta info
+        if roadbook_model.meta:
+            steps_code.append(f"    # Meta: {json.dumps(roadbook_model.meta, ensure_ascii=False)}")
+        
+        steps_code.append("")
+        
+        for sheet in roadbook_model.sheets:
+            steps_code.append(f"    # ----------------------------------------------------------------")
+            steps_code.append(f"    # Sheet: {sheet.title} (ID: {sheet.id})")
+            if sheet.description:
+                desc_lines = sheet.description.splitlines()
+                for d in desc_lines:
+                    steps_code.append(f"    # Description: {d}")
+            if sheet.url:
+                steps_code.append(f"    # URL: {sheet.url}")
+            steps_code.append(f"    # ----------------------------------------------------------------")
+            
+            steps_code.append(f"    with step(\\"{sheet.title}\\"):")
+            if sheet.steps:
+                for s in sheet.steps:
+                    steps_code.append(f"        # {s.original_text or s.action}")
+                steps_code.append("        pass")
+            else:
+                steps_code.append("        pass")
+            steps_code.append("")
+        logic_body = "\\n".join(steps_code)
+
+    content_header = ""
+    if commented_content:
+        content_header = f"""
+# ==============================================================================
+# Roadbook Content
+# ==============================================================================
+{commented_content}
+# ==============================================================================
+"""
+
     return f"""# Roadbook Automation Script for {rb_id}
 # Scaffold Version: {SCAFFOLD_VERSION}
 # Generated at: {date_str}
 # This script was auto-generated by 'roadbook open'.
-
+{content_header}
 import sys
 import json
 import os
@@ -532,23 +560,8 @@ def run(inputs):
     # Initialize structured outputs
     outputs = {{}}
 
-    # TODO: Implement your automation logic here
-    # with sync_playwright() as p:
-    #     with step("Browser Launch"):
-    #         browser = p.chromium.launch(headless=False)
-    #         page = browser.new_page()
-    #     
-    #     with step("Navigate"):
-    #         page.goto("...")
-    #     
-    #     # Example: Save a screenshot
-    #     # with step("Capture"):
-    #     #     page.screenshot(path=OUTPUT_DIR / "screenshot.png")
-    #
-    #     # Example: Set output data
-    #     # outputs["title"] = page.title()
-    #
-    #     browser.close()
+{logic_body}
+
 
     # Save structured outputs to outputs.json
     outputs_file = OUTPUT_DIR / "outputs.json"
@@ -570,13 +583,24 @@ if __name__ == "__main__":
     run(inputs)
 """
 
-def get_js_template(rb_id):
+def get_js_template(rb_id, book_content="", roadbook_model=None):
     import datetime
     date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    
+    commented_content = ""
+    if book_content:
+        commented_content = "\\n".join([f"// {line}" for line in book_content.splitlines()])
+
     return f"""// Roadbook Automation Script for {rb_id}
 // Scaffold Version: {SCAFFOLD_VERSION}
 // Generated at: {date_str}
 // This script was auto-generated by 'roadbook open'.
+
+/* ==============================================================================
+Roadbook Content (Reference)
+============================================================================== */
+{commented_content}
+/* ============================================================================== */
 
 const fs = require('fs');
 const path = require('path');
@@ -671,13 +695,24 @@ def run(inputs):
     # but strictly speaking this file is a module for commands.
     pass
 
-def get_ts_template(rb_id):
+def get_ts_template(rb_id, book_content="", roadbook_model=None):
     import datetime
     date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+
+    commented_content = ""
+    if book_content:
+        commented_content = "\\n".join([f"// {line}" for line in book_content.splitlines()])
+
     return f"""// Roadbook Automation Script for {rb_id}
 // Scaffold Version: {SCAFFOLD_VERSION}
 // Generated at: {date_str}
 // This script was auto-generated by 'roadbook open'.
+
+/* ==============================================================================
+Roadbook Content (Reference)
+============================================================================== */
+{commented_content}
+/* ============================================================================== */
 
 import * as fs from 'fs';
 import * as path from 'path';

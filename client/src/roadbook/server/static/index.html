@@ -154,6 +154,9 @@
                 'color_blue': 'Blue',
                 'save_annotation': 'Save Annotation',
                 'annotation_saved': 'Annotation saved successfully',
+                'inputs': 'Inputs (Run Parameters)',
+                'outputs': 'Outputs (Return Data)',
+                'delete_image': 'Delete Image'
             },
             'zh': {
                 'title': 'Roadbook Explorer',
@@ -213,6 +216,9 @@
                 'color_blue': '蓝色',
                 'save_annotation': '保存标注',
                 'annotation_saved': '标注已保存',
+                'inputs': '输入参数 (Inputs)',
+                'outputs': '输出数据 (Outputs)',
+                'delete_image': '删除图片'
             }
         };
 
@@ -484,6 +490,23 @@
                                             <Field label="Ver" value={roadbook.meta.version} onChange={v => updateMeta('version', v)} required col="col-span-2" />
                                             
                                             <Field label={t('description')} value={roadbook.meta.description} onChange={v => updateMeta('description', v)} col="col-span-12" textarea />
+                                            
+                                            <TextListEditor 
+                                                key={`inputs-${roadbook.meta.id}`}
+                                                label={t('inputs')} 
+                                                value={roadbook.meta.inputs} 
+                                                onChange={v => updateMeta('inputs', v)} 
+                                                col="col-span-12" 
+                                                placeholder="keyword: Search Keyword..."
+                                            />
+                                            <TextListEditor 
+                                                key={`outputs-${roadbook.meta.id}`}
+                                                label={t('outputs')} 
+                                                value={roadbook.meta.outputs} 
+                                                onChange={v => updateMeta('outputs', v)} 
+                                                col="col-span-12"
+                                                placeholder="order_id: The order ID..."
+                                            />
                                         </div>
                                     </div>
 
@@ -558,6 +581,53 @@
                             placeholder={placeholder}
                         />
                     )}
+                </div>
+            );
+        }
+
+        function TextListEditor({ label, value, onChange, col, placeholder }) {
+            const format = (val) => {
+                if (!val) return '';
+                return Object.entries(val).map(([k, v]) => `${k}: ${v}`).join('\n');
+            };
+            
+            const parse = (str) => {
+                const res = {};
+                str.split('\n').forEach(line => {
+                    const idx = line.indexOf(':');
+                    if (idx > 0) {
+                        const k = line.substring(0, idx).trim();
+                        const v = line.substring(idx + 1).trim();
+                        if(k) res[k] = v;
+                    }
+                });
+                return res;
+            };
+
+            const [text, setText] = useState(() => format(value));
+            
+            // Update text if value prop changes significantly (e.g. file switch/undo)
+            // We use a simple check: if formatting the new value results in different text than 
+            // what we have (and what we parsed), maybe we should update.
+            // But to avoid cursor jumping, we usually rely on 'key' prop in parent to reset state on file switch.
+            // For undo/redo, effect dependency is needed. 
+            // Here we just use the Key prop strategy in the parent for file switches.
+            // For safety, we can sync if the value is completely different (e.g. from null to object)
+            
+            return (
+                <div className={`${col || 'col-span-12'}`}>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                        {label}
+                    </label>
+                    <textarea 
+                        value={text} 
+                        onChange={e => {
+                            setText(e.target.value);
+                            onChange(parse(e.target.value));
+                        }}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition-all resize-none h-24 font-mono leading-relaxed placeholder-gray-400"
+                        placeholder={placeholder || "key: description..."}
+                    />
                 </div>
             );
         }
@@ -814,14 +884,23 @@
                                                 onClick={() => setShowImageModal(true)}
                                                 title={t('click_to_zoom')}
                                             />
-                                            {/* Annotate Button Overlay */}
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setShowAnnotator(true); }}
-                                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-black/70 text-white p-1.5 rounded backdrop-blur-sm shadow-sm"
-                                                title={t('annotate')}
-                                            >
-                                                <i className="ph ph-pencil-simple text-lg"></i>
-                                            </button>
+                                            {/* Annotate / Delete Buttons Overlay */}
+                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setShowAnnotator(true); }}
+                                                    className="bg-black/50 hover:bg-black/70 text-white p-1.5 rounded backdrop-blur-sm shadow-sm"
+                                                    title={t('annotate')}
+                                                >
+                                                    <i className="ph ph-pencil-simple text-lg"></i>
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); updateField('reference', ''); }}
+                                                    className="bg-black/50 hover:bg-red-600/80 text-white p-1.5 rounded backdrop-blur-sm shadow-sm"
+                                                    title={t('delete_image')}
+                                                >
+                                                    <i className="ph ph-trash text-lg"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

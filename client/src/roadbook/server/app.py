@@ -9,7 +9,7 @@ from pathlib import Path
 import shutil
 import uvicorn
 
-from .parser import RoadbookParser, RoadbookModel
+from ..core.parser import RoadbookParser, RoadbookModel
 
 app = FastAPI(title="Roadbook Editor API")
 
