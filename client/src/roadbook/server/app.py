@@ -26,6 +26,7 @@ parser = RoadbookParser()
 
 # We will set this when starting the server
 WORK_DIR = Path.cwd()
+MODE = "default"
 
 # Static directory for UI
 STATIC_DIR = Path(__file__).parent / "static"
@@ -40,24 +41,48 @@ async def read_index():
 
 @app.get("/api/roadbooks")
 async def list_roadbooks():
-    """List all roadbook markdown files in the working directory."""
+    """List roadbook.md files with depth limit."""
     files = []
-    # Recursively find .md files but exclude .git, node_modules etc if needed
-    # For now, let's keep it simple: recursive glob
-    for f in WORK_DIR.rglob("*.md"):
-        # Return relative path
+    max_depth = 3
+    target_name = "roadbook.md"
+    
+    # Use os.walk for better control over depth
+    for root, dirs, filenames in os.walk(WORK_DIR):
+        # Calculate depth
         try:
-            rel_path = f.relative_to(WORK_DIR)
-            files.append(str(rel_path).replace("\\", "/"))
-        except:
-            pass
+            rel_dir = Path(root).relative_to(WORK_DIR)
+            depth = len(rel_dir.parts)
+            if str(rel_dir) == ".": depth = 0
+        except ValueError:
+            continue
+
+        if depth >= max_depth:
+            dirs[:] = [] # Stop recursing
+            continue
+            
+        # Ignore hidden directories like .git, .venv, node_modules
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['node_modules', 'venv', '__pycache__']]
+        
+        for filename in filenames:
+            if filename.lower() == target_name:
+                try:
+                    file_path = Path(root) / filename
+                    # Return absolute path
+                    abs_path = file_path.resolve()
+                    files.append(str(abs_path).replace("\\", "/"))
+                except:
+                    pass
             
     return {"files": sorted(files)}
 
 @app.get("/api/roadbooks/{filename:path}")
 async def get_roadbook(filename: str):
     """Get the content of a specific roadbook."""
-    file_path = WORK_DIR / filename
+    # Handle absolute path or relative to WORK_DIR
+    file_path = Path(filename)
+    if not file_path.is_absolute():
+        file_path = WORK_DIR / filename
+        
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     
@@ -73,7 +98,9 @@ async def get_roadbook(filename: str):
 @app.post("/api/roadbooks/{filename:path}")
 async def save_roadbook(filename: str, data: RoadbookModel):
     """Save the roadbook content."""
-    file_path = WORK_DIR / filename
+    file_path = Path(filename)
+    if not file_path.is_absolute():
+        file_path = WORK_DIR / filename
     
     try:
         # Generate markdown content
@@ -93,8 +120,14 @@ async def upload_image(
 ):
     """Upload an image to the assets directory of the specific roadbook."""
     if path:
-        # Resolve the directory of the roadbook
-        roadbook_dir = (WORK_DIR / path).parent
+        # Resolve the directory of the roadbook. 
+        # Path(path) handles absolute paths correctly (ignoring WORK_DIR if absolute)
+        # If relative, it joins with WORK_DIR.
+        roadbook_path = Path(path)
+        if not roadbook_path.is_absolute():
+            roadbook_path = WORK_DIR / path
+            
+        roadbook_dir = roadbook_path.parent
         assets_dir = roadbook_dir / "assets"
     else:
         assets_dir = WORK_DIR / "assets"
@@ -116,7 +149,8 @@ async def get_config():
     """Get server configuration."""
     return {
         "work_dir": str(WORK_DIR),
-        "home_dir": str(Path.home())
+        "home_dir": str(Path.home()),
+        "mode": MODE
     }
 
 @app.post("/api/chdir")
@@ -131,29 +165,42 @@ async def change_dir(data: Dict[str, str]):
         raise HTTPException(status_code=400, detail="Directory does not exist")
         
     global WORK_DIR
-    WORK_DIR = p
-    
-    # Update static mount if assets exist in new dir
-    # Note: Fastapi static files mount is not easily dynamic. 
-    # But since we mounted it at startup, it points to a specific path object.
-    # If we want to support assets in new dir, we might need to recreate the app or mount another path.
-    # For now, let's just update WORK_DIR. The /assets endpoint might still point to old dir 
-    # unless we restart server. 
-    # A workaround is to not use StaticFiles for assets but a custom endpoint that serves from WORK_DIR/assets
+    WORK_DIR = p.resolve()
     
     return {"status": "success", "work_dir": str(WORK_DIR)}
 
-# Custom file serving to support dynamic WORK_DIR and relative paths
+# Custom file serving to support dynamic WORK_DIR and absolute paths
 @app.get("/api/files/{filepath:path}")
 async def get_file(filepath: str):
     try:
         # Resolve to handle '..' in paths safely
-        file_path = (WORK_DIR / filepath).resolve()
+        # If filepath is absolute, (WORK_DIR / filepath) equals filepath (on Windows/Posix).
+        # We need to be careful about what we serve.
+        file_path = Path(filepath)
+        
+        if not file_path.is_absolute():
+            file_path = (WORK_DIR / filepath).resolve()
+        else:
+            file_path = file_path.resolve()
+
         work_dir_resolved = WORK_DIR.resolve()
         
-        # Security check: ensure the resolved path is within WORK_DIR
+        # Security check: ensure the resolved path is within WORK_DIR OR we are in a permissive mode?
+        # Since we changed list_roadbooks to potentially return absolute paths inside subfolders of WORK_DIR,
+        # checking startswith(WORK_DIR) should still pass for those files.
+        # But if the user provides an absolute path to C:\Windows\System32... we probably should block it.
+        # So maintaining the check is safer, assuming list_roadbooks only returns files under WORK_DIR.
+        
         if not str(file_path).startswith(str(work_dir_resolved)):
-            raise HTTPException(status_code=403, detail="Access denied")
+             # Allow if file_path is exactly what we listed?
+             # For now, let's keep the restriction. If list_roadbooks scans WORK_DIR recursively,
+             # all valid roadbooks are inside WORK_DIR.
+             pass
+             # But wait, verify strictness. 
+             # If work_dir is C:\Users\zds\ and file is C:\Users\zds\.roadbook\book.md -> OK.
+             
+        if not str(file_path).startswith(str(work_dir_resolved)):
+             raise HTTPException(status_code=403, detail="Access denied")
             
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
@@ -169,9 +216,10 @@ async def get_asset(filename: str):
         return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="Asset not found")
 
-def start_server(host: str = "127.0.0.1", port: int = 8000, work_dir: str = "."):
-    global WORK_DIR
+def start_server(host: str = "127.0.0.1", port: int = 8000, work_dir: str = ".", mode: str = "default"):
+    global WORK_DIR, MODE
     WORK_DIR = Path(work_dir).resolve()
+    MODE = mode
     
     # We remove the static mount for assets and use the dynamic endpoint above
     # if assets_path.exists():

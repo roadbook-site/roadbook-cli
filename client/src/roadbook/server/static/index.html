@@ -245,7 +245,8 @@
 
         function App() {
             const { lang, setLang, t } = useLanguage();
-            const [config, setConfig] = useState({ work_dir: '' });
+            // config now includes 'mode'
+            const [config, setConfig] = useState({ work_dir: '', mode: '' });
             const [files, setFiles] = useState([]);
             const [currentFile, setCurrentFile] = useState(null);
             const [roadbook, setRoadbook] = useState(null);
@@ -265,7 +266,11 @@
                     setNewDir(cfg.work_dir);
                     loadFiles().then(() => {
                         if (fileToOpen) {
-                            // Decode if needed, though URLSearchParams handles it mostly
+                            // If fileToOpen is a full path (from previous session or explicit URL),
+                            // and listFiles only returns relative paths, we might need to match it.
+                            // But usually listFiles output is what we care about.
+                            // If the server was started with a different root, fileToOpen might be invalid now.
+                            // But assuming the user just clicked a link, it's relative.
                             loadRoadbook(fileToOpen);
                         }
                     });
@@ -379,9 +384,16 @@
                                 </button>
                             </div>
                             
-                            {/* Directory Switcher */}
+                            {/* Directory Switcher / Mode Info */}
                             <div className="mt-4">
-                                <div className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wider">{t('workspace')}</div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">{t('workspace')}</div>
+                                    {config.mode && (
+                                        <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 truncate max-w-[100px]" title={config.mode}>
+                                            {config.mode}
+                                        </span>
+                                    )}
+                                </div>
                                 {editingDir ? (
                                     <div className="flex items-center space-x-1">
                                         <input 
@@ -442,7 +454,11 @@
                                 <h1 className="font-serif font-bold text-xl text-[#2d2a26] flex items-center">
                                     {roadbook ? roadbook.meta.name || t('untitled') : t('welcome')}
                                 </h1>
-                                {currentFile && <div className="text-xs text-gray-400 mt-0.5 font-mono">{currentFile}</div>}
+                                {currentFile && (
+                                    <div className="text-xs text-gray-400 mt-0.5 font-mono" title={currentFile}>
+                                        {currentFile}
+                                    </div>
+                                )}
                             </div>
                             
                             <div className="flex items-center space-x-4">
@@ -781,7 +797,8 @@
                     } else if (extractedUrl.startsWith('/')) {
                         previewUrl = extractedUrl;
                     } else {
-                        // 相对路径，例如 ./assets/img.png
+                        // Relative path logic
+                        // If currentFile is absolute (e.g. C:/Users/zds/...), baseDir is C:/Users/zds/...
                         let baseDir = '';
                         if (currentFile && currentFile.includes('/')) {
                             baseDir = currentFile.substring(0, currentFile.lastIndexOf('/') + 1);
@@ -791,6 +808,19 @@
                         if (cleanUrl.startsWith('./')) {
                             cleanUrl = cleanUrl.substring(2);
                         }
+                        
+                        // We use encodeURIComponent for the *whole* path after /api/files/ to be safe
+                        // BUT fastapi {filepath:path} expects raw slashes.
+                        // If we encode slashes (%2F), fastapi might treat it as single segment.
+                        // Standard practice: /api/files/path/to/file
+                        // So we should NOT encode slashes.
+                        // But we SHOULD encode special chars?
+                        // Browser automatically encodes spaces to %20.
+                        // Windows drive colon c: -> c: is valid in path usually.
+                        
+                        // Fix for absolute paths starting with drive letter (e.g. C:/...)
+                        // If we just concat, we get /api/files/C:/... 
+                        // This should work in modern browsers/servers.
                         
                         previewUrl = `/api/files/${baseDir}${cleanUrl}`;
                     }

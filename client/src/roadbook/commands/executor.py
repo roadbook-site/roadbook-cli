@@ -493,7 +493,7 @@ def get_python_template(rb_id, book_content="", roadbook_model=None):
                 steps_code.append(f"    # URL: {sheet.url}")
             steps_code.append(f"    # ----------------------------------------------------------------")
             
-            steps_code.append(f"    with step(\\"{sheet.title}\\"):")
+            steps_code.append(f'    with step("{sheet.title}"):')
             if sheet.steps:
                 for s in sheet.steps:
                     steps_code.append(f"        # {s.original_text or s.action}")

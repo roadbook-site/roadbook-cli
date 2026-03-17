@@ -1,43 +1,57 @@
 ---
-id: "rb-jimeng-video-v1"
-name: "Jimeng Video Downloader"
+id: "jimeng-ai-video-crawl"
+name: "jimeng-ai-video-crawl"
 version: "4.0"
-owner: "trae_user"
+owner: "user"
 platform: "desktop"
 locale: "zh-CN"
-description: "访问即梦AI视频生成页面，加载并提取最新5条视频的下载链接"
-outputs:
-  video_urls: "视频链接列表"
+region: "CN"
+description: "爬取即梦AI网站的最近5条已生成视频"
+inputs: {}
+outputs: {
+  "videos": "最近5条已生成的视频列表"
+}
 ---
 
-## 访问主页
-**ID**: 1001
-**Description**: 打开即梦AI视频生成页面并等待加载。
-**URL**: `https://jimeng.jianying.com/ai-tool/generate/?type=video&workspace=0`
+## 连接浏览器
+**ID**: a1b2
+**Description**: 通过CDP连接到端口9224上的浏览器，确认连接成功
+**Locators**: `text="即梦AI"`
 
 **Steps**:
-1. `GOTO "https://jimeng.jianying.com/ai-tool/generate/?type=video&workspace=0"`
-2. `WAIT "networkidle"`
-3. `WAIT "video"`
-
----
-
-## 加载视频
-**ID**: 1002
-**Description**: 滚动页面以触发视频懒加载，确保至少加载5条视频。
-**URL**: `type=video`
-
-**Steps**:
-1. `SCROLL "bottom"`
-2. `WAIT 2000`
-3. `SCROLL "bottom"`
-4. `WAIT 2000`
+1. `WAIT 2000`
 
 ---
 
-## 提取链接
-**ID**: 1003
-**Description**: 提取页面中前5个视频的源地址。
+## 页面加载与滚动
+**ID**: 3c4d
+**Description**: 等待页面完全加载，滚动页面以加载更多视频内容
+**URL**: `https://jimeng.jianying.com/ai-tool/generate/`
+**Locators**: `div[class*='video']`, `div:has-text('总时长')`
 
 **Steps**:
-1. `EXTRACT "src" FROM "video" LIMIT 5`
+1. `WAIT 2000`
+2. `SCROLL 1000`
+3. `WAIT 2000`
+
+---
+
+## 提取视频信息
+**ID**: 5e6f
+**Description**: 提取最近5条已生成的视频信息，包括标题、URL和缩略图
+**URL**: `https://jimeng.jianying.com/ai-tool/generate/`
+**Locators**: `div:has-text('总时长')`
+
+**Steps**:
+1. `WAIT "div:has-text('总时长')"`
+2. `EXTRACT "text" FROM "div:has-text('总时长')"`
+
+**Assertions (断言)**:
+- [ ] 成功提取至少5条视频信息
+- [ ] 每条视频包含标题信息
+- [ ] 视频标题不为空
+
+---
+
+## 输出结果 (Outputs)
+- **videos**: 包含5条视频信息的列表，每条视频包含id、title、url和thumbnail字段
