@@ -92,15 +92,14 @@ platform: "desktop"
 description: "{description}"
 tags: []
 inputs: 
-  target_url: 
-    description: "The starting URL"
-    default: "https://www.google.com"
+  target_url: "https://www.google.com"
+  sample_param: "example_value"
 outputs: {{}}
 ---
 """
         
         return f"""{yaml_frontmatter}
-## Initialization
+## sample initialization title
 **ID**: init
 **Type**: setup
 **Description**: Verify browser environment (connection method) and authentication state.
@@ -108,58 +107,44 @@ outputs: {{}}
 **Locators**: `body`
 
 **Steps**:
-1. `GOTO "{{{{target_url}}}}"`
-2. `WAIT "networkidle"`
-
-**Assertions**:
-- [ ] Browser connected successfully (Launch or Attach)
-- [ ] Target page loaded
-- [ ] Authentication verified (Logged in or Login not required)
+1. [Please fill in specific steps, e.g., `GOTO "{{{{target_url}}}}"`]
+2. [Please fill in specific steps, e.g., `WAIT "domcontentloaded"`]
 
 ---
 
-## Process Sheet 1
+## sample sheet title
 **ID**: process_sheet_1
 **Type**: process
-**Description**: [Describe the first main logic, e.g. "Process Sheet 1 Data"]
+**Description**: [Describe the first sheet logic, e.g. "enter search query and submit"]
 **URL**: `{{{{target_url}}}}`
-**Locators**: `#main-content`, `text="Dashboard"`
+**Locators**: `role=main`, `text="Dashboard"`
 
 **Steps**:
-1. [Please fill in specific steps, e.g., `CLICK "#search-btn"`]
-2. [Use semantic selectors, e.g., `INPUT "text=Search" "iPhone"`]
+1. [Please fill in specific steps, e.g., `CLICK "role=button[name='Search']"`]
+2. [Use semantic selectors, e.g., `INPUT "label=Search" "iPhone"`]
 3. [Supported standard actions: GOTO, CLICK, INPUT, HOVER, WAIT, EXTRACT]
-
-**Assertions**:
-- [ ] [Please add checkpoints, e.g., Search result list loaded]
 
 ---
 
-## Process Sheet 2
+## sample sheet title 2
 **ID**: process_sheet_2
 **Type**: process
-**Description**: [Describe the next main logic, e.g. "Process Sheet 2 Data"]
+**Description**: [Describe the next sheet logic, e.g. "Process search results and extract data"]
 **URL**: `{{{{target_url}}}}`
+**Locators**: `[Optional]`
 
 **Steps**:
 1. [Continue with the next part of the process]
 
-**Assertions**:
-- [ ] [Checkpoint for this step]
-
 ---
 
-## Delivery
+## sample delivery title
 **ID**: delivery
 **Type**: delivery
 **Description**: Summarize deliverables and end the journey.
 
 **Steps**:
 1. [Output final result]
-
-**Assertions**:
-- [ ] Task completed
-- [ ] Deliverables saved
 """
 
     @staticmethod
@@ -277,13 +262,13 @@ def get_playwright_context(headless=False, cdp_url=None):
             logic_blocks.append("")
             logic_blocks.append("            # --- Phase 2: Process ---")
             logic_blocks.append("            # Phase 2.1: Process Sheet 1 (Example)")
-            logic_blocks.append("            logger.info(\"Phase 2.1: Process Sheet 1\")")
+            logic_blocks.append("            logger.info(\"Phase 2.1: sample sheet title\")")
             logic_blocks.append("            with step(\"Process Sheet 1\"):")
             logic_blocks.append("                # process_sheet_1(page, data)")
             logic_blocks.append("                pass")
             logic_blocks.append("")
             logic_blocks.append("            # Phase 2.2: Process Sheet 2 (Example)")
-            logic_blocks.append("            logger.info(\"Phase 2.2: Process Sheet 2\")")
+            logic_blocks.append("            logger.info(\"Phase 2.2: sample sheet title 2\")")
             logic_blocks.append("            with step(\"Process Sheet 2\"):")
             logic_blocks.append("                # process_sheet_2(page, data)")
             logic_blocks.append("                pass")
@@ -386,7 +371,7 @@ def run(inputs: dict) -> dict:
             logger.info("All steps completed successfully")
             
         except Exception as step_err:
-            logger.error(f"Error during execution steps: {step_err}")
+            logger.error(f"Error during execution steps: {{step_err}}")
             error_screenshot_path = output_dir / "error_screenshot.png"
             try:
                 page.screenshot(path=str(error_screenshot_path))

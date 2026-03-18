@@ -58,14 +58,11 @@ outputs:                     # 输出数据定义
     *   `process`: 标准业务流程（默认）。
     *   `delivery`: 结果交付与用户反馈（如：展示文件路径、确认数据提取）。
 *   **Description**: 对当前页任务的自然语言描述。
-    *   *Tips*: 可以在描述中明确该页的角色，例如：
-        *   **定位 (Landmark)**: "确认已进入搜索结果页"
-        *   **验证 (Checkpoint)**: "验证商品价格显示正常"
-        *   **目标 (Goal)**: "完成下单并获取订单号"
 *   **URL** (Optional): 该页对应的 Web 页面 URL 模式（定义了“在哪一页”执行）。
 *   **Locators** (Optional): 关键元素的语义化定位符（用于确认“是否在这一页”）。
 *   **Reference** (Optional): 参考图片，辅助视觉确认。
-*   **Steps** (Optional): 在该页上执行的具体动作序列。
+*   **Steps** (Optional): 在该页上执行的具体动作序列
+
 
 ### 2.3 Action Primitives (标准动作原语)
 
@@ -83,6 +80,7 @@ outputs:                     # 输出数据定义
 | **SELECT** | 下拉框选择 | `SELECT "#country" "China"` |
 | **EXTRACT** | 提取数据 | `EXTRACT "text" FROM ".price"` |
 | **SCROLL** | 滚动页面 | `SCROLL "bottom"` 或 `SCROLL 500` |
+| **ASSERT** | 断言条件 | `ASSERT "text=登录成功" EXISTS` |
 
 > **Note**: Action Primitives support fallback selectors. If you provide a list of selectors (e.g., `CLICK ["#id", ".class"]`), the executor should try them in order until one succeeds.
 
@@ -159,9 +157,9 @@ AARP v4.0 严格区分**“静态本体”**与**“动态运行时”**。
 **Description**: 验证是否成功进入商品详情页且商品有货。
 
 **Assertions (断言)**:
-- [ ] 页面标题包含商品名称
-- [ ] 存在 "加入购物车" 按钮 (`#add-to-cart-button`)
-- [ ] 价格显示正常
+- 页面标题包含商品名称
+- 存在 "加入购物车" 按钮 (`#add-to-cart-button`)
+- 价格显示正常
 
 ---
 
@@ -181,8 +179,8 @@ AARP v4.0 严格区分**“静态本体”**与**“动态运行时”**。
 **Description**: 验证订单已生成并提取关键信息。
 
 **Assertions**:
-- [ ] 订单号已提取
-- [ ] 支付状态确认
+- 订单号已提取
+- 支付状态确认
 ```
 
 ## 4. 最佳实践 (Best Practices)

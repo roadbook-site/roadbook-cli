@@ -123,6 +123,7 @@
                 'url_optional': 'URL (Optional)',
                 'url_placeholder': 'Leave empty to inherit previous URL (for location)',
                 'locators_optional': 'Locators (Optional)',
+                'type_optional': 'Type (process/setup/delivery)',
                 'description_goal': 'Description (Goal)',
                 'description_placeholder': 'Describe the main goal of this page...',
                 'reference_image': 'Reference Image (Optional)',
@@ -185,6 +186,7 @@
                 'url_optional': 'URL (可选)',
                 'url_placeholder': '留空则继承上一页 URL (用于定位)',
                 'locators_optional': '定位器 (可选)',
+                'assertions_optional': '断言 (可选)',
                 'description_goal': '描述 (目标)',
                 'description_placeholder': '描述这一页的主要任务目标...',
                 'reference_image': '参考图片 (可选)',
@@ -573,7 +575,7 @@
             );
         }
 
-        function Field({ label, value, onChange, required, col, textarea, placeholder, readOnly }) {
+        function Field({ label, value, onChange, required, col, textarea, placeholder, readOnly, height }) {
             return (
                 <div className={`${col || 'col-span-12'}`}>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -584,7 +586,7 @@
                             value={value || ''} 
                             onChange={e => onChange(e.target.value)}
                             readOnly={readOnly}
-                            className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none h-24 ${readOnly ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-gray-50'}`}
+                            className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none ${height || 'h-24'} ${readOnly ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-gray-50'}`}
                             placeholder={placeholder}
                         />
                     ) : (
@@ -865,18 +867,41 @@
                     {/* Sheet Body */}
                     {!isCollapsed && (
                         <div className="p-6 space-y-6">
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-12 gap-6">
+                                <div className="col-span-3">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                                        {t('type_optional')}
+                                    </label>
+                                    <div className="relative">
+                                        <select 
+                                            value={sheet.type || 'process'} 
+                                            onChange={e => updateField('type', e.target.value)}
+                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-800 bg-gray-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="process">process</option>
+                                            <option value="setup">setup</option>
+                                            <option value="delivery">delivery</option>
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+                                            <i className="ph ph-caret-down"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <Field 
                                     label={t('url_optional')} 
                                     value={sheet.url} 
                                     onChange={v => updateField('url', v)} 
                                     placeholder={t('url_placeholder')}
+                                    col="col-span-9"
                                 />
+                                
                                 <Field 
                                     label={t('locators_optional')} 
                                     value={sheet.locators} 
                                     onChange={v => updateField('locators', v)} 
                                     placeholder='text="Login"'
+                                    col="col-span-12"
                                 />
                             </div>
                             
