@@ -12,6 +12,7 @@ class Step(BaseModel):
 class Sheet(BaseModel):
     id: str = ""
     title: str
+    type: str = "process" # setup | process | delivery
     description: str = ""
     url: str = ""
     locators: str = ""
@@ -96,6 +97,8 @@ class RoadbookParser:
                 
                 if key == "id":
                     sheet.id = value
+                elif key == "type":
+                    sheet.type = value.lower()
                 elif key == "description":
                     sheet.description = value
                 elif key == "url":
@@ -177,6 +180,8 @@ class RoadbookParser:
             
             if sheet.id:
                 output.append(f"**ID**: {sheet.id}")
+            if sheet.type and sheet.type != "process":
+                output.append(f"**Type**: {sheet.type}")
             if sheet.description:
                 output.append(f"**Description**: {sheet.description}")
             if sheet.url:

@@ -83,11 +83,11 @@ def init_book(args):
         f"路书脚手架已生成在 {book_dir} 目录下。"
     ]
     
-    if goal:
+    if description:
         feedback_lines.extend([
             "模式：[AI 自主探索模式]",
             "下一步建议：",
-            "1. 请阅读并分析 `roadbook.md` 中的目标 (Goal)。",
+            "1. 请阅读并分析 `roadbook.md` 中的目标 (Description)。",
             "2. 开始编写或修改 `scripts/script.py`，使用 playwright 等工具探索如何达成目标。",
             "3. 探索成功后，请清洗执行路径，将有效的 AARP 动作原语回写到 `roadbook.md` 中，完善路书本体。"
         ])

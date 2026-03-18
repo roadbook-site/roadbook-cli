@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from .parser import RoadbookParser, RoadbookModel
 
 class ScaffoldManager:
     """
@@ -36,7 +37,7 @@ class ScaffoldManager:
         return paths
 
     @staticmethod
-    def create_script_scaffold(book_dir: Path, language: str = "python", rb_id: str = "roadbook", name: str = "Roadbook") -> Path:
+    def create_script_scaffold(book_dir: Path, language: str = "python", rb_id: str = "roadbook", name: str = "Roadbook", roadbook_content: str = "") -> Path:
         """Creates the script scaffold if it doesn't exist."""
         paths = ScaffoldManager.get_structure_paths(book_dir)
         scripts_dir = paths["scripts"]
@@ -44,6 +45,15 @@ class ScaffoldManager:
         
         script_path = None
         
+        # Try to parse roadbook content to model if provided
+        roadbook_model = None
+        if roadbook_content:
+            try:
+                parser = RoadbookParser()
+                roadbook_model = parser.parse(roadbook_content)
+            except Exception:
+                pass
+
         if language == "python":
             # 1. Create subdirectories
             (scripts_dir / "tests").mkdir(parents=True, exist_ok=True)
@@ -64,7 +74,7 @@ class ScaffoldManager:
             # 4. Create script.py
             script_path = scripts_dir / "script.py"
             if not script_path.exists():
-                content = ScaffoldManager._generate_python_script_template(rb_id, name)
+                content = ScaffoldManager._generate_python_script_template(rb_id, name, roadbook_model)
                 with open(script_path, "w", encoding="utf-8") as f:
                     f.write(content)
         
@@ -185,17 +195,106 @@ def get_playwright_context(headless=False):
 '''
 
     @staticmethod
-    def _generate_python_script_template(rb_id, name):
+    def _generate_python_script_template(rb_id, name, roadbook_model: Optional[RoadbookModel] = None):
+        import datetime
+        date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+        
+        # Logic Generation
+        logic_blocks = []
+        
+        if roadbook_model:
+            # Group sheets by type
+            setup_sheets = [s for s in roadbook_model.sheets if s.type == "setup"]
+            process_sheets = [s for s in roadbook_model.sheets if s.type == "process" or not s.type]
+            delivery_sheets = [s for s in roadbook_model.sheets if s.type == "delivery"]
+            
+            # --- Setup Phase ---
+            if setup_sheets:
+                logic_blocks.append("            # --- Phase 1: Setup ---")
+                for i, sheet in enumerate(setup_sheets, 1):
+                    logic_blocks.append(f'            # Phase 1.{i}: {sheet.title}')
+                    logic_blocks.append(f'            logger.info("Phase 1.{i}: {sheet.title}")')
+                    logic_blocks.append(f'            with step("{sheet.title}"):  # ID: {sheet.id}')
+                    if sheet.url:
+                        logic_blocks.append(f'                # URL: {sheet.url}')
+                        logic_blocks.append(f'                if "{sheet.url}" != "{{target_url}}":')
+                        logic_blocks.append(f'                     page.goto("{sheet.url}")')
+                    if sheet.steps:
+                        for s in sheet.steps:
+                            logic_blocks.append(f'                # {s.original_text or s.action}')
+                    logic_blocks.append(f'                pass')
+                    logic_blocks.append('')
+            
+            # --- Process Phase ---
+            if process_sheets:
+                logic_blocks.append("            # --- Phase 2: Process ---")
+                for i, sheet in enumerate(process_sheets, 1):
+                    logic_blocks.append(f'            # Phase 2.{i}: {sheet.title}')
+                    logic_blocks.append(f'            logger.info("Phase 2.{i}: {sheet.title}")')
+                    logic_blocks.append(f'            with step("{sheet.title}"):  # ID: {sheet.id}')
+                    if sheet.description:
+                        logic_blocks.append(f'                # {sheet.description}')
+                    if sheet.steps:
+                        for s in sheet.steps:
+                            logic_blocks.append(f'                # {s.original_text or s.action}')
+                    
+                    # Provide a helpful placeholder comment for function extraction
+                    func_name = sheet.id if sheet.id else f"process_sheet_{i}"
+                    func_name = func_name.replace('-', '_').replace(' ', '_').lower()
+                    logic_blocks.append(f'                # {func_name}(page, data)')
+                    logic_blocks.append(f'                pass')
+                    logic_blocks.append('')
+            
+            # --- Delivery Phase ---
+            if delivery_sheets:
+                logic_blocks.append("            # --- Phase 3: Delivery ---")
+                for i, sheet in enumerate(delivery_sheets, 1):
+                    logic_blocks.append(f'            # Phase 3.{i}: {sheet.title}')
+                    logic_blocks.append(f'            logger.info("Phase 3.{i}: {sheet.title}")')
+                    logic_blocks.append(f'            with step("{sheet.title}"):  # ID: {sheet.id}')
+                    if sheet.steps:
+                        for s in sheet.steps:
+                            logic_blocks.append(f'                # {s.original_text or s.action}')
+                    logic_blocks.append(f'                pass')
+                    logic_blocks.append('')
+                
+        else:
+            # Default Template if no model
+            logic_blocks.append("            # --- Phase 1: Initialization ---")
+            logic_blocks.append("            logger.info(\"Phase 1: Initialization\")")
+            logic_blocks.append("            page.goto(target_url)")
+            logic_blocks.append("            page.wait_for_load_state(\"networkidle\")")
+            logic_blocks.append("")
+            logic_blocks.append("            # --- Phase 2: Process ---")
+            logic_blocks.append("            # Phase 2.1: Process Sheet 1 (Example)")
+            logic_blocks.append("            logger.info(\"Phase 2.1: Process Sheet 1\")")
+            logic_blocks.append("            with step(\"Process Sheet 1\"):")
+            logic_blocks.append("                # process_sheet_1(page, data)")
+            logic_blocks.append("                pass")
+            logic_blocks.append("")
+            logic_blocks.append("            # Phase 2.2: Process Sheet 2 (Example)")
+            logic_blocks.append("            logger.info(\"Phase 2.2: Process Sheet 2\")")
+            logic_blocks.append("            with step(\"Process Sheet 2\"):")
+            logic_blocks.append("                # process_sheet_2(page, data)")
+            logic_blocks.append("                pass")
+            logic_blocks.append("")
+            logic_blocks.append("            # --- Phase 3: Delivery ---")
+            logic_blocks.append("            logger.info(\"Phase 3: Delivery\")")
+            logic_blocks.append("            data[\"result\"] = \"Operation completed successfully\"")
+
+        logic_body = "\n".join(logic_blocks)
+
         return f'''"""
 Automation script for roadbook: {name} ({rb_id})
-Generated by Roadbook CLI.
+Generated by Roadbook CLI at {date_str}.
 """
 import sys
-import os
 import json
 import logging
 import time
+import os
 from pathlib import Path
+from contextlib import contextmanager
 
 # Add current directory to path so we can import utils
 sys.path.append(str(Path(__file__).parent))
@@ -222,6 +321,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Step Profiling Helper
+STEPS_TIMING = {{}}
+
+@contextmanager
+def step(name):
+    logger.info(f"[*] Step Started: {{name}}...")
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        duration = time.time() - start_time
+        STEPS_TIMING[name] = duration
+        logger.info(f"    -> Step Finished: {{name}} (Duration: {{duration:.2f}}s)")
+
 def run(inputs: dict) -> dict:
     """
     Main execution entry point.
@@ -231,47 +344,42 @@ def run(inputs: dict) -> dict:
     target_url = inputs.get("target_url", "https://www.google.com")
     data = {{}}
     
+    # Runtime artifacts setup
+    # If run by CLI, ROADBOOK_RUN_ID will be set.
+    session_id = os.environ.get("ROADBOOK_RUN_ID")
+    runtime_dir = Path(__file__).parent.parent / "runtime"
+    
+    if session_id:
+        output_dir = runtime_dir / "runs" / session_id / "artifacts"
+    else:
+        # Manual run fallback
+        timestamp = time.strftime('%Y_%m_%d_%H_%M')
+        output_dir = runtime_dir.parent / f"output_{{timestamp}}"
+    
+    output_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Artifacts will be saved to: {{output_dir}}")
+
     try:
         # Initialize Browser using shared utility
         # headless=False allows you to see the browser action. Set to True for production.
         p, browser, context, page = get_playwright_context(headless=False)
         
         try:
-            # --- Phase 1: Initialization ---
-            logger.info("Phase 1: Initialization")
-            page.goto(target_url)
-            page.wait_for_load_state("networkidle")
-            # TODO: Add login logic or environmental checks here
-            
-            # --- Phase 2: Main Process ---
-            # Suggestion: Break down complex logic into multiple steps/functions
-            
-            # Phase 2.1: Process Sheet 1 (Example)
-            logger.info("Phase 2.1: Process Sheet 1")
-            # process_sheet_1(page, data)
-
-            # Phase 2.2: Process Sheet 2 (Example)
-            logger.info("Phase 2.2: Process Sheet 2")
-            # process_sheet_2(page, data)
-            
-            # --- Phase 3: Delivery ---
-            logger.info("Phase 3: Delivery")
-            # Save results, upload files, or return structured data
-            data["result"] = "Operation completed successfully"
-            
-            # Example: Save to Output Directory
-            output_dir = os.environ.get("ROADBOOK_OUTPUT_DIR")
-            if output_dir:
-                output_path = Path(output_dir) / "result.json"
-                with open(output_path, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2)
-                logger.info(f"Result saved to: {{output_path}}")
+{logic_body}
             
             logger.info("All steps completed successfully")
             
         finally:
             browser.close()
             p.stop()
+            
+        # Attach timing metrics to data
+        data["_steps_timing"] = STEPS_TIMING
+        
+        # Save structured outputs to outputs.json
+        outputs_file = output_dir / "outputs.json"
+        with open(outputs_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
             
         return {{"status": "success", "data": data}}
 
