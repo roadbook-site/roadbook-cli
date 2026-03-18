@@ -170,27 +170,37 @@ Browser configuration and initialization utilities.
 from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
 import logging
 
-def get_playwright_context(headless=False):
+def get_playwright_context(headless=False, cdp_url=None):
     """
     Standard context manager for Playwright.
     """
     p = sync_playwright().start()
     
     # --- Browser Launch Strategies ---
-    
-    # Strategy 1: Fresh Browser (Default)
-    # Best for: Clean state, reproducible runs, CI/CD, and initial exploration.
-    browser = p.chromium.launch(headless=headless)
-    
-    # Strategy 2: Connect to Existing Browser (CDP)
-    # Best for: Debugging, reusing login state, avoiding bot detection.
-    # To use: 
-    # 1. Run Chrome with: --remote-debugging-port=9222
-    # 2. Uncomment line below:
-    # browser = p.chromium.connect_over_cdp("http://localhost:9222")
-    
-    context = browser.new_context()
-    page = context.new_page()
+    if cdp_url:
+        # Strategy 2: Connect to Existing Browser (CDP)
+        # Best for: Debugging, reusing login state, avoiding bot detection.
+        # Ensure Chrome is running with: --remote-debugging-port=9222
+        browser = p.chromium.connect_over_cdp(cdp_url)
+        
+        # Crucial for CDP: reuse the existing default context to keep login state
+        if browser.contexts:
+            context = browser.contexts[0]
+        else:
+            context = browser.new_context()
+            
+        # Try to reuse an existing page, otherwise create a new one
+        if context.pages:
+            page = context.pages[0]
+        else:
+            page = context.new_page()
+    else:
+        # Strategy 1: Fresh Browser (Default)
+        # Best for: Clean state, reproducible runs, CI/CD, and initial exploration.
+        browser = p.chromium.launch(headless=headless)
+        context = browser.new_context()
+        page = context.new_page()
+        
     return p, browser, context, page
 '''
 
@@ -303,12 +313,17 @@ try:
     from utils.browser import get_playwright_context
 except ImportError:
     # Fallback if utils not present or path issue
-    def get_playwright_context(headless=False):
+    def get_playwright_context(headless=False, cdp_url=None):
         from playwright.sync_api import sync_playwright
         p = sync_playwright().start()
-        browser = p.chromium.launch(headless=headless)
-        context = browser.new_context()
-        page = context.new_page()
+        if cdp_url:
+            browser = p.chromium.connect_over_cdp(cdp_url)
+            context = browser.contexts[0] if browser.contexts else browser.new_context()
+            page = context.pages[0] if context.pages else context.new_page()
+        else:
+            browser = p.chromium.launch(headless=headless)
+            context = browser.new_context()
+            page = context.new_page()
         return p, browser, context, page
 
 # Configure Logging
@@ -362,12 +377,23 @@ def run(inputs: dict) -> dict:
     try:
         # Initialize Browser using shared utility
         # headless=False allows you to see the browser action. Set to True for production.
+        # To connect to an existing browser, pass cdp_url (e.g., cdp_url="http://localhost:9222")
         p, browser, context, page = get_playwright_context(headless=False)
         
         try:
 {logic_body}
             
             logger.info("All steps completed successfully")
+            
+        except Exception as step_err:
+            logger.error(f"Error during execution steps: {step_err}")
+            error_screenshot_path = output_dir / "error_screenshot.png"
+            try:
+                page.screenshot(path=str(error_screenshot_path))
+                logger.info(f"Saved error screenshot to {{error_screenshot_path}}")
+            except Exception as ss_err:
+                logger.error(f"Failed to take error screenshot: {{ss_err}}")
+            raise step_err
             
         finally:
             browser.close()
