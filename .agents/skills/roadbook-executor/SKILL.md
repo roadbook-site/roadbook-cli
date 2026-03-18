@@ -54,14 +54,15 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
 - **IMPORTANT - Reusability & Token Efficiency**: Scripts are the core of Roadbook's efficiency. They can be reused without consuming tokens. **Always strive to generate a robust script instead of relying on interactive semantic execution every time.**
 - **Workspace Structure**: Roadbooks are executed in a dedicated workspace directory: `.roadbook/<roadbook_id>/`.
     - **Scripts**: Located in `.roadbook/<roadbook_id>/scripts/script.py`.
-    - **Runtime Artifacts**: Located in `.roadbook/<roadbook_id>/runtime/`.
+    - **Outputs**: Located in `.roadbook/<roadbook_id>/outputs/`.
+    - **Runtime**: Located in `.roadbook/<roadbook_id>/runtime/` (internal system use).
 - **Auto-Scaffolding**: When `roadbook open <id>` is executed:
     1.  The system copies the roadbook from the global library (`~/.roadbook/<id>/`) to `.roadbook/<id>/` in the current workspace.
     2.  It scaffolds a template script in `.roadbook/<id>/scripts/script.py`.
     3.  **Edit this file directly** to implement automation logic.
 - **Output Management**:
-    - All execution outputs (downloads, screenshots, logs) MUST be saved in `.roadbook/<id>/runtime/runs/<session_id>/artifacts/`.
+    - All execution outputs (downloads, screenshots, logs) MUST be saved in `.roadbook/<id>/outputs/<session_id>/`.
     - The scaffolded script automatically detects the `ROADBOOK_RUN_ID` environment variable and sets `OUTPUT_DIR` accordingly.
-    - If running manually without CLI context, it falls back to a timestamped directory.
+    - If running manually without CLI context, it falls back to a timestamped directory in `outputs/`.
 - **Do not move to global**: Keep the script and artifacts in the workspace `.roadbook/` directory.
 - **Verification**: Always verify the script works before finalizing.

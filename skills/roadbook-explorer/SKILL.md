@@ -39,6 +39,7 @@ This skill guides the Agent to create a robust, standard-compliant Roadbook by e
 2.  **Develop Workflow**:
     -   Modify `.roadbook/<id>/scripts/script.py` to implement the logic.
     -   Leverage the pre-configured `logger` and `get_playwright_context` helper.
+    -   **Output Handling**: Save all artifacts (screenshots, data) to the `outputs/` directory. The scaffolded script provides the `output_dir` variable for this purpose.
 3.  **Fast Fail Strategy (Crucial)**:
     -   **Identify Barriers**: Watch for **Login screens**, **CAPTPHAs**, or **Bot Verification**.
     -   **Stop & Ask**: If blocked, **STOP IMMEDIATELY**. Do not attempt to bypass. Request human intervention.

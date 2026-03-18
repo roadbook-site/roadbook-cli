@@ -93,27 +93,59 @@ outputs:                     # 输出数据定义
     *   **Local**: `./assets/login_btn.png` (推荐，随路书一起分发)
     *   **Remote**: `https://example.com/assets/login_btn.png` (需确保网络可达)
 
-### 2.5 本体与运行时解耦 (Decoupling)
+### 2.5 路书目录结构 (Roadbook Directory Structure)
 
-AARP v4.0 严格区分**“静态本体”**与**“动态运行时”**。
+AARP v4.0 将路书定义为一个包含多层级信息的标准目录包。这种结构设计确保了**“本体定义”**、**“执行逻辑”**与**“运行结果”**的清晰解耦。
+
+一个标准的路书包（Roadbook Package）包含以下四个核心层级：
 
 *   **本体层 (The Roadbook)**: 
-    *   **性质**: 静态、只读、可分享、可审阅。
+    *   **性质**: 静态、核心、可分享。
     *   **内容**: 任务意图、关键路标、断言条件、输入输出定义。
-    *   **载体**: `roadbook.md` 路书文件。
+    *   **载体**: 根目录下的 `roadbook.md` 文件。它是路书的 Single Source of Truth。
 *   **脚本层 (The Script)**:
-    *   **性质**: 静态、只读、可分享、可审阅。
-    *   **内容**: 路书对应的可执行脚本（如 Python Playwright 脚本）。
-    *   **载体**: `scripts/` 目录下的 `.py` 或 `.js` 文件。其中入口文件为 `script.py` 或 `script.js`，这也是脚手架会生成的脚本文件。
+    *   **性质**: 静态、逻辑实现、可版本控制。
+    *   **内容**: 路书对应的自动化执行脚本（如 Python Playwright）。
+    *   **载体**: `scripts/` 目录。
+        *   入口文件通常为 `scripts/script.py`。
+        *   该目录可包含 `utils/` 等辅助模块，与 `roadbook.md` 同级，随路书一起分发。
+*   **输出层 (The Output)**:
+    *   **性质**: 动态、持久化、结构化。
+    *   **内容**: 每次运行产生的交付物。
+        *   **结构化数据**: 如抓取的商品列表 (`products.json`)、提取的表格 (`data.csv`)。
+        *   **媒体文件**: 关键步骤截图、下载的文件（PDF/Excel）。
+    *   **载体**: `outputs/` 目录。
+        *   **目录结构**: 建议按**运行ID (Run ID)** 隔离，即 `outputs/<run_id>/`。
+        *   此目录应在 `.gitignore` 中被忽略（除非特定的样例数据），不随路书代码分发。
 *   **运行时层 (The Runtime)**:
-    *   **性质**: 动态、本地化、不可分享（包含隐私）。
+    *   **性质**: 动态、临时、本地隐私。
     *   **内容**: 
-        *   **执行脚本**: 由 Agent 将路书翻译成的 Python/Node.js 脚本（用于加速执行）。
-        *   **运行记录**: 执行日志、截图、报错堆栈。
-        *   **状态缓存**: 上次运行结果、Cookie、Session 数据。
-    *   **载体**: CLI 管理的 `~/.roadbook` 目录。
+        *   **系统日志**: 详细的 debug 日志、报错堆栈。
+        *   **浏览器状态**: User Data Dir、Cookies、Local Storage、Session 缓存。
+        *   **临时文件**: 运行时生成的中间文件。
+    *   **载体**: `.roadbook/` 隐藏目录（项目级）或 `~/.roadbook`（全局级）。此目录完全由 CLI 管理，不应被提交到版本控制。
 
-这种解耦确保了路书文件本身的纯粹性，使其可以在不同用户、不同环境间安全流通，而不会携带某个特定用户的运行状态或本地路径垃圾。
+**目录结构示例**:
+```text
+my-roadbook-project/
+├── roadbook.md           # [本体层] 任务定义
+├── scripts/              # [脚本层] 自动化逻辑
+│   ├── script.py         #    入口脚本
+│   └── utils.py
+├── outputs/              # [输出层] 运行结果 (Git Ignored)
+│   ├── run_20231001_a1/  #    按 Run ID 隔离
+│   │   ├── data.json
+│   │   └── screenshot.png
+│   └── latest/           #    指向最新运行结果的软链 (可选)
+└── .roadbook/            # [运行时层] 系统缓存 (Git Ignored)
+    ├── runtime/
+    └── logs/
+```
+
+这种分层设计确保了：
+1.  **可移植性**: `roadbook.md` 和 `scripts/` 构成了完整的可执行单元。
+2.  **数据隔离**: 用户数据 (`outputs/`) 与系统状态 (`.roadbook/`) 分离，便于用户管理和归档结果。
+3.  **清晰交付**: 用户只需关注 `outputs/` 目录即可获取所有价值产出。
 
 ## 3. 路书正文示例 (Roadbook Body)
 

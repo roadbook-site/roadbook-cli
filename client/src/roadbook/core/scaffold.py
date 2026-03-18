@@ -16,6 +16,7 @@ class ScaffoldManager:
             "root": book_dir,
             "scripts": book_dir / "scripts",
             "runtime": book_dir / "runtime",
+            "outputs": book_dir / "outputs",
             "roadbook_file": book_dir / "roadbook.md"
         }
 
@@ -27,6 +28,7 @@ class ScaffoldManager:
         # Create Directories
         paths["scripts"].mkdir(parents=True, exist_ok=True)
         paths["runtime"].mkdir(parents=True, exist_ok=True)
+        paths["outputs"].mkdir(parents=True, exist_ok=True)
         
         # Create roadbook.md
         if not paths["roadbook_file"].exists():
@@ -347,15 +349,17 @@ def run(inputs: dict) -> dict:
     # Runtime artifacts setup
     # If run by CLI, ROADBOOK_RUN_ID will be set.
     session_id = os.environ.get("ROADBOOK_RUN_ID")
-    runtime_dir = Path(__file__).parent.parent / "runtime"
     
-    if session_id:
-        output_dir = runtime_dir / "runs" / session_id / "artifacts"
-    else:
+    # Locate the outputs directory (sibling to scripts/)
+    project_root = Path(__file__).parent.parent
+    outputs_root = project_root / "outputs"
+    
+    if not session_id:
         # Manual run fallback
-        timestamp = time.strftime('%Y_%m_%d_%H_%M')
-        output_dir = runtime_dir.parent / f"output_{{timestamp}}"
-    
+        timestamp = time.strftime('%Y%m%d_%H%M%S')
+        session_id = f"run_{{timestamp}}"
+        
+    output_dir = outputs_root / session_id
     output_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Artifacts will be saved to: {{output_dir}}")
 

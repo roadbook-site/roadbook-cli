@@ -15,6 +15,7 @@ from ..core.runtime import RuntimeManager
 from ..core.scaffold import ScaffoldManager
 from ..core.parser import RoadbookParser
 from ..utils.output import print_info, print_error
+from .. import __version__ as SCAFFOLD_VERSION
 
 def check_environment() -> bool:
     """
