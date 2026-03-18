@@ -53,6 +53,10 @@ outputs:                     # 输出数据定义
 **Sheet** 是路书的基础组成单元。一个标准的 Sheet 包含以下要素：
 *   **Title**: 页标题（对应 Markdown 的 `##` 标题），通常包含该页的意图摘要。
 *   **ID**: 页唯一标识符。建议使用 4-5 位的短随机码（如 `a1b2`），作为内部索引键。
+*   **Type** (Optional): 页类型，用于指示运行时的执行策略。默认为 `process`。
+    *   `setup`: 环境检查与前置准备（如：确认浏览器启动方式、连接状态、以及是否满足登录校验）。
+    *   `process`: 标准业务流程（默认）。
+    *   `delivery`: 结果交付与用户反馈（如：展示文件路径、确认数据提取）。
 *   **Description**: 对当前页任务的自然语言描述。
     *   *Tips*: 可以在描述中明确该页的角色，例如：
         *   **定位 (Landmark)**: "确认已进入搜索结果页"
@@ -169,6 +173,16 @@ AARP v4.0 严格区分**“静态本体”**与**“动态运行时”**。
 1. `CLICK "#add-to-cart-button"`
 2. `WAIT 2000`
 3. `CLICK "input[name='proceedToRetailCheckout']"`
+
+---
+
+## 结果交付 (Delivery)
+**ID**: delivery
+**Description**: 验证订单已生成并提取关键信息。
+
+**Assertions**:
+- [ ] 订单号已提取
+- [ ] 支付状态确认
 ```
 
 ## 4. 最佳实践 (Best Practices)

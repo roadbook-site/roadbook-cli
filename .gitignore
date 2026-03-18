@@ -59,4 +59,5 @@ test_e2e_remote.py
 run_meta.json
 outputs/
 node_modules/
-.roadbook
+.roadbook/
+test/

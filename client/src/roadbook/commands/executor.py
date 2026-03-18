@@ -156,12 +156,19 @@ def run_book(args):
         run_id = RuntimeManager.create_run(rb_id, book_dir=book_dir)
         run_dir = RuntimeManager.get_runs_dir(rb_id, book_dir) / run_id
         
+        # Define Output Directory (User Request: Centralized output with RB name & Timestamp)
+        # Using cwd/output/<rb_id>_<run_id>
+        output_dir = Path.cwd() / "output" / f"{rb_id}_{run_id}"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
         # Pass Run ID via environment variables
         env = os.environ.copy()
         env["ROADBOOK_RUN_ID"] = run_id
         env["ROADBOOK_RUN_DIR"] = str(run_dir)
+        env["ROADBOOK_OUTPUT_DIR"] = str(output_dir)
         
         print_info(f"[Runtime] Run ID: {run_id}")
+        print_info(f"[Runtime] Output Dir: {output_dir}")
         print_info(f"[*] Executing script...")
         
         # Prepare log file
@@ -258,16 +265,16 @@ def run_book(args):
             print_error(f"Script execution error: {e}")
             print_info(f"[Guidance] {diagnose_error(e)}")
     else:
+        from ..core.scaffold import ScaffoldManager
+        
         print_info(f"[!] No automation script found for '{rb_id}'.")
         
-        cwd = Path.cwd()
-        # New structure guidance
-        workspace_roadbook_dir = cwd / ".roadbook" / rb_id
-        workspace_script_dir = workspace_roadbook_dir / "scripts"
-        runtime_dir = workspace_roadbook_dir / "runtime"
+        scaffold_paths = ScaffoldManager.get_structure_paths(book_dir)
+        script_path_py = scaffold_paths["scripts"] / "script.py"
         
         print_info(f"[Action Required] Please generate an automation script to save tokens and enable reusability.")
-        print_info(f"  -> Save your script to: {workspace_script_dir / 'script.py'}")
+        print_info(f"  -> Save your script to: {script_path_py}")
+        print_info(f"  -> Or run 'roadbook init {rb_id}' to generate standard scaffolding.")
         print_info(f"  -> Save execution artifacts (downloads, screenshots) to: {workspace_roadbook_dir / 'output_...'}")
         
         print_info("[*] Switching to Semantic Guide Mode to help you build the script...")

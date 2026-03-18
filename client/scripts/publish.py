@@ -9,6 +9,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 PYPROJECT_PATH = PROJECT_ROOT / "pyproject.toml"
+INIT_PY_PATH = PROJECT_ROOT / "src" / "roadbook" / "__init__.py"
 DIST_DIR = PROJECT_ROOT / "dist"
 
 def run_cmd(cmd, cwd=PROJECT_ROOT):
@@ -19,12 +20,14 @@ def run_cmd(cmd, cwd=PROJECT_ROOT):
         sys.exit(1)
 
 def get_current_version():
+    current_version_py = "Unknown"
     with open(PYPROJECT_PATH, "r", encoding="utf-8") as f:
         content = f.read()
     match = re.search(r'^version\s*=\s*"([^"]+)"', content, re.MULTILINE)
     if match:
-        return match.group(1)
-    return "Unknown"
+        current_version_py = match.group(1)
+
+    return current_version_py
 
 def update_version(new_version):
     with open(PYPROJECT_PATH, "r", encoding="utf-8") as f:
@@ -41,6 +44,28 @@ def update_version(new_version):
         f.write(new_content)
     print(f"✅ Updated pyproject.toml to version {new_version}")
 
+    # Update version in roadbook/__init__.py
+    if INIT_PY_PATH.exists():
+        with open(INIT_PY_PATH, "r", encoding="utf-8") as f:
+            init_content = f.read()
+
+        new_init_content = re.sub(
+            r'^__version__\s*=\s*["\']([^"\']+)["\']',
+            f'__version__ = "{new_version}"',
+            init_content,
+            flags=re.MULTILINE
+        )
+        
+        # If version not found, append it
+        if new_init_content == init_content:
+            new_init_content += f'\n__version__ = "{new_version}"\n'
+
+        with open(INIT_PY_PATH, "w", encoding="utf-8") as f:
+            f.write(new_init_content)
+        print(f"✅ Updated roadbook/__init__.py to version {new_version}")
+    else:
+        print(f"⚠️ roadbook/__init__.py not found at {INIT_PY_PATH}")
+
 def clean_dist():
     if DIST_DIR.exists():
         print(f"🧹 Cleaning old builds in {DIST_DIR}...")
@@ -53,10 +78,24 @@ def main():
     current_version = get_current_version()
     print(f"📦 Current version in pyproject.toml: {current_version}")
     
+    # Read version from __init__.py for comparison
+    init_version = "Unknown"
+    if INIT_PY_PATH.exists():
+        with open(INIT_PY_PATH, "r", encoding="utf-8") as f:
+            match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', f.read(), re.MULTILINE)
+            if match:
+                init_version = match.group(1)
+    
+    if init_version != current_version: 
+         print(f"⚠️ Warning: Version mismatch! roadbook/__init__.py is {init_version}")
+    
     new_version = input("\n👉 Enter the NEW version number (or press Enter to keep current): ").strip()
     
     if new_version and new_version != current_version:
         update_version(new_version)
+    elif init_version != current_version:
+        print(f"🔄 Syncing roadbook/__init__.py to match pyproject.toml ({current_version})...")
+        update_version(current_version)
     else:
         print("⏭️ Keeping current version.")
     

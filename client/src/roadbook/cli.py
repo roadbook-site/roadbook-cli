@@ -7,6 +7,7 @@ warnings.filterwarnings("ignore", message="Unable to find acceptable character d
 
 from .core.config import ensure_roadbook_dir
 from .commands import library, search, executor, script, run, editor, auth, remote, config, doctor, initialize
+from . import __version__
 
 class RichHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom help formatter to display commands by category."""
@@ -29,7 +30,9 @@ Command Categories:
   [Observe]   Review execution history and logs
     logs      Manage and inspect run logs
 
-  [Develop]   Manage automation scripts
+  [Develop]   Create and manage roadbooks
+    init      Initialize a new roadbook scaffold
+    edit      Start Roadbook Editor (WebUI)
     script    Manage local scripts
     
   [Diagnose]  System diagnostics
@@ -48,6 +51,7 @@ Command Categories:
         description=description,
         formatter_class=RichHelpFormatter
     )
+    parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     subparsers = parser.add_subparsers(dest="command", help=argparse.SUPPRESS)
 
     # --- Group: Explore ---
@@ -124,7 +128,6 @@ Command Categories:
     init_parser = subparsers.add_parser("init", help="Initialize a new roadbook scaffold")
     init_parser.add_argument("name", help="Name of the roadbook")
     init_parser.add_argument("--description", "-d", help="Optional description of the roadbook", default="")
-    init_parser.add_argument("--goal", "-g", help="Optional goal for autonomous exploration", default="")
     init_parser.add_argument("--edit", "-e", help="Immediately open in editor after initialization", action="store_true")
     init_parser.set_defaults(func=initialize.init_book)
 
