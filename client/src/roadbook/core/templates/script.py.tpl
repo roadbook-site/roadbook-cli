@@ -83,6 +83,32 @@ def print_scaffold_warning():
     print("║    'scripts/script.py' and 'roadbook.md' simultaneously.                     ║")
     print("╚══════════════════════════════════════════════════════════════════════════════╝")
 
+# ---------------------------------------------------------
+# Output Management Helpers
+# Provides multiple data export forms for agents to choose from.
+# ---------------------------------------------------------
+def save_as_json(data: dict, output_dir: Path, filename="outputs.json") -> str:
+    path = output_dir / filename
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    return str(path)
+
+def save_as_csv(items: list, output_dir: Path, filename="outputs.csv") -> str:
+    if not items: return ""
+    import csv
+    path = output_dir / filename
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=items[0].keys())
+        writer.writeheader()
+        writer.writerows(items)
+    return str(path)
+
+def save_as_markdown(content: str, output_dir: Path, filename="outputs.md") -> str:
+    path = output_dir / filename
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return str(path)
+
 def run(inputs: dict) -> dict:
     """
     Main execution entry point.
@@ -160,11 +186,29 @@ def run(inputs: dict) -> dict:
         # Attach timing metrics to data
         data["_steps_timing"] = STEPS_TIMING
         
-        # Save structured outputs to outputs.json
-        outputs_file = output_dir / "outputs.json"
-        with open(outputs_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-            
+        # ---------------------------------------------------------
+        # AGENT EXPORT INSTRUCTIONS: Choose the appropriate outputs.
+        # ---------------------------------------------------------
+        
+        # 1. JSON (Structured default record)
+        save_as_json(data, output_dir, "outputs.json")
+        
+        # 2. CSV: Excellent for multiple rows/items
+        # if "items" in data and isinstance(data["items"], list):
+        #     save_as_csv(data["items"], output_dir, "table_data.csv")
+        
+        # 3. Markdown: Excellent for text, articles, readability
+        # if "article" in data:
+        #     save_as_markdown(data["article"], output_dir, "document.md")
+        
+        # 4. Quick Answer / Summary (Passed directly back to the User/LLM)
+        # data["quick_answer"] = "Action completed. 15 items extracted."
+        
+        # 5. Multimedia/File paths (Make sure to save the absolute paths)
+        # screenshot_path = output_dir / "final_state.png"
+        # page.screenshot(path=str(screenshot_path), full_page=True)
+        # data["final_screenshot"] = str(screenshot_path)
+        
         return {"status": "success", "data": data}
 
     except Exception as e:
