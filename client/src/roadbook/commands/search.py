@@ -14,4 +14,4 @@ def search_books(args):
         ]
     )
     print_info("[Info] This is a mock search result.")
-    print_info("[Action] Use 'roadbook show <id>' to inspect details, then 'roadbook open <id>' to start guidance.")
+    print_info("[Action] Use 'roadbook show <id>' to inspect details, then 'roadbook run --guide <id>' to start guidance.")

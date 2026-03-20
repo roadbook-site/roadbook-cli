@@ -61,7 +61,7 @@ def show_book(args):
         lang_name = lang_map.get(script_path.suffix, "Unknown")
         print_info(f"[Action] Run automation script ({lang_name}): roadbook run {book.id}")
     else:
-        print_info(f"[Action] Start semantic guide mode: roadbook open {book.id}")
+        print_info(f"[Action] Start semantic guide mode: roadbook run --guide {book.id}")
     
     if not book.valid:
         print_error(f"Error: {book.error}")

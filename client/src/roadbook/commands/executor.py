@@ -127,9 +127,13 @@ def run_book(args):
     """
     rb_id = args.id
     global_scope = getattr(args, 'global_scope', False)
-    
+
     if not check_environment():
         print_info("[Guidance] Environment check failed. Please fix issues above before running.")
+        
+    if getattr(args, 'guide', False):
+        print_info("[Mode] Force Semantic Guide Mode.")
+        return start_session(args)
     
     inputs = get_inputs(args)
     if inputs is None:

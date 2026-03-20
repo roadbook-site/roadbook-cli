@@ -18,7 +18,7 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
     - **Semantic Guide Mode**: If no script exists, it will switch to interactive guidance.
 
 3.  **Semantic Guide Execution**:
-    - Once a session is started (via `roadbook run <id>` or `roadbook open <id>`), the **Full Roadbook Content** will be displayed.
+    - Once a session is started (via `roadbook run <id>` or `roadbook run --guide <id>`), the **Full Roadbook Content** will be displayed.
     - You are the **Executor**.
     - **Session Context**: The CLI provides a Session ID (e.g., `run_20260315_...`). Use this ID to organize artifacts if you are running manual commands.
     - **Read and Execute**: Read the entire Roadbook content (all Sheets) carefully.
@@ -43,23 +43,25 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
 
 ## CLI Commands Reference
 
-- `roadbook list`: List all installed roadbooks.
-- `roadbook inspect <id>`: Show details of a roadbook (alias for `show`).
-- `roadbook run <id>`: Execute a roadbook automatically (script-first) or open interactive mode.
-- `roadbook open <id>`: Start an interactive session and view the full roadbook.
+- `roadbook list`: List local roadbooks in the current project (`.roadbook/`).
+- `roadbook list -g`: List all globally installed roadbooks.
+- `roadbook inspect <id> [-g]`: Show details of a roadbook (alias for `show`).
+- `roadbook run <id> [-g]`: Execute a roadbook automatically (script-first) or open interactive mode. Use `-g` if the roadbook is in the global library.
+- `roadbook run --guide <id> [-g]`: Start an interactive session and view the full roadbook.
 - `roadbook logs list <id>`: View run history.
+- `roadbook link`: Link local roadbooks to the global scope for easy testing.
+- `roadbook remove <id> [-g]`: Delete a roadbook (use `-g` for global).
 
 ## Script Management & Artifacts
 
 - **IMPORTANT - Reusability & Token Efficiency**: Scripts are the core of Roadbook's efficiency. They can be reused without consuming tokens. **Always strive to generate a robust script instead of relying on interactive semantic execution every time.**
-- **Workspace Structure**: Roadbooks are executed in a dedicated workspace directory: `.roadbook/<roadbook_id>/`.
+- **Workspace Structure**: Roadbooks are executed in a dedicated workspace directory. For local roadbooks, this is `.roadbook/<roadbook_id>/`.
     - **Scripts**: Located in `.roadbook/<roadbook_id>/scripts/script.py`.
     - **Outputs**: Located in `.roadbook/<roadbook_id>/outputs/`.
     - **Runtime**: Located in `.roadbook/<roadbook_id>/runtime/` (internal system use).
-- **Auto-Scaffolding**: When `roadbook open <id>` is executed:
-    1.  The system copies the roadbook from the global library (`~/.roadbook/<id>/`) to `.roadbook/<id>/` in the current workspace.
-    2.  It scaffolds a template script in `.roadbook/<id>/scripts/script.py`.
-    3.  **Edit this file directly** to implement automation logic.
+- **Auto-Scaffolding**: When `roadbook run --guide <id>` is executed and no script exists:
+    1.  It scaffolds a template script in `scripts/script.py` within the roadbook's directory.
+    2.  **Edit this file directly** to implement automation logic.
 - **Output Management**:
     - All execution outputs (downloads, screenshots, logs) MUST be saved in `.roadbook/<id>/outputs/<session_id>/`.
     - The scaffolded script automatically detects the `ROADBOOK_RUN_ID` environment variable and sets `OUTPUT_DIR` accordingly.

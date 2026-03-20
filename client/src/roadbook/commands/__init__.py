@@ -7,3 +7,5 @@ from . import editor
 from . import doctor
 from . import initialize
 from . import link
+from . import unlink
+from . import remove

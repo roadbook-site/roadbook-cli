@@ -24,8 +24,7 @@ Command Categories:
     show      Show details of a roadbook
 
   [Navigate]  Execute and interact with roadbooks
-    open      Start semantic guide mode
-    run       Execute automation script (Auto-downgrade to semantic mode)
+    run       Execute automation script (Auto-downgrade to semantic guide mode)
 
   [Observe]   Review execution history and logs
     logs      Manage and inspect run logs
@@ -73,19 +72,12 @@ Command Categories:
     show_parser.set_defaults(func=library.show_book)
 
     # --- Group: Navigate ---
-    # Command: open
-    open_parser = subparsers.add_parser("open", help="Open roadbook in semantic guide mode")
-    open_parser.add_argument("id", help="Roadbook ID")
-    open_parser.add_argument("--inputs", help="JSON inputs (string)")
-    open_parser.add_argument("--inputs-file", help="JSON inputs file path")
-    open_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
-    open_parser.set_defaults(func=executor.start_session)
-
     # Command: run
-    run_parser = subparsers.add_parser("run", help="Run roadbook (Script/Auto)")
+    run_parser = subparsers.add_parser("run", help="Run roadbook (Script/Auto-downgrade to Guide)")
     run_parser.add_argument("id", help="Roadbook ID")
     run_parser.add_argument("--inputs", help="JSON inputs (string)")
     run_parser.add_argument("--inputs-file", help="JSON inputs file path")
+    run_parser.add_argument("--guide", action="store_true", help="Force Semantic Guide Mode instead of running script")
     run_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     run_parser.set_defaults(func=executor.run_book)
 

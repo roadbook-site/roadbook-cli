@@ -64,10 +64,30 @@ def step(name):
         STEPS_TIMING[name] = duration
         logger.info(f"    -> Step Finished: {name} (Duration: {duration:.2f}s)")
 
+def print_scaffold_warning():
+    """Prints a warning that this is a scaffold script."""
+    print("╔══════════════════════════════════════════════════════════════════════════════╗")
+    print("║                     Roadbook Scaffold Execution                              ║")
+    print("╠══════════════════════════════════════════════════════════════════════════════╣")
+    print("║  NOTICE: You are running a scaffold script.                                  ║")
+    print("║  This script contains structure but NO scraping logic yet.                   ║")
+    print("║                                                                              ║")
+    print("║  Workflow Options:                                                           ║")
+    print("║  [Option A] Human-Guided (Recommended for complex flows):                    ║")
+    print("║    1. Run 'roadbook edit <id>' to visually outline steps in roadbook.md.     ║")
+    print("║    2. Implement the corresponding logic in 'scripts/script.py'.              ║")
+    print("║                                                                              ║")
+    print("║  [Option B] AI-Driven Exploration:                                           ║")
+    print("║    Command your AI Agent to explore the webpage directly. The agent can      ║")
+    print("║    write code or use browser tools to map the flow, refining both            ║")
+    print("║    'scripts/script.py' and 'roadbook.md' simultaneously.                     ║")
+    print("╚══════════════════════════════════════════════════════════════════════════════╝")
+
 def run(inputs: dict) -> dict:
     """
     Main execution entry point.
     """
+    print_scaffold_warning()
     logger.info(f"Starting execution for {inputs}")
     
     # entry_url can be overridden by inputs, otherwise use the one defined in Roadbook
