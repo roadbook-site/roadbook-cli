@@ -27,7 +27,7 @@ This skill guides the Agent to create a robust, standard-compliant Roadbook by e
         -   *Example*: `product_title`, `price`, `url`.
     -   **Naming**: Propose a concise `kebab-case` name (e.g., `amazon-product-search`).
 3.  **Scaffolding**:
-    -   Run: `roadbook init <name> --description "<generalized_goal>"`.
+    -   Run: `roadbook init <name> --description "<generalized_goal>" --entry-url "<target_url>"`
     -   *Note*: The `init` command creates the folder structure at `.roadbook/<id>/`.
 
 ### Phase 2: Exploration & Fast Fail

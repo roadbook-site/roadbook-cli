@@ -30,6 +30,7 @@ owner: "user_123"            # 责任人/创建者
 platform: "desktop"          # desktop | mobile
 locale: "zh-CN"              # 语言环境 (e.g. zh-CN, en-US)
 region: "CN"                 # 适用地域 (e.g. CN, US)
+entry_url: "https://www.amazon.com" # [新增] 路书入口URL
 description: "在亚马逊上搜索商品并完成下单流程"
 inputs:                      # 输入参数定义
   keyword: "搜索关键词"

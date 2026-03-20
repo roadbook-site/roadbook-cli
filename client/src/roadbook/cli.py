@@ -128,7 +128,13 @@ Command Categories:
     init_parser = subparsers.add_parser("init", help="Initialize a new roadbook scaffold")
     init_parser.add_argument("name", help="Name of the roadbook")
     init_parser.add_argument("--description", "-d", help="Optional description of the roadbook", default="")
+    init_parser.add_argument("--entry-url", help="Initial URL for the roadbook to start exploration", default="https://www.example.com")
     init_parser.add_argument("--edit", "-e", help="Immediately open in editor after initialization", action="store_true")
+
+    # Interactive/Advanced Scaffolding options
+    init_parser.add_argument("--browser-mode", choices=["new", "cdp"], default=None, help="Browser connection mode: 'new' (fresh profile) or 'cdp' (existing browser)")
+    init_parser.add_argument("--login", type=str, choices=["y", "n", "yes", "no", "true", "false"], default=None, help="Website requires login (y/n)")
+    
     init_parser.set_defaults(func=initialize.init_book)
 
     # Command: script

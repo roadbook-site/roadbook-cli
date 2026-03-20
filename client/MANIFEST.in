@@ -1,3 +1,4 @@
 include README.md
 include LICENSE
 recursive-include src/roadbook/server/static *
+recursive-include src/roadbook/core/templates *

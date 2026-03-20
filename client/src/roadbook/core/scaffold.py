@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
+import pkgutil
 from .parser import RoadbookParser, RoadbookModel
 
 class ScaffoldManager:
@@ -21,7 +22,7 @@ class ScaffoldManager:
         }
 
     @staticmethod
-    def create_roadbook_scaffold(book_dir: Path, rb_id: str, name: str, description: str):
+    def create_roadbook_scaffold(book_dir: Path, rb_id: str, name: str, description: str, entry_url: str = "https://www.example.com"):
         """Creates the full roadbook scaffold (directories + roadbook.md)."""
         paths = ScaffoldManager.get_structure_paths(book_dir)
         
@@ -32,7 +33,7 @@ class ScaffoldManager:
         
         # Create roadbook.md
         if not paths["roadbook_file"].exists():
-            content = ScaffoldManager._generate_roadbook_md_content(rb_id, name, description)
+            content = ScaffoldManager._generate_roadbook_md_content(rb_id, name, description, entry_url)
             with open(paths["roadbook_file"], "w", encoding="utf-8") as f:
                 f.write(content)
         
@@ -83,113 +84,23 @@ class ScaffoldManager:
         return script_path
 
     @staticmethod
-    def _generate_roadbook_md_content(rb_id, name, description):
-        # Base YAML frontmatter
-        yaml_frontmatter = f"""---
-id: "{rb_id}"
-name: "{name}"
-version: "1.0"
-owner: "user"
-platform: "desktop"
-description: "{description}"
-tags: []
-inputs: 
-  target_url: "https://www.google.com"
-  sample_param: "example_value"
-outputs: {{}}
----
-"""
+    def _generate_roadbook_md_content(rb_id, name, description, entry_url="https://www.example.com"):
+        template_bytes = pkgutil.get_data(__package__, "templates/roadbook.md.tpl")
+        if not template_bytes:
+            raise RuntimeError("Could not find roadbook.md.tpl template")
+        template_str = template_bytes.decode("utf-8")
         
-        return f"""{yaml_frontmatter}
-## sample initialization title
-**ID**: init
-**Type**: setup
-**Description**: Verify browser environment (connection method) and authentication state.
-**URL**: `{{{{target_url}}}}`
-**Locators**: `body`
-
-**Steps**:
-1. [Please fill in specific steps, e.g., `GOTO "{{{{target_url}}}}"`]
-2. [Please fill in specific steps, e.g., `WAIT "domcontentloaded"`]
-
----
-
-## sample sheet title
-**ID**: process_sheet_1
-**Type**: process
-**Description**: [Describe the first sheet logic, e.g. "enter search query and submit"]
-**URL**: `{{{{target_url}}}}`
-**Locators**: `role=main`, `text="Dashboard"`
-
-**Steps**:
-1. [Please fill in specific steps, e.g., `CLICK "role=button[name='Search']"`]
-2. [Use semantic selectors, e.g., `INPUT "label=Search" "iPhone"`]
-3. [Supported standard actions: GOTO, CLICK, INPUT, HOVER, WAIT, EXTRACT]
-
----
-
-## sample sheet title 2
-**ID**: process_sheet_2
-**Type**: process
-**Description**: [Describe the next sheet logic, e.g. "Process search results and extract data"]
-**URL**: `{{{{target_url}}}}`
-**Locators**: `[Optional]`
-
-**Steps**:
-1. [Continue with the next part of the process]
-
----
-
-## sample delivery title
-**ID**: delivery
-**Type**: delivery
-**Description**: Summarize deliverables and end the journey.
-
-**Steps**:
-1. [Output final result]
-"""
+        return template_str.replace("{rb_id}", rb_id)\
+                           .replace("{name}", name)\
+                           .replace("{description}", description)\
+                           .replace("{entry_url}", entry_url)
 
     @staticmethod
     def _generate_browser_utils_content():
-        return '''"""
-Browser configuration and initialization utilities.
-"""
-from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
-import logging
-
-def get_playwright_context(headless=False, cdp_url=None):
-    """
-    Standard context manager for Playwright.
-    """
-    p = sync_playwright().start()
-    
-    # --- Browser Launch Strategies ---
-    if cdp_url:
-        # Strategy 2: Connect to Existing Browser (CDP)
-        # Best for: Debugging, reusing login state, avoiding bot detection.
-        # Ensure Chrome is running with: --remote-debugging-port=9222
-        browser = p.chromium.connect_over_cdp(cdp_url)
-        
-        # Crucial for CDP: reuse the existing default context to keep login state
-        if browser.contexts:
-            context = browser.contexts[0]
-        else:
-            context = browser.new_context()
-            
-        # Try to reuse an existing page, otherwise create a new one
-        if context.pages:
-            page = context.pages[0]
-        else:
-            page = context.new_page()
-    else:
-        # Strategy 1: Fresh Browser (Default)
-        # Best for: Clean state, reproducible runs, CI/CD, and initial exploration.
-        browser = p.chromium.launch(headless=headless)
-        context = browser.new_context()
-        page = context.new_page()
-        
-    return p, browser, context, page
-'''
+        template_bytes = pkgutil.get_data(__package__, "templates/browser.py.tpl")
+        if not template_bytes:
+            raise RuntimeError("Could not find browser.py.tpl template")
+        return template_bytes.decode("utf-8")
 
     @staticmethod
     def _generate_python_script_template(rb_id, name, roadbook_model: Optional[RoadbookModel] = None):
@@ -214,7 +125,7 @@ def get_playwright_context(headless=False, cdp_url=None):
                     logic_blocks.append(f'            with step("{sheet.title}"):  # ID: {sheet.id}')
                     if sheet.url:
                         logic_blocks.append(f'                # URL: {sheet.url}')
-                        logic_blocks.append(f'                if "{sheet.url}" != "{{target_url}}":')
+                        logic_blocks.append(f'                if "{sheet.url}" != "{{entry_url}}":')
                         logic_blocks.append(f'                     page.goto("{sheet.url}")')
                     if sheet.steps:
                         for s in sheet.steps:
@@ -259,8 +170,9 @@ def get_playwright_context(headless=False, cdp_url=None):
             # Default Template if no model
             logic_blocks.append("            # --- Phase 1: Initialization ---")
             logic_blocks.append("            logger.info(\"Phase 1: Initialization\")")
-            logic_blocks.append("            page.goto(target_url)")
-            logic_blocks.append("            page.wait_for_load_state(\"networkidle\")")
+            logic_blocks.append("            page.goto(entry_url)")
+            # Use wait_for_page_load for better stability
+            logic_blocks.append("            wait_for_page_load(page, \"domcontentloaded\")")
             logic_blocks.append("")
             logic_blocks.append("            # --- Phase 2: Process ---")
             logic_blocks.append("            # Phase 2.1: Process Sheet 1 (Example)")
@@ -280,147 +192,16 @@ def get_playwright_context(headless=False, cdp_url=None):
             logic_blocks.append("            data[\"result\"] = \"Operation completed successfully\"")
 
         logic_body = "\n".join(logic_blocks)
-
-        return f'''"""
-Automation script for roadbook: {name} ({rb_id})
-Generated by Roadbook CLI at {date_str}.
-"""
-import sys
-import json
-import logging
-import time
-import os
-from pathlib import Path
-from contextlib import contextmanager
-
-# Add current directory to path so we can import utils
-sys.path.append(str(Path(__file__).parent))
-
-try:
-    from utils.browser import get_playwright_context
-except ImportError:
-    # Fallback if utils not present or path issue
-    def get_playwright_context(headless=False, cdp_url=None):
-        from playwright.sync_api import sync_playwright
-        p = sync_playwright().start()
-        if cdp_url:
-            browser = p.chromium.connect_over_cdp(cdp_url)
-            context = browser.contexts[0] if browser.contexts else browser.new_context()
-            page = context.pages[0] if context.pages else context.new_page()
-        else:
-            browser = p.chromium.launch(headless=headless)
-            context = browser.new_context()
-            page = context.new_page()
-        return p, browser, context, page
-
-# Configure Logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
-
-# Step Profiling Helper
-STEPS_TIMING = {{}}
-
-@contextmanager
-def step(name):
-    logger.info(f"[*] Step Started: {{name}}...")
-    start_time = time.time()
-    try:
-        yield
-    finally:
-        duration = time.time() - start_time
-        STEPS_TIMING[name] = duration
-        logger.info(f"    -> Step Finished: {{name}} (Duration: {{duration:.2f}}s)")
-
-def run(inputs: dict) -> dict:
-    """
-    Main execution entry point.
-    """
-    logger.info(f"Starting execution for {{inputs}}")
-    
-    target_url = inputs.get("target_url", "https://www.google.com")
-    data = {{}}
-    
-    # Runtime artifacts setup
-    # If run by CLI, ROADBOOK_RUN_ID will be set.
-    session_id = os.environ.get("ROADBOOK_RUN_ID")
-    
-    # Locate the outputs directory (sibling to scripts/)
-    project_root = Path(__file__).parent.parent
-    outputs_root = project_root / "outputs"
-    
-    if not session_id:
-        # Manual run fallback
-        timestamp = time.strftime('%Y%m%d_%H%M%S')
-        session_id = f"run_{{timestamp}}"
         
-    output_dir = outputs_root / session_id
-    output_dir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Artifacts will be saved to: {{output_dir}}")
-
-    try:
-        # Initialize Browser using shared utility
-        # headless=False allows you to see the browser action. Set to True for production.
-        # To connect to an existing browser, pass cdp_url (e.g., cdp_url="http://localhost:9222")
-        p, browser, context, page = get_playwright_context(headless=False)
+        template_bytes = pkgutil.get_data(__package__, "templates/script.py.tpl")
+        if not template_bytes:
+            raise RuntimeError("Could not find script.py.tpl template")
+        template_str = template_bytes.decode("utf-8")
         
-        try:
-{logic_body}
-            
-            logger.info("All steps completed successfully")
-            
-        except Exception as step_err:
-            logger.error(f"Error during execution steps: {{step_err}}")
-            error_screenshot_path = output_dir / "error_screenshot.png"
-            try:
-                page.screenshot(path=str(error_screenshot_path))
-                logger.info(f"Saved error screenshot to {{error_screenshot_path}}")
-            except Exception as ss_err:
-                logger.error(f"Failed to take error screenshot: {{ss_err}}")
-            raise step_err
-            
-        finally:
-            browser.close()
-            p.stop()
-            
-        # Attach timing metrics to data
-        data["_steps_timing"] = STEPS_TIMING
+        entry_url_fallback = roadbook_model.meta.get('entry_url', 'https://www.example.com') if roadbook_model else 'https://www.example.com'
         
-        # Save structured outputs to outputs.json
-        outputs_file = output_dir / "outputs.json"
-        with open(outputs_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-            
-        return {{"status": "success", "data": data}}
-
-    except Exception as e:
-        logger.error(f"Execution failed: {{e}}", exc_info=True)
-        return {{"status": "failed", "error": str(e)}}
-
-if __name__ == "__main__":
-    # Standard Entry Point for CLI Execution
-    try:
-        if len(sys.argv) > 1:
-            try:
-                # Try parsing as JSON first
-                cli_inputs = json.loads(sys.argv[1])
-            except json.JSONDecodeError:
-                # If not JSON, maybe treat as key=value or just empty
-                cli_inputs = {{}}
-        else:
-             cli_inputs = {{}}
-        
-        result = run(cli_inputs)
-        
-        # Ensure result is printed to stdout for capture
-        print(json.dumps(result))
-        
-    except Exception as e:
-        print(json.dumps({{"status": "failed", "error": str(e)}}))
-        sys.exit(1)
-'''
+        return template_str.replace("{name}", name)\
+                           .replace("{rb_id}", rb_id)\
+                           .replace("{date_str}", date_str)\
+                           .replace("{entry_url_fallback}", entry_url_fallback)\
+                           .replace("{logic_body}", logic_body)

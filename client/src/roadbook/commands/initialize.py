@@ -29,6 +29,7 @@ def init_book(args):
     """Initialize a new roadbook scaffold."""
     name = args.name
     description = args.description
+    entry_url = args.entry_url
     
     rb_id = _generate_id(name)
     if not rb_id:
@@ -55,8 +56,10 @@ def init_book(args):
             work_dir.mkdir(parents=True, exist_ok=True)
             
         # Use centralized scaffold manager
-        ScaffoldManager.create_roadbook_scaffold(book_dir, rb_id, name, description)
-        ScaffoldManager.create_script_scaffold(book_dir, "python", rb_id, name)
+        paths = ScaffoldManager.create_roadbook_scaffold(book_dir, rb_id, name, description, entry_url)
+        with open(paths["roadbook_file"], "r", encoding="utf-8") as f:
+            roadbook_content = f.read()
+        ScaffoldManager.create_script_scaffold(book_dir, "python", rb_id, name, roadbook_content)
         
     except Exception as e:
         print_error(f"Failed to initialize roadbook: {e}")
