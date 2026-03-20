@@ -26,25 +26,25 @@ class RoadbookMeta:
 
 class RoadbookManager:
     @staticmethod
-    def get_search_paths() -> List[Path]:
+    def get_search_paths(global_scope: bool = False) -> List[Path]:
         paths = []
-        # Workspace (High priority)
-        cwd = Path.cwd()
-        # 1. Check .roadbook/ in cwd (New Structure: .roadbook/<id>)
-        local_books = cwd / ".roadbook"
-        if local_books.exists():
-            paths.append(local_books)
-        
-        # 2. Check global books (Low priority)
-        global_books = get_books_dir()
-        if global_books.exists():
-            paths.append(global_books)
+        if global_scope:
+            # Global books
+            global_books = get_books_dir()
+            if global_books.exists():
+                paths.append(global_books)
+        else:
+            # Workspace
+            cwd = Path.cwd()
+            local_books = cwd / ".roadbook"
+            if local_books.exists():
+                paths.append(local_books)
             
         return paths
 
     @staticmethod
-    def list_roadbooks() -> List[RoadbookMeta]:
-        search_paths = RoadbookManager.get_search_paths()
+    def list_roadbooks(global_scope: bool = False) -> List[RoadbookMeta]:
+        search_paths = RoadbookManager.get_search_paths(global_scope)
         roadbooks = []
         seen_ids = set()
         
@@ -67,8 +67,8 @@ class RoadbookManager:
         return roadbooks
 
     @staticmethod
-    def get_roadbook(rb_id: str) -> Optional[RoadbookMeta]:
-        search_paths = RoadbookManager.get_search_paths()
+    def get_roadbook(rb_id: str, global_scope: bool = False) -> Optional[RoadbookMeta]:
+        search_paths = RoadbookManager.get_search_paths(global_scope)
         
         for books_dir in search_paths:
             # 1. Try direct path (standard structure: books/{id}/roadbook.md)

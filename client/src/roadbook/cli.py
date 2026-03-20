@@ -57,16 +57,19 @@ Command Categories:
     # --- Group: Explore ---
     # Command: list
     list_parser = subparsers.add_parser("list", help="List all roadbooks")
+    list_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     list_parser.set_defaults(func=library.list_books)
 
     # Command: search
     search_parser = subparsers.add_parser("search", help="Search roadbooks")
     search_parser.add_argument("keyword", help="Search keyword")
+    search_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     search_parser.set_defaults(func=search.search_books)
 
     # Command: show
     show_parser = subparsers.add_parser("show", aliases=["inspect"], help="Show roadbook details")
     show_parser.add_argument("id", help="Roadbook ID")
+    show_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     show_parser.set_defaults(func=library.show_book)
 
     # --- Group: Navigate ---
@@ -75,6 +78,7 @@ Command Categories:
     open_parser.add_argument("id", help="Roadbook ID")
     open_parser.add_argument("--inputs", help="JSON inputs (string)")
     open_parser.add_argument("--inputs-file", help="JSON inputs file path")
+    open_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     open_parser.set_defaults(func=executor.start_session)
 
     # Command: run
@@ -82,6 +86,7 @@ Command Categories:
     run_parser.add_argument("id", help="Roadbook ID")
     run_parser.add_argument("--inputs", help="JSON inputs (string)")
     run_parser.add_argument("--inputs-file", help="JSON inputs file path")
+    run_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     run_parser.set_defaults(func=executor.run_book)
 
     # --- Group: Observe ---
@@ -121,6 +126,7 @@ Command Categories:
     edit_parser.add_argument("--port", type=int, default=8000, help="Port to run server on")
     edit_parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind server to")
     edit_parser.add_argument("--dir", type=str, default=None, help="Directory to serve roadbooks from (default: ~/.roadbook/books)")
+    edit_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     edit_parser.set_defaults(func=editor.start_editor)
 
     # --- Group: Develop ---
@@ -130,6 +136,7 @@ Command Categories:
     init_parser.add_argument("--description", "-d", help="Optional description of the roadbook", default="")
     init_parser.add_argument("--entry-url", help="Initial URL for the roadbook to start exploration", default="https://www.example.com")
     init_parser.add_argument("--edit", "-e", help="Immediately open in editor after initialization", action="store_true")
+    init_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Initialize in global directory")
 
     # Interactive/Advanced Scaffolding options
     init_parser.add_argument("--browser-mode", choices=["new", "cdp"], default=None, help="Browser connection mode: 'new' (fresh profile) or 'cdp' (existing browser)")
@@ -144,12 +151,20 @@ Command Categories:
     # script ls
     script_ls_parser = script_subparsers.add_parser("ls", help="List scripts")
     script_ls_parser.add_argument("id", help="Roadbook ID")
+    script_ls_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     script_ls_parser.set_defaults(func=script.script_ls)
 
     # script clean
     script_clean_parser = script_subparsers.add_parser("clean", help="Clean scripts")
     script_clean_parser.add_argument("id", help="Roadbook ID")
+    script_clean_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     script_clean_parser.set_defaults(func=script.script_clean)
+
+    # Command: link
+    link_parser = subparsers.add_parser("link", help="Symlink local roadbook to global")
+    link_parser.add_argument("id", nargs="?", help="Optional: Roadbook ID to link (defaults to all local roadbooks)")
+    from .commands import link as link_cmd
+    link_parser.set_defaults(func=link_cmd.link_book)
 
     # --- Group: Diagnose ---
     # Command: doctor
@@ -186,11 +201,13 @@ Command Categories:
     # Command: push
     push_parser = subparsers.add_parser("push", help="Push roadbook to server")
     push_parser.add_argument("id", help="Roadbook ID")
+    push_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     push_parser.set_defaults(func=remote.push)
     
     # Command: pull
     pull_parser = subparsers.add_parser("pull", help="Pull roadbook from server")
     pull_parser.add_argument("id", help="Roadbook ID")
+    pull_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     pull_parser.set_defaults(func=remote.pull)
 
     # Command: remote

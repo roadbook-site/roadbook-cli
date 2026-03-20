@@ -126,6 +126,7 @@ def run_book(args):
     2. 如果没有脚本，则警告用户并切换到语义引导模式 (open).
     """
     rb_id = args.id
+    global_scope = getattr(args, 'global_scope', False)
     
     if not check_environment():
         print_info("[Guidance] Environment check failed. Please fix issues above before running.")
@@ -134,10 +135,11 @@ def run_book(args):
     if inputs is None:
         return
 
-    book = RoadbookManager.get_roadbook(rb_id)
+    book = RoadbookManager.get_roadbook(rb_id, global_scope)
     if not book:
-        print_error(f"Roadbook '{rb_id}' not found.")
-        print_info("[Action] Use 'roadbook list' to view installed roadbooks.")
+        scope_str = "global" if global_scope else "local"
+        print_error(f"Roadbook '{rb_id}' not found in {scope_str} scope.")
+        print_info(f"[Action] Use 'roadbook list{ ' -g' if global_scope else ''}' to view installed roadbooks.")
         return
 
     book_dir = book.path.parent
@@ -307,14 +309,16 @@ def find_workspace_dot_roadbook(start_path: Path) -> Path:
 def start_session(args):
     """Starts a new semantic guide mode session."""
     rb_id = args.id
+    global_scope = getattr(args, 'global_scope', False)
     inputs = get_inputs(args)
     if inputs is None:
         return
 
-    book = RoadbookManager.get_roadbook(rb_id)
+    book = RoadbookManager.get_roadbook(rb_id, global_scope)
     if not book:
-        print_error(f"Roadbook '{rb_id}' not found.")
-        print_info("[Action] Use 'roadbook list' to view installed roadbooks.")
+        scope_str = "global" if global_scope else "local"
+        print_error(f"Roadbook '{rb_id}' not found in {scope_str} scope.")
+        print_info(f"[Action] Use 'roadbook list{ ' -g' if global_scope else ''}' to view installed roadbooks.")
         return
 
     cwd = Path.cwd()

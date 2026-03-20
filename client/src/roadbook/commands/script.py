@@ -5,10 +5,12 @@ from ..utils.output import print_table, print_info, print_error
 
 def script_ls(args):
     rb_id = args.id
-    book = RoadbookManager.get_roadbook(rb_id)
+    global_scope = getattr(args, 'global_scope', False)
+    book = RoadbookManager.get_roadbook(rb_id, global_scope)
     if not book:
-        print_error(f"Roadbook '{rb_id}' not found.")
-        print_info("[Action] Use 'roadbook list' to view installed roadbooks.")
+        scope_str = "global" if global_scope else "local"
+        print_error(f"Roadbook '{rb_id}' not found in {scope_str} scope.")
+        print_info(f"[Action] Use 'roadbook list{ ' -g' if global_scope else ''}' to view installed roadbooks.")
         return
 
     scripts = RuntimeManager.list_scripts(rb_id, book_dir=book.path.parent)
@@ -29,10 +31,12 @@ def script_ls(args):
 
 def script_clean(args):
     rb_id = args.id
-    book = RoadbookManager.get_roadbook(rb_id)
+    global_scope = getattr(args, 'global_scope', False)
+    book = RoadbookManager.get_roadbook(rb_id, global_scope)
     if not book:
-        print_error(f"Roadbook '{rb_id}' not found.")
-        print_info("[Action] Use 'roadbook list' to view installed roadbooks.")
+        scope_str = "global" if global_scope else "local"
+        print_error(f"Roadbook '{rb_id}' not found in {scope_str} scope.")
+        print_info(f"[Action] Use 'roadbook list{ ' -g' if global_scope else ''}' to view installed roadbooks.")
         return
 
     RuntimeManager.clean_scripts(rb_id, book_dir=book.path.parent)

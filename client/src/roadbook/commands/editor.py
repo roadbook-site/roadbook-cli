@@ -79,70 +79,21 @@ def start_editor(args):
         local_roadbook = cwd / ".roadbook"
         global_roadbook = get_books_dir()
         
-        if local_roadbook.exists():
-             work_dir = str(local_roadbook)
-        elif (cwd / ".git").exists() or any(cwd.glob("*.md")):
-             # If it looks like a project root, use it?
-             # But the server recursively scans.
-             # Let's default to global ONLY if explicit ID requires it, otherwise use CWD if it seems relevant.
-             # Actually, the user's request "use current directory as starting point" implies they want CWD to be the root.
-             # But usually roadbooks are in .roadbook/.
-             
-             # Compromise:
-             # If .roadbook exists, root is .roadbook.
-             # Else root is Global.
-             
-             # WAIT, user said "roadbook init ... take current directory".
-             # And "roadbook edit ... take current directory".
-             
-             # If I run `roadbook edit` in `C:\MyProject`, I expect to see roadbooks relevant to MyProject.
-             # If `C:\MyProject\.roadbook` exists, show that.
-             # If NOT, maybe show `C:\MyProject`?
-             
-             # Let's stick to the convention: Roadbooks are in `.roadbook`.
-             # If `.roadbook` exists in CWD, use it.
-             # If NOT, use GLOBAL.
-             
-             # BUT, the user issue was: "click a roadbook... relative path...".
-             # If the server is at `C:\code_dev...` and I open `books/my-test/roadbook.md` (which is in global),
-             # then the server MUST be at global for that link to work.
-             
-             # If the user provides an ID that is found in Global but not Local, 
-             # we MUST set root to Global.
-             pass
+        global_scope = getattr(args, 'global_scope', False)
 
-        # Updated Priority:
-        # 1. If ID provided:
-        #    a. Check Local .roadbook
-        #    b. Check Global .roadbook
-        #    c. Set work_dir to where it was found.
-        # 2. If NO ID provided:
-        #    a. If Local .roadbook exists -> Local
-        #    b. Else -> Global
-        
-        work_dir = str(global_roadbook) # Default
-        mode = "Global"
-        
-        if args.id:
-            # Check local first
-            if (local_roadbook / args.id).exists() or (local_roadbook / f"{args.id}.md").exists():
-                work_dir = str(local_roadbook)
-                mode = "Local (.roadbook)"
-            # Check global next
-            elif (global_roadbook / args.id).exists() or (global_roadbook / f"{args.id}.md").exists():
-                work_dir = str(global_roadbook)
-                mode = "Global (User Home)"
-            # Check CWD for direct file match ?
-            elif (cwd / args.id).exists():
-                 # If user passed a relative path to a file in CWD
-                 # e.g. roadbook edit mybook.md
-                 work_dir = str(cwd)
-                 mode = "Current Directory"
+        if global_scope:
+            work_dir = str(global_roadbook)
+            mode = "Global (User Home)"
         else:
             if local_roadbook.exists():
                 work_dir = str(local_roadbook)
                 mode = "Local (.roadbook)"
-        
+            else:
+                # If local does not exist, but user wants local, we should still use local and maybe create it?
+                # For editor, it's safe to just use the path
+                work_dir = str(local_roadbook)
+                mode = "Local (.roadbook)"
+                
         print(f"Roadbook Editor starting in [{mode}] mode.")
         print(f"Serving directory: {work_dir}")
 

@@ -30,6 +30,7 @@ def init_book(args):
     name = args.name
     description = args.description
     entry_url = args.entry_url
+    global_scope = getattr(args, 'global_scope', False)
     
     rb_id = _generate_id(name)
     if not rb_id:
@@ -37,22 +38,25 @@ def init_book(args):
         return
         
     # Check for duplicates
-    existing_books = RoadbookManager.list_roadbooks()
+    existing_books = RoadbookManager.list_roadbooks(global_scope)
     for book in existing_books:
         if book.id == rb_id:
             print_error(f"A roadbook with ID '{rb_id}' already exists at {book.path.parent}.")
             return
 
-    # Create directory structure in current workspace
-    cwd = Path.cwd()
-    
-    # Priority: .roadbook in CWD, creating if not exists
-    work_dir = cwd / ".roadbook"
+    if global_scope:
+        from ..core.config import get_books_dir
+        work_dir = get_books_dir()
+    else:
+        # Create directory structure in current workspace
+        cwd = Path.cwd()
+        work_dir = cwd / ".roadbook"
+        
     book_dir = work_dir / rb_id
     
     try:
         if not work_dir.exists():
-            print(f"Initializing .roadbook directory at {work_dir}")
+            print(f"Initializing directory at {work_dir}")
             work_dir.mkdir(parents=True, exist_ok=True)
             
         # Use centralized scaffold manager

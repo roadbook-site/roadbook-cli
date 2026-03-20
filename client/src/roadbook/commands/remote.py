@@ -31,9 +31,11 @@ def remote_list(args):
 
 def push(args):
     rb_id = args.id
-    book = RoadbookManager.get_roadbook(rb_id)
+    global_scope = getattr(args, 'global_scope', False)
+    book = RoadbookManager.get_roadbook(rb_id, global_scope)
     if not book:
-        print_error(f"Roadbook '{rb_id}' not found locally.")
+        scope_str = "global" if global_scope else "local"
+        print_error(f"Roadbook '{rb_id}' not found in {scope_str} scope.")
         return
 
     client = APIClient()
@@ -84,6 +86,7 @@ def push(args):
 
 def pull(args):
     rb_id = args.id
+    global_scope = getattr(args, 'global_scope', False)
     client = APIClient()
     
     try:
@@ -102,7 +105,11 @@ def pull(args):
             client.download_content(rb_id, zip_file)
             
             # Unzip to books dir
-            books_dir = get_books_dir()
+            if global_scope:
+                books_dir = get_books_dir()
+            else:
+                books_dir = Path.cwd() / ".roadbook"
+                
             target_dir = books_dir / rb_id
             
             if target_dir.exists():

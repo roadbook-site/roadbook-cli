@@ -6,3 +6,4 @@ from . import run
 from . import editor
 from . import doctor
 from . import initialize
+from . import link

@@ -2,11 +2,16 @@ from ..core.roadbook import RoadbookManager
 from ..utils.output import print_table, print_info, print_error
 
 def list_books(args):
-    books = RoadbookManager.list_roadbooks()
+    global_scope = getattr(args, 'global_scope', False)
+    books = RoadbookManager.list_roadbooks(global_scope)
     
     if not books:
-        print_info("No roadbooks found.")
-        print_info("[Action] Put roadbook packages under ~/.roadbook/books/ and run 'roadbook list' again.")
+        scope_str = "global " if global_scope else "local "
+        print_info(f"No {scope_str}roadbooks found.")
+        if global_scope:
+            print_info("[Action] Put roadbook packages under ~/.roadbook/ or use 'roadbook link'.")
+        else:
+            print_info("[Action] Use 'roadbook init <name>' to create one in the current directory.")
         return
 
     headers = ["ID", "Name", "Version", "Description"]
@@ -23,11 +28,13 @@ def list_books(args):
 
 def show_book(args):
     rb_id = args.id
-    book = RoadbookManager.get_roadbook(rb_id)
+    global_scope = getattr(args, 'global_scope', False)
+    book = RoadbookManager.get_roadbook(rb_id, global_scope)
     
     if not book:
-        print_error(f"Roadbook '{rb_id}' not found.")
-        print_info("[Action] Use 'roadbook list' to view installed roadbooks.")
+        scope_str = "global" if global_scope else "local"
+        print_error(f"Roadbook '{rb_id}' not found in {scope_str} scope.")
+        print_info(f"[Action] Use 'roadbook list{ ' -g' if global_scope else ''}' to view installed roadbooks.")
         return
 
     print_info(f"Roadbook Details: {book.id}")
