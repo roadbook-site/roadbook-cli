@@ -76,23 +76,35 @@ def start_editor(args):
         # But for viewing arbitrary MDs, CWD is better.
         
         cwd = Path.cwd()
-        local_roadbook = cwd / ".roadbook"
         global_roadbook = get_books_dir()
         
         global_scope = getattr(args, 'global_scope', False)
+
+        def find_local_roadbook(start_path: Path):
+            curr = start_path.resolve()
+            while True:
+                if (curr / ".roadbook").is_dir():
+                    return curr / ".roadbook"
+                if curr.name == ".roadbook":
+                    return curr
+                parent = curr.parent
+                if parent == curr:
+                    break
+                curr = parent
+            return None
 
         if global_scope:
             work_dir = str(global_roadbook)
             mode = "Global (User Home)"
         else:
-            if local_roadbook.exists():
-                work_dir = str(local_roadbook)
+            found_rb = find_local_roadbook(cwd)
+            if found_rb:
+                work_dir = str(found_rb)
                 mode = "Local (.roadbook)"
             else:
-                # If local does not exist, but user wants local, we should still use local and maybe create it?
-                # For editor, it's safe to just use the path
-                work_dir = str(local_roadbook)
-                mode = "Local (.roadbook)"
+                # If local does not exist, use current directory as fallback
+                work_dir = str(cwd)
+                mode = "Local (Current Dir)"
                 
         print(f"Roadbook Editor starting in [{mode}] mode.")
         print(f"Serving directory: {work_dir}")
@@ -110,59 +122,71 @@ def start_editor(args):
         target_file = None
         work_path = Path(work_dir)
         
-        # Simple search in work_dir
-        # 1. Check if ID is likely a relative or absolute path
+        # 1. Evaluate as absolute or relative path to Current Working Directory
         p = Path(args.id)
-        if p.is_absolute():
-            # If absolute, verify it's inside work_dir? The new logic allows absolute paths if server supports it.
-            # But the server (app.py) checks if file is inside WORK_DIR for security. 
-            # So we should ensure it stays within WORK_DIR, or broaden WORK_DIR.
-            # But earlier logic defines WORK_DIR based on finding .roadbook or Global.
-            # If the absolute path is completely unrelated, the server might reject it (403).
-            # But assuming the user uses ID which usually implies lookup OR a path they know is there.
-            
-            # Let's just use absolute path.
-             target_file = str(p.resolve()).replace("\\", "/")
-             
-        elif (work_path / args.id).exists():
-            # Use absolute path
-             target_abs = (work_path / args.id).resolve()
-             if target_abs.is_file():
-                 target_file = str(target_abs).replace("\\", "/")
-             elif (target_abs / "roadbook.md").exists():
-                 target_file = str((target_abs / "roadbook.md").resolve()).replace("\\", "/")
-                 
-        elif (work_path / f"{args.id}.md").exists():
-             target_file = str((work_path / f"{args.id}.md").resolve()).replace("\\", "/")
-            
-        elif args.id.endswith(".md") and (work_path / args.id).exists():
-             target_file = str((work_path / args.id).resolve()).replace("\\", "/")
+        cwd_path = Path.cwd() / args.id
 
-        else:
-            # 3. Scan all MD files
-            print("Scanning for ID match...")
-            found = False
-            for f in work_path.rglob("*.md"):
-                # Check if parent folder matches ID or filename (minus .md) matches ID
-                if f.parent.name == args.id or f.stem == args.id:
-                     # Use absolute path
-                     target_file = str(f.resolve()).replace('\\', '/')
-                     found = True
-                     break
-            
-            if not found:
-                # Try to check content? Maybe too slow.
-                # Let's assume folder name match is enough for now as per RoadbookManager logic
-                pass
+        if p.is_absolute() and p.exists():
+            if p.is_file():
+                target_file = str(p.resolve()).replace("\\", "/")
+            elif (p / "roadbook.md").exists():
+                target_file = str((p / "roadbook.md").resolve()).replace("\\", "/")
+        elif cwd_path.exists():
+            target_abs = cwd_path.resolve()
+            if target_abs.is_file():
+                target_file = str(target_abs).replace("\\", "/")
+            elif (target_abs / "roadbook.md").exists():
+                target_file = str((target_abs / "roadbook.md").resolve()).replace("\\", "/")
         
+        # 2. Evaluate relative to work_dir
+        if not target_file:
+            if (work_path / args.id).exists():
+                 target_abs = (work_path / args.id).resolve()
+                 if target_abs.is_file():
+                     target_file = str(target_abs).replace("\\", "/")
+                 elif (target_abs / "roadbook.md").exists():
+                     target_file = str((target_abs / "roadbook.md").resolve()).replace("\\", "/")
+            elif (work_path / f"{args.id}.md").exists():
+                 target_file = str((work_path / f"{args.id}.md").resolve()).replace("\\", "/")
+            elif args.id.endswith(".md") and (work_path / args.id).exists():
+                 target_file = str((work_path / args.id).resolve()).replace("\\", "/")
+            else:
+                # 3. Scan all MD files
+                print("Scanning for ID match...")
+                found = False
+                for f in work_path.rglob("*.md"):
+                    # Check if parent folder matches ID or filename (minus .md) matches ID
+                    if f.parent.name == args.id or f.stem == args.id:
+                         target_file = str(f.resolve()).replace('\\', '/')
+                         found = True
+                         break
+                
         if target_file:
-            # URL encode the filename
+            # Ensure the target_file is within the work_dir (for security/accessibility)
+            # If target_file contains .roadbook in its path, set work_dir up to .roadbook
+            target_path = Path(target_file)
+            if ".roadbook" in target_path.parts:
+                rb_idx = target_path.parts.index(".roadbook")
+                # Need to handle Windows paths correctly, Path(*parts) on Windows with C:\ doesn't form root properly sometimes if we are not careful
+                # Usually parts[0] is 'C:\\' so Path(*parts) works.
+                new_work_dir = Path(*target_path.parts[:rb_idx+1])
+                work_dir = str(new_work_dir)
+                mode = "Local (.roadbook)"
+            else:
+                # Fallback to its parent directory if not in work_dir
+                try:
+                    target_path.relative_to(work_path)
+                except ValueError:
+                    work_dir = str(target_path.parent)
+                    mode = "Local (File Dir)"
+                    
             encoded_file = urllib.parse.quote(target_file)
             url = f"{url}/?open={encoded_file}"
             print(f"Found roadbook: {target_file}")
-        print(f"Warning: Roadbook '{args.id}' not found in {work_dir}")
-        print("Opening editor at root...")
-        url = f"http://{host}:{port}/?open={args.id if args.id else ''}"
+        else:
+            print(f"Warning: Roadbook '{args.id}' not found in current directory or {work_dir}.")
+            print("Opening editor at root...")
+            url = f"http://{host}:{port}/?open="
 
     print(f"Opening Roadbook Editor at {url}...")
     print(f"Roadbook Editor starting in [{mode}] mode.")

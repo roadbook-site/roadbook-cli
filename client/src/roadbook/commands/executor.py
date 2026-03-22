@@ -154,6 +154,9 @@ def run_book(args):
     if workspace_roadbook_dir.exists():
         book_dir = workspace_roadbook_dir
         
+    # Synchronization reminder before checking script
+    RuntimeManager.check_sync_status(rb_id, book_dir=book_dir)
+        
     script_path = RuntimeManager.find_script(rb_id, book_dir=book_dir)
     
     if script_path:

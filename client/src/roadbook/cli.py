@@ -174,7 +174,7 @@ Command Categories:
 
     # config get
     config_get_parser = config_subparsers.add_parser("get", help="Get configuration value")
-    config_get_parser.add_argument("key", help="Configuration key (e.g. scaffold_defaults.language)")
+    config_get_parser.add_argument("key", help="Configuration key (e.g. browser.headless)")
     config_get_parser.set_defaults(func=config.config_get)
 
     # config set

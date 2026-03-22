@@ -157,7 +157,12 @@
                 'annotation_saved': 'Annotation saved successfully',
                 'inputs': 'Inputs (Run Parameters)',
                 'outputs': 'Outputs (Return Data)',
-                'delete_image': 'Delete Image'
+                'delete_image': 'Delete Image',
+                'move_sheet': 'Move Sheet',
+                'new_position': 'Enter new position (1 to ',
+                'expand_all': 'Expand All',
+                'collapse_all': 'Collapse All',
+                'insert_sheet_below': 'Insert Sheet Below'
             },
             'zh': {
                 'title': 'Roadbook Explorer',
@@ -220,7 +225,12 @@
                 'annotation_saved': '标注已保存',
                 'inputs': '输入参数 (Inputs)',
                 'outputs': '输出数据 (Outputs)',
-                'delete_image': '删除图片'
+                'delete_image': '删除图片',
+                'move_sheet': '调换顺序',
+                'new_position': '请输入该页面的新位置 (1 到 ',
+                'expand_all': '全部展开',
+                'collapse_all': '全部收起',
+                'insert_sheet_below': '在下方插入新页'
             }
         };
 
@@ -342,7 +352,7 @@
                 setRoadbook(prev => ({ ...prev, sheets: newSheets }));
             };
             
-            const addSheet = () => {
+            const addSheet = (insertAfterIndex = null) => {
                 let newId;
                 do {
                     newId = Math.random().toString(36).substring(2, 7);
@@ -354,10 +364,16 @@
                     steps: [],
                     extra_content: ""
                 };
-                setRoadbook(prev => ({
-                    ...prev,
-                    sheets: [...prev.sheets, newSheet]
-                }));
+                
+                setRoadbook(prev => {
+                    const newSheets = [...prev.sheets];
+                    if (insertAfterIndex !== null && insertAfterIndex >= 0 && insertAfterIndex < newSheets.length) {
+                        newSheets.splice(insertAfterIndex + 1, 0, newSheet);
+                    } else {
+                        newSheets.push(newSheet);
+                    }
+                    return { ...prev, sheets: newSheets };
+                });
             };
 
             const deleteSheet = (index) => {
@@ -366,6 +382,21 @@
                 newSheets.splice(index, 1);
                 setRoadbook(prev => ({ ...prev, sheets: newSheets }));
             };
+
+            const moveSheet = (fromIndex, toIndex) => {
+                if (fromIndex === toIndex || toIndex < 0 || toIndex >= roadbook.sheets.length) return;
+                setRoadbook(prev => {
+                    const newSheets = [...prev.sheets];
+                    const [draggedSheet] = newSheets.splice(fromIndex, 1);
+                    newSheets.splice(toIndex, 0, draggedSheet);
+                    return { ...prev, sheets: newSheets };
+                });
+            };
+
+            const [globalCollapseSignal, setGlobalCollapseSignal] = useState({ id: 0, collapsed: false });
+
+            const expandAll = () => setGlobalCollapseSignal({ id: Date.now(), collapsed: false });
+            const collapseAll = () => setGlobalCollapseSignal({ id: Date.now(), collapsed: true });
 
             return (
                 <div className="flex h-full text-sm">
@@ -532,29 +563,44 @@
                                     <div className="space-y-8">
                                         <div className="flex items-center justify-between px-2 border-b border-gray-200 pb-4">
                                             <h2 className="text-2xl font-serif font-bold text-[#2d2a26]">{t('sheets')}</h2>
-                                            <button 
-                                                onClick={addSheet} 
-                                                className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded hover:bg-blue-50 transition-colors"
-                                            >
-                                                <i className="ph ph-plus-circle text-lg"></i>
-                                                <span>{t('add_sheet')}</span>
-                                            </button>
+                                            <div className="flex items-center space-x-2">
+                                                <button 
+                                                    onClick={expandAll} 
+                                                    className="flex items-center space-x-1 text-gray-500 hover:text-gray-800 font-medium px-3 py-1.5 rounded hover:bg-gray-100 transition-colors"
+                                                    title={t('expand_all')}
+                                                >
+                                                    <i className="ph ph-arrows-out-line-vertical text-lg"></i>
+                                                    <span className="text-xs">{t('expand_all')}</span>
+                                                </button>
+                                                <button 
+                                                    onClick={collapseAll} 
+                                                    className="flex items-center space-x-1 text-gray-500 hover:text-gray-800 font-medium px-3 py-1.5 rounded hover:bg-gray-100 transition-colors"
+                                                    title={t('collapse_all')}
+                                                >
+                                                    <i className="ph ph-arrows-in-line-vertical text-lg"></i>
+                                                    <span className="text-xs">{t('collapse_all')}</span>
+                                                </button>
+                                            </div>
                                         </div>
                                         
                                         {roadbook.sheets.map((sheet, idx) => (
                                             <SheetEditor 
-                                                key={idx} 
+                                                key={sheet.id || idx} 
                                                 index={idx}
+                                                totalSheets={roadbook.sheets.length}
                                                 sheet={sheet} 
                                                 currentFile={currentFile}
                                                 onChange={(newSheet) => updateSheet(idx, newSheet)}
                                                 onDelete={() => deleteSheet(idx)}
+                                                onMove={(toIndex) => moveSheet(idx, toIndex)}
+                                                onInsertAfter={() => addSheet(idx)}
+                                                globalCollapseSignal={globalCollapseSignal}
                                                 t={t}
                                             />
                                         ))}
                                         
                                         <div className="py-10 text-center">
-                                            <button onClick={addSheet} className="text-gray-400 hover:text-blue-600 transition-colors flex flex-col items-center mx-auto space-y-2 group">
+                                            <button onClick={() => addSheet()} className="text-gray-400 hover:text-blue-600 transition-colors flex flex-col items-center mx-auto space-y-2 group">
                                                 <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 group-hover:border-blue-400 flex items-center justify-center">
                                                     <i className="ph ph-plus text-xl"></i>
                                                 </div>
@@ -650,13 +696,19 @@
             );
         }
 
-        function SheetEditor({ index, sheet, currentFile, onChange, onDelete, t }) {
+        function SheetEditor({ index, totalSheets, sheet, currentFile, onChange, onDelete, onMove, onInsertAfter, globalCollapseSignal, t }) {
             const [isCollapsed, setIsCollapsed] = useState(false);
             const [draggedIdx, setDraggedIdx] = useState(null);
             const [dragOverIdx, setDragOverIdx] = useState(null);
             const [uploadingImage, setUploadingImage] = useState(false);
             const [showImageModal, setShowImageModal] = useState(false);
             const [showAnnotator, setShowAnnotator] = useState(false);
+
+            useEffect(() => {
+                if (globalCollapseSignal && globalCollapseSignal.id > 0) {
+                    setIsCollapsed(globalCollapseSignal.collapsed);
+                }
+            }, [globalCollapseSignal]);
 
             useEffect(() => {
                 const handleKeyDown = (e) => {
@@ -837,9 +889,23 @@
                         onClick={() => setIsCollapsed(!isCollapsed)}
                     >
                         <div className="flex items-center space-x-4 flex-1">
-                            <div className="w-8 h-8 rounded-full bg-[#2d2a26] text-white flex items-center justify-center font-serif font-bold shrink-0">
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const max = totalSheets;
+                                    const res = prompt(t('new_position') + max + '):', String(index + 1));
+                                    if (res !== null) {
+                                        const newIdx = parseInt(res, 10) - 1;
+                                        if (!isNaN(newIdx) && newIdx >= 0 && newIdx < max) {
+                                            onMove(newIdx);
+                                        }
+                                    }
+                                }}
+                                className="w-8 h-8 rounded-full bg-[#2d2a26] hover:bg-blue-600 text-white flex items-center justify-center font-serif font-bold shrink-0 transition-colors"
+                                title={t('move_sheet')}
+                            >
                                 {index + 1}
-                            </div>
+                            </button>
                             <div className="flex-1">
                                 <input 
                                     type="text" 
@@ -1048,6 +1114,16 @@
                                         <span>{t('add_action_step')}</span>
                                     </button>
                                 </div>
+                            </div>
+
+                            <div className="flex justify-end pt-4 border-t border-gray-100 mt-6">
+                                <button 
+                                    onClick={onInsertAfter}
+                                    className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition-colors"
+                                >
+                                    <i className="ph ph-plus-circle text-lg"></i>
+                                    <span>{t('insert_sheet_below')}</span>
+                                </button>
                             </div>
                         </div>
                     )}

@@ -3,6 +3,7 @@ id: "{rb_id}"
 name: "{name}"
 version: "1.0"
 owner: "user"
+generator: "Agent/Roadbook"
 platform: "desktop"
 description: "{description}"
 entry_url: "{entry_url}"
@@ -12,8 +13,8 @@ inputs:
 outputs: {}
 ---
 
-## sample initialization title
-**ID**: init
+## initialization
+**ID**: {uuid_1}
 **Type**: setup
 **Description**: Verify browser environment (connection method) and authentication state.
 **URL**: `{entry_url}`
@@ -26,7 +27,7 @@ outputs: {}
 ---
 
 ## sample sheet title
-**ID**: process_sheet_1
+**ID**: {uuid_2}
 **Type**: process
 **Description**: [Describe the first sheet logic, e.g. "enter search query and submit"]
 **URL**: `{entry_url}`
@@ -40,7 +41,7 @@ outputs: {}
 ---
 
 ## sample sheet title 2
-**ID**: process_sheet_2
+**ID**: {uuid_3}
 **Type**: process
 **Description**: [Describe the next sheet logic, e.g. "Process search results and extract data"]
 **URL**: `{entry_url}`
@@ -52,7 +53,7 @@ outputs: {}
 ---
 
 ## sample delivery title
-**ID**: delivery
+**ID**: {uuid_4}
 **Type**: delivery
 **Description**: Summarize deliverables and end the journey.
 

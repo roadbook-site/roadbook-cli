@@ -24,6 +24,43 @@ class RuntimeManager:
         return RuntimeManager._resolve_book_dir(rb_id, book_dir) / "runtime"
 
     @staticmethod
+    def check_sync_status(rb_id: str, book_dir: Optional[Path] = None):
+        """
+        Check timestamps of roadbook.md and script.py, print a warning if one is significantly newer.
+        """
+        script_path = RuntimeManager.find_script(rb_id, book_dir=book_dir)
+        if not script_path or not script_path.exists():
+            return
+            
+        resolved_book_dir = RuntimeManager._resolve_book_dir(rb_id, book_dir)
+        roadbook_path = resolved_book_dir / "roadbook.md"
+        
+        if not roadbook_path.exists():
+            return
+            
+        try:
+            time_md = roadbook_path.stat().st_mtime
+            time_script = script_path.stat().st_mtime
+            
+            diff = time_script - time_md
+            
+            # If difference is larger than a threshold (e.g. 5 seconds), output a reminder
+            THRESHOLD = 5
+            
+            from ..utils.output import print_info
+            
+            if diff > THRESHOLD:
+                # Script is newer
+                print_info(f"\n[Sync Reminder] '{script_path.name}' is newer than 'roadbook.md'.")
+                print_info("  -> If you modified the script logic, consider transcribing it back to roadbook.md.")
+            elif diff < -THRESHOLD:
+                # Roadbook is newer
+                print_info(f"\n[Sync Reminder] 'roadbook.md' is newer than '{script_path.name}'.")
+                print_info("  -> Please ensure the latest intention from roadbook.md is implemented in the script.")
+        except Exception:
+            pass
+
+    @staticmethod
     def get_active_session_file() -> Path:
         """Returns the path to the file storing the active session info."""
         # Use new core location first

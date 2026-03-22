@@ -23,6 +23,7 @@ dependencies = [
     "pydantic",
     "python-multipart",
     "requests",
+    "python-dotenv",
 ]
 requires-python = ">=3.8"
 

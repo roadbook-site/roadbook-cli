@@ -59,8 +59,31 @@ class ScaffoldManager:
 
         if language == "python":
             # 1. Create subdirectories
-            (scripts_dir / "tests").mkdir(parents=True, exist_ok=True)
+            tests_dir = scripts_dir / "tests"
+            tests_dir.mkdir(parents=True, exist_ok=True)
             (scripts_dir / "utils").mkdir(parents=True, exist_ok=True)
+
+            # 1.5 Create sample test file with Agent Instructions
+            sample_test_py = tests_dir / "sample_test.py"
+            if not sample_test_py.exists():
+                with open(sample_test_py, "w", encoding="utf-8") as f:
+                    f.write(
+                        "\"\"\"\n"
+                        "[AGENT INSTRUCTION - MICRO TESTING]\n"
+                        "Before modifying the main script.py, use this directory to write minimal tests.\n"
+                        "Focus on ONE single element or interaction (e.g., just clicking a complex dropdown).\n"
+                        "Once the logic is verified here, merge it back into the main script.py.\n"
+                        "\"\"\"\n"
+                        "from playwright.sync_api import sync_playwright\n\n"
+                        "def test_single_element():\n"
+                        "    with sync_playwright() as p:\n"
+                        "        browser = p.chromium.launch(headless=False)\n"
+                        "        page = browser.new_page()\n"
+                        "        # Add your micro-test logic here\n"
+                        "        browser.close()\n\n"
+                        "if __name__ == '__main__':\n"
+                        "    test_single_element()\n"
+                    )
 
             # 2. Create __init__.py for utils
             init_py = scripts_dir / "utils" / "__init__.py"
@@ -85,6 +108,7 @@ class ScaffoldManager:
 
     @staticmethod
     def _generate_roadbook_md_content(rb_id, name, description, entry_url="https://www.example.com"):
+        import uuid
         template_bytes = pkgutil.get_data(__package__, "templates/roadbook.md.tpl")
         if not template_bytes:
             raise RuntimeError("Could not find roadbook.md.tpl template")
@@ -93,7 +117,11 @@ class ScaffoldManager:
         return template_str.replace("{rb_id}", rb_id)\
                            .replace("{name}", name)\
                            .replace("{description}", description)\
-                           .replace("{entry_url}", entry_url)
+                           .replace("{entry_url}", entry_url)\
+                           .replace("{uuid_1}", uuid.uuid4().hex[:5])\
+                           .replace("{uuid_2}", uuid.uuid4().hex[:5])\
+                           .replace("{uuid_3}", uuid.uuid4().hex[:5])\
+                           .replace("{uuid_4}", uuid.uuid4().hex[:5])
 
     @staticmethod
     def _generate_browser_utils_content():
@@ -149,6 +177,7 @@ class ScaffoldManager:
                     # Provide a helpful placeholder comment for function extraction
                     func_name = sheet.id if sheet.id else f"process_sheet_{i}"
                     func_name = func_name.replace('-', '_').replace(' ', '_').lower()
+                    logic_blocks.append(f'                # [AGENT INSTRUCTION] Implement logic for {func_name} here.')
                     logic_blocks.append(f'                # {func_name}(page, data)')
                     logic_blocks.append(f'                pass')
                     logic_blocks.append('')

@@ -57,6 +57,9 @@ def show_book(args):
     script_path = RuntimeManager.find_script(book.id, book_dir=book_dir)
     
     if script_path:
+        # Synchronization reminder
+        RuntimeManager.check_sync_status(book.id, book_dir=book_dir)
+        
         lang_map = {".py": "Python", ".js": "NodeJS", ".ts": "TypeScript"}
         lang_name = lang_map.get(script_path.suffix, "Unknown")
         print_info(f"[Action] Run automation script ({lang_name}): roadbook run {book.id}")

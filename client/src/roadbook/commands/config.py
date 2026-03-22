@@ -52,12 +52,22 @@ def _set_nested_value(data, path, value):
 
 def config_list(args):
     """List all configurations."""
+    from ..core.config import get_api_key
     config = load_config()
     print_info("Current Configuration (Merged):")
     if PROJECT_CONFIG_FILE.exists():
         print_info(f" - Includes project config: {PROJECT_CONFIG_FILE}")
     print_info(f" - Includes global config: {USER_CONFIG_FILE}\n")
     print(yaml.dump(config, default_flow_style=False))
+    
+    api_key = get_api_key()
+    if api_key:
+        masked_key = f"{api_key[:6]}...{api_key[-4:]}" if len(api_key) > 10 else "***"
+        print_info(f"Credentials (Environment):")
+        print(f"ROADBOOK_API_KEY: {masked_key}")
+    else:
+        print_info(f"Credentials (Environment): Not Set")
+        
     print_info("\nTip: Run `roadbook doctor` to verify if the current configuration is valid.")
 
 def config_get(args):

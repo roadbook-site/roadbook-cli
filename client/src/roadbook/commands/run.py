@@ -76,6 +76,9 @@ def run_inspect(args):
     print(f"Time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(found_run['timestamp']))}")
     print(f"Details: {found_run.get('details')}")
     
+    # Synchronization reminder
+    RuntimeManager.check_sync_status(found_book.id, book_dir=book_dir)
+    
     run_dir = RuntimeManager.get_runs_dir(found_book.id, book_dir=book_dir) / run_id
     print(f"Directory: {run_dir}")
     print_info("[Action] Opening run directory...")

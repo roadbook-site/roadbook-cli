@@ -67,9 +67,10 @@ async def list_roadbooks():
             if filename.lower() == target_name:
                 try:
                     file_path = Path(root) / filename
-                    # Return absolute path
-                    abs_path = file_path.resolve()
-                    files.append(str(abs_path).replace("\\", "/"))
+                    # Return path relative to WORK_DIR to keep it short in UI
+                    # (Web will use it as relative path to call back APIs)
+                    rel_path = file_path.relative_to(WORK_DIR)
+                    files.append(str(rel_path).replace("\\", "/"))
                 except:
                     pass
             
@@ -82,6 +83,9 @@ async def get_roadbook(filename: str):
     file_path = Path(filename)
     if not file_path.is_absolute():
         file_path = WORK_DIR / filename
+        
+    if file_path.is_dir() and (file_path / "roadbook.md").exists():
+        file_path = file_path / "roadbook.md"
         
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
@@ -101,6 +105,9 @@ async def save_roadbook(filename: str, data: RoadbookModel):
     file_path = Path(filename)
     if not file_path.is_absolute():
         file_path = WORK_DIR / filename
+        
+    if file_path.is_dir() and (file_path / "roadbook.md").exists():
+        file_path = file_path / "roadbook.md"
     
     try:
         # Generate markdown content

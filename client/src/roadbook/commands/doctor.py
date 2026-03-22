@@ -77,8 +77,8 @@ def run_doctor(args):
     except ValueError:
         cdp_port = 9222
     
-    # 2. Language: Priority to 'scaffold_defaults.language'
-    target_lang = config.get("scaffold_defaults", {}).get("language", "python").lower()
+    # 2. Language: Priority to 'scaffold.language'
+    target_lang = config.get("scaffold", {}).get("language", "python").lower()
 
     console.print(Panel("Roadbook Doctor: Environment Diagnostics", style="bold blue"))
     print(f"Target Language: {target_lang}")

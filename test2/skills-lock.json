@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "roadbook-executor": {
+      "source": "C:\\code_dev\\roadbook\\.agents\\skills\\roadbook-executor",
+      "sourceType": "local",
+      "computedHash": "e62e862f7108838549540570c191e3e691a74901fe3961b379daaebef8470b6b"
+    },
+    "roadbook-explorer": {
+      "source": "C:\\code_dev\\roadbook\\.agents\\skills\\roadbook-explorer",
+      "sourceType": "local",
+      "computedHash": "3a60e7f82815b154a3873c0422a5c426d189c77c1b4b7c466753ee3817e42b37"
+    }
+  }
+}
