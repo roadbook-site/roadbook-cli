@@ -1,4 +1,4 @@
-from roadbook.server.app import start_server
+from roadbook.web.app import start_server
 from roadbook.core.config import get_books_dir, get_roadbook_dir
 from roadbook.core.roadbook import RoadbookManager
 import webbrowser
