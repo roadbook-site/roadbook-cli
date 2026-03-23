@@ -276,6 +276,9 @@
                 api.getConfig().then(cfg => {
                     setConfig(cfg);
                     setNewDir(cfg.work_dir);
+                    if (cfg.language && !localStorage.getItem('roadbook_lang')) {
+                        setLang(cfg.language);
+                    }
                     loadFiles().then(() => {
                         if (fileToOpen) {
                             // If fileToOpen is a full path (from previous session or explicit URL),

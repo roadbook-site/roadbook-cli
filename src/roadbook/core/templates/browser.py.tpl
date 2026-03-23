@@ -159,9 +159,17 @@ def get_playwright_context(headless=None, cdp_url=None, storage_state_path=None,
 
     except Exception as e:
         if "Executable doesn't exist" in str(e):
+            try:
+                from roadbook.core.i18n import t
+                msg_not_found = t("browser_not_found")
+                msg_install = t("browser_install_prompt")
+            except ImportError:
+                msg_not_found = "Playwright browser core not found!"
+                msg_install = "Please run the following command in terminal to install (only needed once globally):"
+                
             logging.error("\n" + "="*60)
-            logging.error("无法找到 Playwright 浏览器内核！")
-            logging.error("请使用终端运行以下命令进行安装（全局仅需一次）：")
+            logging.error(msg_not_found)
+            logging.error(msg_install)
             logging.error("    playwright install")
             logging.error("="*60 + "\n")
             raise SystemExit(1)

@@ -8,6 +8,7 @@ from ..core.roadbook import RoadbookManager
 from ..core.runtime import RuntimeManager
 from ..core.scaffold import ScaffoldManager
 from ..utils.output import console, print_error, print_success
+from ..core.i18n import t
 from . import editor
 import argparse
 
@@ -69,12 +70,12 @@ def init_book(args):
         print_error(f"Failed to initialize roadbook: {e}")
         return
 
-    print_success(f"Successfully initialized roadbook scaffold for '{name}' (ID: {rb_id})")
-    console.print(f"Directory: [cyan]{book_dir}[/cyan]")
+    print_success(t("init_success", name=name, rb_id=rb_id))
+    console.print(t("init_dir", book_dir=book_dir))
     
     # Handle auto-edit
     if args.edit:
-        console.print("[bold cyan]Launching Roadbook Editor...[/bold cyan]")
+        console.print(t("launch_editor"))
         # Construct arguments for editor
         editor_args = argparse.Namespace(
             port=8000, 
@@ -87,26 +88,26 @@ def init_book(args):
 
     # Constructing AI Agent feedback prompt
     feedback_lines = [
-        f"路书脚手架已生成在 {book_dir} 目录下。"
+        t("ai_feedback_scaffold_gen", book_dir=book_dir)
     ]
     
     if description:
         feedback_lines.extend([
-            "模式：[AI 自主探索模式]",
-            "下一步建议：",
-            "1. 请阅读并分析 `roadbook.md` 中的目标 (Description)。",
-            "2. 开始编写或修改 `scripts/script.py`，使用 playwright 等工具探索如何达成目标。",
-            "3. 探索成功后，请清洗执行路径，将有效的 AARP 动作原语回写到 `roadbook.md` 中，完善路书本体。"
+            t("ai_feedback_mode_ai"),
+            t("ai_feedback_next_steps"),
+            t("ai_feedback_ai_step1"),
+            t("ai_feedback_ai_step2"),
+            t("ai_feedback_ai_step3")
         ])
     else:
         feedback_lines.extend([
-            "模式：[人机协同/手动引导模式]",
-            "下一步建议：",
-            "1. 请用户或 AI 代理优先修改 `roadbook.md`，填充具体的 Sheet（场景）信息。",
-            "2. 推荐使用编辑器：运行 `roadbook edit {rb_id}` 启动可视化编辑器。",
-            "3. 在编辑器中，你可以使用截图工具上传图片，并使用涂鸦功能进行标注。",
-            "4. 当 `roadbook.md` 描述清晰后，可将其翻译为 `scripts/script.py` 中的具体执行代码。"
+            t("ai_feedback_mode_manual"),
+            t("ai_feedback_next_steps"),
+            t("ai_feedback_manual_step1"),
+            t("ai_feedback_manual_step2", rb_id=rb_id),
+            t("ai_feedback_manual_step3"),
+            t("ai_feedback_manual_step4")
         ])
         
     feedback_text = "\n".join(feedback_lines)
-    console.print(Panel(feedback_text, title="[bold yellow]🤖 给 AI Agent 的后续引导[/bold yellow]", border_style="yellow"))
+    console.print(Panel(feedback_text, title=t("ai_feedback_title"), border_style="yellow"))

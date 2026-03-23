@@ -123,7 +123,7 @@ def run_book(args):
     Runs a roadbook.
     Logic:
     1. If script exists, run it (mocked for now).
-    2. 如果没有脚本，则警告用户并切换到语义引导模式 (open).
+    2. If there is no script, warn the user and switch to semantic guidance mode (open).
     """
     rb_id = args.id
     global_scope = getattr(args, 'global_scope', False)

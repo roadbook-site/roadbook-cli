@@ -27,7 +27,8 @@ PROJECT_CONFIG_FILE = Path.cwd() / ".roadbook" / "config.yaml"
 DEFAULT_CONFIG = {
     "core": {
         "server_url": "http://localhost:8000",
-        "timeout": 30
+        "timeout": 30,
+        "language": "auto"
     },
     "scaffold": {
         "language": "python",
@@ -166,6 +167,9 @@ core:
   
   # Default timeout in seconds for API and core network requests
   timeout: 30
+  
+  # CLI interface language ("auto", "en", "zh")
+  language: "auto"
 
 # Options specifically controlling generated scaffolding scripts
 scaffold:

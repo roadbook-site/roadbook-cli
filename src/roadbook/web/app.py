@@ -154,10 +154,17 @@ async def upload_image(
 @app.get("/api/config")
 async def get_config():
     """Get server configuration."""
+    try:
+        from ..core.i18n import get_language
+        lang = get_language()
+    except Exception:
+        lang = "en"
+        
     return {
         "work_dir": str(WORK_DIR),
         "home_dir": str(Path.home()),
-        "mode": MODE
+        "mode": MODE,
+        "language": lang
     }
 
 @app.post("/api/chdir")
