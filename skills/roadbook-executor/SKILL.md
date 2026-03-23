@@ -7,6 +7,13 @@ description: "Executes a Roadbook by following its instructions step-by-step usi
 
 This skill helps you execute a Roadbook, which is a structured guide for automating browser tasks.
 
+## Requirements
+
+- Ensure Python is available before execution (`python --version`).
+- Ensure the Roadbook CLI is installed:
+    - Linux: `pip3 install roadbook`
+    - macOS/Windows: `pip install roadbook`
+
 ## Usage
 
 1.  **Identify the Roadbook**:

@@ -7,6 +7,13 @@ description: Guide the agent to create a new Roadbook by exploring a website, ge
 
 This skill guides the Agent to create a robust, standard-compliant Roadbook by exploring a website. 
 
+## Requirements
+
+- Ensure Python is available before exploration (`python --version`).
+- Ensure the Roadbook CLI is installed:
+	- Linux: `pip3 install roadbook`
+	- macOS/Windows: `pip install roadbook`
+
 ## Core Philosophy
 1. **Standardization**: Always use `roadbook init` to create the scaffold.
 2. **Context-in-Place**: The generated `script.py` and `tests/` directory contain specific `[AGENT INSTRUCTION]` blocks. **ALWAYS read these instructions within the generated files** before coding.
