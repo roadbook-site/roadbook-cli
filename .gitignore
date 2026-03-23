@@ -60,8 +60,10 @@ run_meta.json
 outputs/
 node_modules/
 .roadbook/
-tests/
-# AI agent and skill directories
+# Playgrounds and Examples
+playground/
+examples/
+tests/test2/
 .agents/
 .claude/
 .trae/
