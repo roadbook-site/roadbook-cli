@@ -46,6 +46,7 @@ def update_version(new_version):
     with open(PYPROJECT_PATH, "r", encoding="utf-8") as f:
         content = f.read()
     
+    # Update version in pyproject.toml
     new_content = re.sub(
         r'^version\s*=\s*"[^"]+"',
         f'version = "{new_version}"',
@@ -57,27 +58,7 @@ def update_version(new_version):
         f.write(new_content)
     print(f"✅ Updated pyproject.toml to version {new_version}")
 
-    # Update version in roadbook/__init__.py
-    if INIT_PY_PATH.exists():
-        with open(INIT_PY_PATH, "r", encoding="utf-8") as f:
-            init_content = f.read()
-
-        new_init_content = re.sub(
-            r'^__version__\s*=\s*["\']([^"\']+)["\']',
-            f'__version__ = "{new_version}"',
-            init_content,
-            flags=re.MULTILINE
-        )
-        
-        # If version not found, append it
-        if new_init_content == init_content:
-            new_init_content += f'\n__version__ = "{new_version}"\n'
-
-        with open(INIT_PY_PATH, "w", encoding="utf-8") as f:
-            f.write(new_init_content)
-        print(f"✅ Updated roadbook/__init__.py to version {new_version}")
-    else:
-        print(f"⚠️ roadbook/__init__.py not found at {INIT_PY_PATH}")
+    # No longer updating __init__.py as it dynamically reads from package metadata
 
 def clean_dist():
     if DIST_DIR.exists():
@@ -91,17 +72,6 @@ def main():
     current_version = get_current_version()
     print(f"📦 Current version in pyproject.toml: {current_version}")
     
-    # Read version from __init__.py for comparison
-    init_version = "Unknown"
-    if INIT_PY_PATH.exists():
-        with open(INIT_PY_PATH, "r", encoding="utf-8") as f:
-            match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', f.read(), re.MULTILINE)
-            if match:
-                init_version = match.group(1)
-    
-    if init_version != current_version: 
-         print(f"⚠️ Warning: Version mismatch! roadbook/__init__.py is {init_version}")
-    
     # Ensure the version read from pyproject is valid-looking
     if not is_valid_version(current_version):
         print(f"⚠️ The version in pyproject.toml ('{current_version}') doesn't look valid.")
@@ -111,16 +81,7 @@ def main():
     while True:
         new_version = input("\n👉 Enter the NEW version number (or press Enter to keep current): ").strip()
         if not new_version:
-            # If no input, decide based on mismatch
-            if init_version != current_version:
-                if is_valid_version(current_version):
-                    print(f"🔄 Syncing roadbook/__init__.py to match pyproject.toml ({current_version})...")
-                    update_version(current_version)
-                else:
-                    print("❌ Cannot sync because pyproject.toml version is invalid. Exiting.")
-                    sys.exit(1)
-            else:
-                print("⏭️ Keeping current version.")
+            print("⏭️ Keeping current version.")
             break
 
         # validate format
