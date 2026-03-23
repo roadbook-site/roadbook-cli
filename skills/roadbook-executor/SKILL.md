@@ -22,7 +22,7 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
     - You are the **Executor**.
     - **Session Context**: The CLI provides a Session ID (e.g., `run_20260315_...`). Use this ID to organize artifacts if you are running manual commands.
     - **Read and Execute**: Read the entire Roadbook content (all Sheets) carefully.
-    - **Sequential Execution**: Execute the tasks in each Sheet sequentially using your browser automation tools (`agent-browser` or `playwright-cli`).
+    - **Sequential Execution**: Execute the tasks in each Sheet sequentially using your browser automation tools.
     - **Self-Verification**: Verify the "Assertions" (if any) in each Sheet yourself using browser checks (e.g., checking element visibility or text).
     - **Completion**: Once you have completed all Sheets, you can consider the task done.
 
@@ -38,7 +38,7 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
         - **Use File**: Write the JSON to a temporary file and use `--inputs-file <path>` instead of `--inputs` string to avoid shell escaping issues on Windows/PowerShell.
 
 5.  **Error Handling & Script Generation**:
-    - If an action fails, report the error to the user and ask for guidance or try to debug using `agent-browser` tools.
+    - If an action fails, report the error to the user and ask for guidance or try to debug.
     - You can use `roadbook logs inspect <run_id>` to see detailed logs of the session.
 
 ## CLI Commands Reference

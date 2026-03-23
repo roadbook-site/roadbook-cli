@@ -62,7 +62,6 @@ node_modules/
 .roadbook/
 tests/
 # AI agent and skill directories
-skills/
 .agents/
 .claude/
 .trae/
