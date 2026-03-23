@@ -24,7 +24,7 @@ def run_history(args):
     runs = RuntimeManager.list_runs(rb_id, book_dir=target_dir)
     if not runs:
         print_info(f"No run history for {rb_id}.")
-        print_info("[Action] Start a session with 'roadbook run --guide <id>' or execute with 'roadbook run <id>'.")
+        print_info("[Action] Start a session with 'roadbook run <id>'.")
         return
 
     print_info(f"Run History for {rb_id}:")
@@ -112,7 +112,7 @@ def run_last(args):
     
     if not latest_run:
         print_info("No runs found in any roadbook.")
-        print_info("[Action] Start a session with 'roadbook run --guide <id>' or execute with 'roadbook run <id>'.")
+        print_info("[Action] Start a session with 'roadbook run <id>'.")
         return
 
     print_info(f"Last Run (Book: {latest_book_id}):")

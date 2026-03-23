@@ -57,13 +57,9 @@ roadbook init my-first-task --description "Search for a product on Amazon" --ent
 # 列出本地可用的路书
 roadbook list
 
-# 选项 1：通过 Fast Path 运行（自动脚本执行）
+# 通过脚本执行运行路书
 # 这将尝试使用预编译的自动化脚本进行快速执行。
 roadbook run my-first-task
-
-# 选项 2：通过交互式向导模式运行（语义探索）
-# 当网站发生变化或没有可用脚本时使用此模式。它会显示完整的 Markdown 路书，指导 Agent 完成步骤。
-roadbook run --guide my-first-task
 ```
 
 ### 3. 管理路书
@@ -80,3 +76,4 @@ roadbook link
 # 查看特定路书的执行日志和历史记录
 roadbook logs list my-first-task
 ```
+

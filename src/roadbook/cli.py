@@ -73,11 +73,10 @@ Command Categories:
 
     # --- Group: Navigate ---
     # Command: run
-    run_parser = subparsers.add_parser("run", help="Run roadbook (Script/Auto-downgrade to Guide)")
+    run_parser = subparsers.add_parser("run", help="Run roadbook (Script execution)")
     run_parser.add_argument("id", help="Roadbook ID")
     run_parser.add_argument("--inputs", help="JSON inputs (string)")
     run_parser.add_argument("--inputs-file", help="JSON inputs file path")
-    run_parser.add_argument("--guide", action="store_true", help="Force Semantic Guide Mode instead of running script")
     run_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     run_parser.set_defaults(func=executor.run_book)
 

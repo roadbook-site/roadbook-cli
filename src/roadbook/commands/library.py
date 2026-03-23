@@ -64,7 +64,7 @@ def show_book(args):
         lang_name = lang_map.get(script_path.suffix, "Unknown")
         print_info(f"[Action] Run automation script ({lang_name}): roadbook run {book.id}")
     else:
-        print_info(f"[Action] Start semantic guide mode: roadbook run --guide {book.id}")
+        print_info(f"[Action] No automation script found. Use 'roadbook init {book.id}' to generate scaffolding.")
     
     if not book.valid:
         print_error(f"Error: {book.error}")

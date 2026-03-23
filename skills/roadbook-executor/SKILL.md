@@ -14,17 +14,8 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
     - If the user provides a name or ID, try to find it in the list.
 
 2.  **Start Execution**:
-    - **Automatic Mode**: Try `roadbook run <id>` first. This will attempt to use any existing automation scripts.
-    - **Semantic Guide Mode**: If no script exists, it will switch to interactive guidance.
-
-3.  **Semantic Guide Execution**:
-    - Once a session is started (via `roadbook run <id>` or `roadbook run --guide <id>`), the **Full Roadbook Content** will be displayed.
-    - You are the **Executor**.
-    - **Session Context**: The CLI provides a Session ID (e.g., `run_20260315_...`). Use this ID to organize artifacts if you are running manual commands.
-    - **Read and Execute**: Read the entire Roadbook content (all Sheets) carefully.
-    - **Sequential Execution**: Execute the tasks in each Sheet sequentially using your browser automation tools.
-    - **Self-Verification**: Verify the "Assertions" (if any) in each Sheet yourself using browser checks (e.g., checking element visibility or text).
-    - **Completion**: Once you have completed all Sheets, you can consider the task done.
+    - **Automatic Mode**: Use `roadbook run <id>` to execute the roadbook using any existing automation scripts.
+    - **Script Generation**: If no script exists, the CLI will provide guidance on generating scaffolding.
 
 4.  **Robust Execution Guidelines**:
     - **Selector Fallback**: Treat selectors in the Roadbook as **hints**. If a specific CSS selector fails (e.g., timeout), DO NOT give up immediately.
@@ -46,8 +37,7 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
 - `roadbook list`: List local roadbooks in the current project (`.roadbook/`).
 - `roadbook list -g`: List all globally installed roadbooks.
 - `roadbook inspect <id> [-g]`: Show details of a roadbook (alias for `show`).
-- `roadbook run <id> [-g]`: Execute a roadbook automatically (script-first) or open interactive mode. Use `-g` if the roadbook is in the global library.
-- `roadbook run --guide <id> [-g]`: Start an interactive session and view the full roadbook.
+- `roadbook run <id> [-g]`: Execute a roadbook automatically (script-first). Use `-g` if roadbook is in the global library.
 - `roadbook logs list <id>`: View run history.
 - `roadbook link`: Link local roadbooks to the global scope for easy testing.
 - `roadbook remove <id> [-g]`: Delete a roadbook (use `-g` for global).
@@ -59,9 +49,6 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
     - **Scripts**: Located in `.roadbook/<roadbook_id>/scripts/script.py`.
     - **Outputs**: Located in `.roadbook/<roadbook_id>/outputs/`.
     - **Runtime**: Located in `.roadbook/<roadbook_id>/runtime/` (internal system use).
-- **Auto-Scaffolding**: When `roadbook run --guide <id>` is executed and no script exists:
-    1.  It scaffolds a template script in `scripts/script.py` within the roadbook's directory.
-    2.  **Edit this file directly** to implement automation logic.
 - **Output Management**:
     - All execution outputs (downloads, screenshots, logs) MUST be saved in `.roadbook/<id>/outputs/<session_id>/`.
     - The scaffolded script automatically detects the `ROADBOOK_RUN_ID` environment variable and sets `OUTPUT_DIR` accordingly.

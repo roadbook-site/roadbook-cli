@@ -57,13 +57,9 @@ You can run a roadbook automatically (if a stable script exists) or in interacti
 # List available local roadbooks
 roadbook list
 
-# Option 1: Run via Fast Path (Automatic Script Execution)
+# Run roadbook via script execution
 # This will attempt to use pre-compiled automation scripts for fast execution.
 roadbook run my-first-task
-
-# Option 2: Run via Interactive Guide Mode (Semantic Exploration)
-# Use this when the site has changed or no script exists. It displays the full markdown Roadbook to guide the agent in completing the steps.
-roadbook run --guide my-first-task
 ```
 
 ### 3. Managing Roadbooks
@@ -80,3 +76,5 @@ roadbook link
 # View execution logs and history for a specific roadbook
 roadbook logs list my-first-task
 ```
+
+
