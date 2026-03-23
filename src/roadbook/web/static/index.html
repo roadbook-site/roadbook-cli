@@ -985,22 +985,12 @@
                                     <span>{t('reference_image')}</span>
                                     {uploadingImage && <span className="text-blue-500 normal-case text-xs"><i className="ph ph-spinner animate-spin inline-block mr-1"></i>{t('uploading')}</span>}
                                 </label>
-                                <div className="flex items-start space-x-4">
-                                    <div className="flex-1">
-                                        <input 
-                                            type="text" 
-                                            value={sheet.reference || ''} 
-                                            onChange={e => updateField('reference', e.target.value)}
-                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono text-gray-600 mb-2"
-                                            placeholder={t('paste_placeholder')}
-                                        />
-                                        <p className="text-xs text-gray-400">{t('paste_hint')}</p>
-                                    </div>
+                                <div className="flex flex-col space-y-3">
                                     {previewUrl && (
-                                        <div className="w-72 bg-white rounded overflow-hidden relative border border-gray-300 shadow-sm transition-all hover:shadow-md group">
+                                        <div className="w-full bg-white rounded overflow-hidden relative border border-gray-300 shadow-sm transition-all hover:shadow-md group text-center">
                                             <img 
                                                 src={previewUrl} 
-                                                className="w-full h-auto object-contain cursor-zoom-in"
+                                                className="max-h-80 mx-auto object-contain cursor-zoom-in"
                                                 onError={(e) => e.target.style.display = 'none'} 
                                                 onClick={() => setShowImageModal(true)}
                                                 title={t('click_to_zoom')}
@@ -1024,6 +1014,16 @@
                                             </div>
                                         </div>
                                     )}
+                                    <div className="w-full">
+                                        <input 
+                                            type="text" 
+                                            value={sheet.reference || ''} 
+                                            onChange={e => updateField('reference', e.target.value)}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono text-gray-600 mb-1"
+                                            placeholder={t('paste_placeholder')}
+                                        />
+                                        <p className="text-xs text-gray-400">{t('paste_hint')}</p>
+                                    </div>
                                 </div>
                             </div>
                             
