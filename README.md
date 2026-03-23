@@ -9,7 +9,7 @@ Standard web automation often relies on fixed scripts that easily break when web
 When your AI Agent (the Explorer) gets lost or a script fails, Roadbook (the System/Sherpa) provides the context and semantic hints needed to autonomously find a new path, fix the script, and complete the task.
 
 ## Key Concepts
-
+![alt text](images/image.png)
 - **Roadbook**: The Expedition Log. It records key landmarks (UI features), required paths, and actionable advice to dynamically navigate web interfaces.
 - **Agent**: The Explorer. The AI agent that reads the Roadbook, makes decisions, and performs visual/semantic reasoning when standard scripts fail.
 - **Guide/CLI**: The CLI and runtime system that handles the heavy lifting (browser driving, context management) and provides semantic guidance.

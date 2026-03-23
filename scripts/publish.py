@@ -29,6 +29,19 @@ def get_current_version():
 
     return current_version_py
 
+
+def is_valid_version(v: str) -> bool:
+    """Validate version string. Accepts simple semver-like versions such as 1.2.3,
+    and allows additional dot/dash separated identifiers (e.g. 1.2.3-alpha).
+    This is intentionally permissive but prevents obvious bad values.
+    """
+    if not v:
+        return False
+    # simple semver-ish: MAJOR.MINOR.PATCH optionally followed by -label or .label
+    import re
+    pattern = r'^\d+\.\d+\.\d+(?:[-\.][0-9A-Za-z]+(?:[-\.][0-9A-Za-z]+)*)?$'
+    return re.match(pattern, v) is not None
+
 def update_version(new_version):
     with open(PYPROJECT_PATH, "r", encoding="utf-8") as f:
         content = f.read()
@@ -89,15 +102,38 @@ def main():
     if init_version != current_version: 
          print(f"⚠️ Warning: Version mismatch! roadbook/__init__.py is {init_version}")
     
-    new_version = input("\n👉 Enter the NEW version number (or press Enter to keep current): ").strip()
-    
-    if new_version and new_version != current_version:
-        update_version(new_version)
-    elif init_version != current_version:
-        print(f"🔄 Syncing roadbook/__init__.py to match pyproject.toml ({current_version})...")
-        update_version(current_version)
-    else:
-        print("⏭️ Keeping current version.")
+    # Ensure the version read from pyproject is valid-looking
+    if not is_valid_version(current_version):
+        print(f"⚠️ The version in pyproject.toml ('{current_version}') doesn't look valid.")
+        print("Please enter a valid version (e.g. 1.2.3 or 1.2.3-alpha).")
+
+    # Prompt user for new version and validate format before updating
+    while True:
+        new_version = input("\n👉 Enter the NEW version number (or press Enter to keep current): ").strip()
+        if not new_version:
+            # If no input, decide based on mismatch
+            if init_version != current_version:
+                if is_valid_version(current_version):
+                    print(f"🔄 Syncing roadbook/__init__.py to match pyproject.toml ({current_version})...")
+                    update_version(current_version)
+                else:
+                    print("❌ Cannot sync because pyproject.toml version is invalid. Exiting.")
+                    sys.exit(1)
+            else:
+                print("⏭️ Keeping current version.")
+            break
+
+        # validate format
+        if not is_valid_version(new_version):
+            print(f"❌ '{new_version}' 不是合法的版本格式。示例: 1.2.3 或 1.2.3-alpha，请重新输入。")
+            continue
+
+        # If provided and different, update
+        if new_version != current_version:
+            update_version(new_version)
+        else:
+            print("ℹ️ 新版本与当前 pyproject.toml 相同，跳过更新。")
+        break
     
     print("\n🔍 Step 1: Cleaning previous builds...")
     clean_dist()
