@@ -1,5 +1,6 @@
 ---
 name: roadbook-explorer
+version: "0.1.2"
 description: Guide the agent to create a new Roadbook by exploring a website, generating intermediate scripts, and finalizing a standard `roadbook.md` file. Invoke when the user wants to "create a roadbook", "explore a site", or "generate a workflow" for a website.
 ---
 
@@ -13,6 +14,32 @@ This skill guides the Agent to create a robust, standard-compliant Roadbook by e
 - Ensure the Roadbook CLI is installed:
 	- Linux: `pip3 install roadbook`
 	- macOS/Windows: `pip install roadbook`
+
+### ⚡ Version Compatibility Check
+
+This skill requires the Roadbook package version to match the skill frontmatter `version`.
+Use the `version` value in this file header as the single source of truth.
+
+1. **Check installed Roadbook version**:
+   ```bash
+   roadbook --version
+   ```
+
+2. **Version mismatch scenarios**:
+   - **If installed version < skill header `version`**: Upgrade the package
+     ```bash
+     pip install --upgrade roadbook
+     ```
+   - **If installed version > skill header `version`**: This skill is outdated; update it
+     ```bash
+     npx skills update roadbook-site/roadbook-cli --skill roadbook-explorer
+     ```
+
+3. **Verify compatibility**:
+   ```bash
+   roadbook --version
+   ```
+  Ensure `roadbook --version` equals the skill header `version`.
 
 ## Core Philosophy
 1. **Standardization**: Always use `roadbook init` to create the scaffold.

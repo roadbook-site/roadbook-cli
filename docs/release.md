@@ -16,23 +16,75 @@
    ```
    *(注：`src/roadbook/__init__.py` 会在运行时自动读取这个版本号，无需手动修改)*
 
-2. **提交代码**
+2. **运行发布脚本（自动同步版本）**
+   执行本地发布脚本，它会自动：
+   - 更新 `pyproject.toml` 中的版本号
+   - 同时更新所有 Skill 文件 (SKILL.md) 中的 `version` 字段
    ```bash
-   git add pyproject.toml
+   # Windows
+   .\scripts\publish.bat
+   
+   # Linux/macOS
+   python scripts/publish.py
+   ```
+   *按照脚本提示输入新版本号（例如 `0.1.3`），脚本会自动更新所有文件。*
+
+3. **提交代码**
+   审查脚本所做的更改，确认无误后提交：
+   ```bash
+   git add pyproject.toml skills/*/SKILL.md
    git commit -m "chore: bump version to 0.1.3"
    git push origin main
    ```
    *此时会触发 `test.yml` 运行自动化测试，请确保测试通过。*
 
-3. **打标签并触发发布**
+4. **打标签并触发发布**
    确认代码无误后，打上对应的版本标签并推送到远端：
    ```bash
    git tag v0.1.3
    git push origin v0.1.3
    ```
 
-4. **等待执行**
+5. **等待执行**
    前往 GitHub 仓库的 **Actions** 页面，你会看到名为 `Publish to PyPI` 的工作流正在运行。完成后，新版本即在 PyPI 上线。
+
+---
+
+## 📦 技能版本管理
+
+Roadbook CLI 提供两项技能（Skills），它们与 Python 发行包版本保持同步：
+
+### Skill 文件
+- `skills/roadbook-executor/SKILL.md` - 执行 Roadbook
+- `skills/roadbook-explorer/SKILL.md` - 创建 Roadbook
+
+### 版本同步机制
+
+每当运行发布脚本时，所有 Skill 文件中的以下字段会自动更新：
+- `version`: 与 `pyproject.toml` 中的版本号保持一致
+
+实现位置：`scripts/publish.py` 中的 `update_skill_versions()` 会在发布时自动回填每个 `SKILL.md` 的 `version` 字段。
+
+### 用户端版本检查
+
+Skill 文件的 Requirements 部分包含版本检查说明。用户可以通过以下命令验证兼容性：
+
+```bash
+# 检查已安装的 Roadbook 包版本
+roadbook --version
+```
+
+然后直接查看对应 `SKILL.md` 头部的 `version` 字段，确保两者一致。
+
+**版本不匹配时的处理：**
+- 如果 Python 包版本 **低于** Skill 要求的版本 → 升级 Python 包
+  ```bash
+  pip install --upgrade roadbook
+  ```
+- 如果 Python 包版本 **高于** Skill 提供的版本 → 更新 Skill
+  ```bash
+  npx skills update
+  ```
 
 ---
 
@@ -71,4 +123,4 @@
    # 在 Windows 环境下
    .\scripts\publish.bat
    ```
-   *该脚本会提示你确认版本号、自动清理旧的 `dist/` 目录、构建 `wheel` 和 `tar.gz` 包，并调用 `twine` 上传到 PyPI。*
+   *该脚本会提示你确认版本号、自动清理旧的 `dist/` 目录、同时更新 `pyproject.toml` 和 `SKILL.md` 文件、构建 `wheel` 和 `tar.gz` 包，并调用 `twine` 上传到 PyPI。*

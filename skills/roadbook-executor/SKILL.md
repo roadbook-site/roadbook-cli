@@ -1,5 +1,6 @@
 ---
 name: "roadbook-executor"
+version: "0.1.2"
 description: "Executes a Roadbook by following its instructions step-by-step using the CLI and browser automation tools. Invoke when the user wants to run or execute a specific Roadbook."
 ---
 
@@ -13,6 +14,32 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
 - Ensure the Roadbook CLI is installed:
     - Linux: `pip3 install roadbook`
     - macOS/Windows: `pip install roadbook`
+
+### ⚡ Version Compatibility Check
+
+This skill requires the Roadbook package version to match the skill frontmatter `version`.
+Use the `version` value in this file header as the single source of truth.
+
+1. **Check installed Roadbook version**:
+   ```bash
+   roadbook --version
+   ```
+
+2. **Version mismatch scenarios**:
+     - **If installed version < skill header `version`**: Upgrade the package
+     ```bash
+     pip install --upgrade roadbook
+     ```
+     - **If installed version > skill header `version`**: This skill is outdated; update it
+     ```bash
+         npx skills update roadbook-site/roadbook-cli --skill roadbook-executor
+     ```
+
+3. **Verify compatibility**:
+   ```bash
+   roadbook --version
+   ```
+    Ensure `roadbook --version` equals the skill header `version`.
 
 ## Usage
 

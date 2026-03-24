@@ -11,6 +11,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 PYPROJECT_PATH = PROJECT_ROOT / "pyproject.toml"
 INIT_PY_PATH = PROJECT_ROOT / "src" / "roadbook" / "__init__.py"
 DIST_DIR = PROJECT_ROOT / "dist"
+SKILLS_DIR = PROJECT_ROOT / "skills"
 
 def run_cmd(cmd, cwd=PROJECT_ROOT):
     print(f"🔧 Running: {cmd}")
@@ -42,6 +43,51 @@ def is_valid_version(v: str) -> bool:
     pattern = r'^\d+\.\d+\.\d+(?:[-\.][0-9A-Za-z]+(?:[-\.][0-9A-Za-z]+)*)?$'
     return re.match(pattern, v) is not None
 
+def update_skill_versions(new_version):
+    """Update version in all SKILL.md files in the skills directory."""
+    if not SKILLS_DIR.exists():
+        print(f"⚠️ Skills directory not found at {SKILLS_DIR}")
+        return
+    
+    # Find all SKILL.md files
+    skill_files = list(SKILLS_DIR.glob("*/SKILL.md"))
+    
+    if not skill_files:
+        print("⚠️ No SKILL.md files found")
+        return
+    
+    for skill_file in skill_files:
+        try:
+            with open(skill_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # Update version field in frontmatter (YAML block)
+            # Match version: "X.Y.Z" or version: 'X.Y.Z' or version: X.Y.Z (unquoted)
+            updated_content = re.sub(
+                r'version:\s*["\']?[^\n,\]]+["\']?',
+                f'version: "{new_version}"',
+                content,
+                flags=re.MULTILINE,
+                count=1
+            )
+
+            # If version field is missing in frontmatter, insert it after name.
+            if updated_content == content:
+                updated_content = re.sub(
+                    r'(^name:\s*[^\n]+\n)',
+                    r'\1version: "' + new_version + '"\n',
+                    content,
+                    flags=re.MULTILINE,
+                    count=1,
+                )
+            
+            with open(skill_file, "w", encoding="utf-8") as f:
+                f.write(updated_content)
+            
+            print(f"✅ Updated {skill_file.relative_to(PROJECT_ROOT)} to version {new_version}")
+        except Exception as e:
+            print(f"❌ Failed to update {skill_file}: {e}")
+
 def update_version(new_version):
     with open(PYPROJECT_PATH, "r", encoding="utf-8") as f:
         content = f.read()
@@ -57,6 +103,9 @@ def update_version(new_version):
     with open(PYPROJECT_PATH, "w", encoding="utf-8") as f:
         f.write(new_content)
     print(f"✅ Updated pyproject.toml to version {new_version}")
+
+    # Also update SKILL.md files
+    update_skill_versions(new_version)
 
     # No longer updating __init__.py as it dynamically reads from package metadata
 
