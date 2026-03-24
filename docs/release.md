@@ -2,6 +2,8 @@
 
 本文档记录了 Roadbook CLI 项目发布到 PyPI 的自动化流程及相关配置。本项目已配置 GitHub Actions 实现全自动发布，不再需要手动在本地执行打包和上传命令。
 
+> 当前仓库的 `PYPI_API_TOKEN` 已配置完成。日常发布时，你只需要完成版本变更、提交代码并推送对应的 Git Tag。
+
 ## 🚀 自动发布流程 (推荐)
 
 我们使用 **Git Tag** 来触发自动发布工作流。只有当代码被打上符合 `v*.*.*` 格式（如 `v0.1.3`）的标签并推送到 GitHub 时，才会触发发布。
@@ -45,8 +47,32 @@
    git push origin v0.1.3
    ```
 
+   如需覆盖已存在的本地标签，可先删除并重建：
+   ```bash
+   git tag -d v0.1.3
+   git tag v0.1.3
+   git push origin :refs/tags/v0.1.3
+   git push origin v0.1.3
+   ```
+
 5. **等待执行**
    前往 GitHub 仓库的 **Actions** 页面，你会看到名为 `Publish to PyPI` 的工作流正在运行。完成后，新版本即在 PyPI 上线。
+
+6. **确保 CLI 改动已推送到 GitHub**
+   `publish.py` 会改动 `pyproject.toml` 和 `skills/*/SKILL.md`。若这些变更尚未推送，请执行：
+   ```bash
+   git add pyproject.toml skills/*/SKILL.md
+   git commit -m "chore: bump version to 0.1.3"
+   git push origin main
+   ```
+
+   如果当前仓库以子模块方式引用 `roadbook-cli`，还需要在父仓库同步并推送子模块指针：
+   ```bash
+   # 在父仓库目录执行
+   git add roadbook-cli
+   git commit -m "chore: update roadbook-cli submodule"
+   git push origin main
+   ```
 
 ---
 
@@ -108,6 +134,8 @@ roadbook --version
 
 *这些配置已被硬编码在 `.github/workflows/publish.yml` 中。*
 
+如果你只是日常发布，且仓库未迁移、Token 未过期，则不需要重复做以上配置，直接按“自动发布流程”中的 Git Tag 步骤执行即可。
+
 ---
 
 ## 🛠️ 本地手动发布 (备用方案)
@@ -123,4 +151,4 @@ roadbook --version
    # 在 Windows 环境下
    .\scripts\publish.bat
    ```
-   *该脚本会提示你确认版本号、自动清理旧的 `dist/` 目录、同时更新 `pyproject.toml` 和 `SKILL.md` 文件、构建 `wheel` 和 `tar.gz` 包，并调用 `twine` 上传到 PyPI。*
+   *该脚本会先运行本地测试（`pytest`），测试通过后才进入发布流程；随后提示你确认版本号、自动清理旧的 `dist/` 目录、同时更新 `pyproject.toml` 和 `SKILL.md` 文件、构建 `wheel` 和 `tar.gz` 包，并调用 `twine` 上传到 PyPI。*

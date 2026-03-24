@@ -43,6 +43,15 @@ def is_valid_version(v: str) -> bool:
     pattern = r'^\d+\.\d+\.\d+(?:[-\.][0-9A-Za-z]+(?:[-\.][0-9A-Za-z]+)*)?$'
     return re.match(pattern, v) is not None
 
+
+def suggest_next_patch_version(version: str) -> str | None:
+    """Return next patch version for strict X.Y.Z inputs, else None."""
+    match = re.match(r'^(\d+)\.(\d+)\.(\d+)$', version)
+    if not match:
+        return None
+    major, minor, patch = match.groups()
+    return f"{major}.{minor}.{int(patch) + 1}"
+
 def update_skill_versions(new_version):
     """Update version in all SKILL.md files in the skills directory."""
     if not SKILLS_DIR.exists():
@@ -120,6 +129,9 @@ def main():
     
     current_version = get_current_version()
     print(f"📦 Current version in pyproject.toml: {current_version}")
+    suggested_version = suggest_next_patch_version(current_version)
+    if suggested_version:
+        print(f"💡 Suggested next patch version: {suggested_version}")
     
     # Ensure the version read from pyproject is valid-looking
     if not is_valid_version(current_version):
@@ -128,10 +140,28 @@ def main():
 
     # Prompt user for new version and validate format before updating
     while True:
-        new_version = input("\n👉 Enter the NEW version number (or press Enter to keep current): ").strip()
-        if not new_version:
+        if suggested_version:
+            prompt = (
+                f"\n👉 Enter the NEW version number "
+                f"(press Enter to use {suggested_version}, or type current to keep current): "
+            )
+        else:
+            prompt = "\n👉 Enter the NEW version number (or press Enter to keep current): "
+
+        new_version_input = input(prompt).strip()
+
+        if not new_version_input:
+            if suggested_version:
+                new_version = suggested_version
+                print(f"⏭️ Using suggested version: {new_version}")
+            else:
+                print("⏭️ Keeping current version.")
+                break
+        elif new_version_input.lower() in {"current", "keep"}:
             print("⏭️ Keeping current version.")
             break
+        else:
+            new_version = new_version_input
 
         # validate format
         if not is_valid_version(new_version):
@@ -164,6 +194,12 @@ def main():
         print("\n🎉 Publish complete!")
     else:
         print("\n🛑 Publish cancelled. Your built package is ready in the 'dist/' directory.")
+
+    print("\n📌 Next step reminder: push version file changes to GitHub if not pushed yet.")
+    print("   git add pyproject.toml skills/*/SKILL.md")
+    print("   git commit -m \"chore: bump version to X.Y.Z\"")
+    print("   git push origin main")
+    print("   git tag vX.Y.Z && git push origin vX.Y.Z")
 
 if __name__ == "__main__":
     main()
