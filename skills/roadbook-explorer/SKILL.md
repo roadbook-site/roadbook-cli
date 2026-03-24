@@ -1,6 +1,6 @@
 ---
 name: roadbook-explorer
-version: "0.1.4"
+version: "0.1.7"
 description: Guide the agent to create a new Roadbook by exploring a website, generating intermediate scripts, and finalizing a standard `roadbook.md` file. Invoke when the user wants to "create a roadbook", "explore a site", or "generate a workflow" for a website.
 ---
 
