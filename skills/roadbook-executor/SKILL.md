@@ -1,6 +1,6 @@
 ---
 name: "roadbook-executor"
-version: "0.1.2"
+version: "0.1.4"
 description: "Executes a Roadbook by following its instructions step-by-step using the CLI and browser automation tools. Invoke when the user wants to run or execute a specific Roadbook."
 ---
 
