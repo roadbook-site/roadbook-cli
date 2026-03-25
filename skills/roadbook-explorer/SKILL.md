@@ -58,17 +58,18 @@ Use the `version` value in this file header as the single source of truth.
 **✓ Do:**
 - **DO** always read the `[AGENT INSTRUCTION]` comments in the generated `script.py` and `sample_test.py` after scaffolding.
 - **DO** use the `tests/` directory for micro-testing complex UI elements before merging logic into `script.py`.
-- **DO** ask the user for help (`AskUserQuestion`) immediately if you encounter a CAPTCHA or Login Wall.
+- **DO** ask the user for help (`AskUserQuestion`) if you receive unclear prompt objectives.
+- **DO** strictly use `rb.human_intervene_for_login(success_selector="...", message="...")` when encountering login structures or CAPTCHAs. Rely on the SDK for state management.
 - **DO** use semantic selectors (e.g., `get_by_role`, `get_by_text`) whenever possible.
-- **DO** conditionally use `cdp_url` in `RoadbookContext(cdp_url="...")` inside `script.py` if requested or if you need an existing browser.
 
 **✗ Don't:**
 - **DON'T** skip the version check step. It must be done before anything else.
 - **DON'T** delete or bypass `RoadbookContext` in `script.py` to use raw Playwright API manually. The SDK handles lifecycle safely.
-- **DON'T** attempt to bypass or brute-force Login screens or CAPTCHAs autonomously.
+- **DON'T** attempt to bypass or brute-force Login screens or write automated password inputs. Always use `rb.human_intervene_for_login`.
+- **DON'T** create your own local storage, browser initialization overrides, or CDP configs.
 - **DON'T** create temporary test files in the project root. Always use `scripts/tests/`.
 - **DON'T** hardcode search queries or dynamic parameters in the script; extract them to the `inputs` section.
-- **DON'T** put environment configurations (like CDP debugging ports or headless flags) inside `inputs` or `roadbook.md`. Those are strictly for business data and domain variables.
+- **DON'T** put environment configurations (like debugging ports or headless flags) inside `inputs` or `roadbook.md`. Those are strictly for business data and domain variables.
 
 ## Project Directory Structure
 All roadbook projects follow a standard directory structure:

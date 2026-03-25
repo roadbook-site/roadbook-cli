@@ -1,106 +1,165 @@
-# src/roadbook/sdk/context.py
+﻿# src/roadbook/sdk/context.py
 import os
 import sys
 from pathlib import Path
 from contextlib import contextmanager
 
-from playwright.sync_api import sync_playwright, Playwright, Browser, BrowserContext, Page
+from playwright.sync_api import sync_playwright, Playwright, BrowserContext, Page
 
 from .io import IOManager
 from .storage import Storage
 from .logger import get_logger
 
 class RoadbookContext:
-    def __init__(self, run_dir: str = None, outputs_dir: str = None, headless: bool = None, cdp_url: str = None):
+    def __init__(self, rb_id: str = None, root_dir: str = None, run_dir: str = None, outputs_dir: str = None, headless: bool = None, cdp_url: str = None):
+        self.logger = get_logger()
+        self.rb_id = rb_id
+        
+        # 1. 自动推导项目根目录 (基于 rb_id, env 或是向上查找 .rb)
+        if root_dir:
+            self.root_dir = Path(root_dir)
+        else:
+            self.root_dir = self._find_project_root()
+        
+        # 2. 核心路径定义
+        self.rb_dir = self.root_dir / ".rb"
+        
+        # 如果退回到了全局大本营 (~/.roadbook)，配置和 profile 在 .core 中
+        if self.root_dir.name == ".roadbook":
+            self.rb_dir = self.root_dir / ".core"
+            
+        self.profile_dir = self.rb_dir / "profile"
+        
+        # 3. 运行环境与输出隔离
+        env_run_dir = os.environ.get("ROADBOOK_RUN_DIR")
+        env_outputs_dir = os.environ.get("ROADBOOK_OUTPUTS_DIR")
+        
         if run_dir:
             self.run_dir = Path(run_dir)
             self.outputs_dir = Path(outputs_dir) if outputs_dir else Path(run_dir).parent.parent / "outputs" / Path(run_dir).name
+        elif env_run_dir:
+            self.run_dir = Path(env_run_dir)
+            self.outputs_dir = Path(env_outputs_dir) if env_outputs_dir else Path(env_run_dir).parent.parent / "outputs" / Path(env_run_dir).name
         else:
-            # Fallback or from env
-            env_dir = os.environ.get("ROADBOOK_RUN_DIR")
-            env_outputs_dir = os.environ.get("ROADBOOK_OUTPUTS_DIR")
+            self.run_dir = self.root_dir / "runtime" / "local_run"
+            self.outputs_dir = self.root_dir / "outputs" / "local_run"
             
-            # In standard setup, it's runtime/run_xxxx. For ad-hoc local runs without CLI, use runtime/local_run
-            self.run_dir = Path(env_dir) if env_dir else Path.cwd() / "runtime" / "local_run"
-            self.outputs_dir = Path(env_outputs_dir) if env_outputs_dir else Path.cwd() / "outputs" / "local_run"
-            
+        # Ensure directories exist
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.outputs_dir.mkdir(parents=True, exist_ok=True)
+        self.profile_dir.mkdir(parents=True, exist_ok=True)
+        self.rb_dir.mkdir(parents=True, exist_ok=True)
         
         self.io = IOManager(self.outputs_dir)
         self.storage = Storage(self.run_dir, self.outputs_dir)
-        self.logger = get_logger()
         
-        # Load unified CLI configuration if available
-        try:
-            from roadbook.core.config import load_config
-            self._cli_config = load_config()
-        except ImportError:
-            self._cli_config = {}
-            
-        scaffold_config = self._cli_config.get("scaffold", {})
-        
-        # Determine headless and cdp via CLI config merging (explicit param > config > default)
-        self.headless = headless if headless is not None else scaffold_config.get("headless", False)
-        
-        if cdp_url:
-            self.cdp_url = cdp_url
-        else:
-            cdp_port = scaffold_config.get("cdp_port")
-            if cdp_port:
-                self.cdp_url = f"http://localhost:{cdp_port}"
-            else:
-                self.cdp_url = None
-                
+        # 4. 载入统一配置
+        self._load_config(headless, cdp_url)
+
         # Playwright internals
         self._playwright: Playwright = None
-        self._browser: Browser = None
         self._context: BrowserContext = None
         self.page: Page = None
-        
         self.current_sheet = None
+
+    def _find_project_root(self) -> Path:
+        """根据 rb_id 或环境变量定位路书项目根目录"""
+        # 1. 如果传入了 rb_id，利用管理器查找
+        if self.rb_id:
+            try:
+                from roadbook.core.roadbook import RoadbookManager
+                book = RoadbookManager.get_roadbook(self.rb_id, global_scope=False)
+                if not book:
+                    book = RoadbookManager.get_roadbook(self.rb_id, global_scope=True)
+                
+                if book:
+                    return book.path.parent
+            except ImportError:
+                pass
+                
+        # 2. 如果之前 executor 通过环境变量设置了 RUN_DIR
+        env_run_dir = os.environ.get("ROADBOOK_RUN_DIR")
+        if env_run_dir:
+            return Path(env_run_dir).parent.parent
+
+        # 3. 如果没传参数，退回查找 .rb 模式
+        current_dir = Path.cwd()
+        for parent in [current_dir, *current_dir.parents]:
+            if (parent / ".rb").exists() or (parent / "roadbook.md").exists():
+                return parent
+
+        # 4. 彻底找不到，使用全局大本营
+        try:
+            from roadbook.core.config import get_roadbook_dir
+            return get_roadbook_dir()
+        except ImportError:
+            return Path.home() / ".roadbook"
+
+    def _load_config(self, headless_override=None, cdp_override=None):
+        try:
+            from roadbook.core.config import load_config
+            self._cli_config = load_config(self.root_dir)
+        except Exception:
+            self._cli_config = {}
+        
+        scaffold_config = self._cli_config.get("scaffold", {})
+        self.headless = headless_override if headless_override is not None else scaffold_config.get("headless", False)
+        
+        self.browser_mode = scaffold_config.get("browser_mode", "auto")
+        
+        if cdp_override:
+            self.cdp_url = cdp_override
+        else:
+            cdp_port = scaffold_config.get("cdp_port")
+            self.cdp_url = f"http://localhost:{cdp_port}" if cdp_port else None
+            
+        self.state_file = self.rb_dir / "state.json"
 
     def __enter__(self):
         self.logger.info("Starting Roadbook Context...")
         
-        # Patch for Sync API inside asyncio loop (common in Agent setups/Jupyter)
         try:
-            import asyncio
-            if asyncio.get_running_loop():
-                try:
-                    import nest_asyncio
-                    nest_asyncio.apply()
-                except ImportError:
-                    self.logger.warning("asyncio loop running but nest_asyncio not installed. Playwright Sync API might fail.")
-        except RuntimeError:
-            pass # No running loop
+             # Patch for asyncio inside sync
+             import asyncio
+             if asyncio.get_running_loop():
+                 try:
+                     import nest_asyncio
+                     nest_asyncio.apply()
+                 except ImportError:
+                     pass
+        except Exception:
+             pass 
 
         self._playwright = sync_playwright().start()
         
-        # Determine launch parameters
         scaffold_config = getattr(self, "_cli_config", {}).get("scaffold", {})
         browser_type_name = scaffold_config.get("browser_type", "chromium")
         browser_type = getattr(self._playwright, browser_type_name, self._playwright.chromium)
         
         connected = False
-        if self.cdp_url:
+        if self.browser_mode == "cdp" or (self.browser_mode == "auto" and self.cdp_url):
             self.logger.info(f"Attempting to connect to CDP at {self.cdp_url}...")
             try:
-                self._browser = browser_type.connect_over_cdp(self.cdp_url)
-                self._context = self._browser.contexts[0] if self._browser.contexts else self._browser.new_context()
+                browser = browser_type.connect_over_cdp(self.cdp_url)
+                self._context = browser.contexts[0] if browser.contexts else browser.new_context()
                 self.page = self._context.pages[0] if self._context.pages else self._context.new_page()
                 connected = True
                 self.logger.info("Successfully connected to existing browser via CDP.")
             except Exception as e:
-                self.logger.warning(f"Failed to connect to CDP at {self.cdp_url}: {e}. Falling back to launching a new browser...")
+                self.logger.warning(f"Failed to connect to CDP at {self.cdp_url}: {e}. Falling back...")
         
         if not connected:
-            self.logger.info(f"Launching new {browser_type_name} browser (headless={self.headless})...")
-            self._browser = browser_type.launch(headless=self.headless)
-            self._context = self._browser.new_context()
+            self.logger.info(f"Launching ephemeral context with state (headless={self.headless})...")
+            self._browser_instance = browser_type.launch(headless=self.headless)
+            
+            context_args = {"no_viewport": False}
+            if self.state_file.exists():
+                context_args["storage_state"] = str(self.state_file)
+                self.logger.info(f"Loaded previous storage state from {self.state_file.name}.")
+                
+            self._context = self._browser_instance.new_context(**context_args)
             self.page = self._context.new_page()
             
-        # Set default timeout if configured
         default_timeout = scaffold_config.get("default_timeout", 30000)
         self._context.set_default_timeout(default_timeout)
             
@@ -109,27 +168,48 @@ class RoadbookContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             self.logger.error(f"Error encountered: {exc_val}")
-            # Automatically take screenshot on error
             if self.page:
                 try:
                     self.storage.save_screenshot("error_state", self.page)
-                    self.logger.info("Saved error state screenshot.")
-                except Exception as e:
-                    self.logger.error(f"Failed to take error screenshot: {e}")
+                except Exception:
+                    pass
                     
+        # Auto-save state if we own the context
+        if self._context and hasattr(self, "state_file"):
+            try:
+                self._context.storage_state(path=str(self.state_file))
+                self.logger.info(f"Automatically saved storage state to {self.state_file.name}")
+            except Exception as e:
+                self.logger.warning(f"Failed to auto-save storage state: {e}")
+                
         self.logger.info("Closing Roadbook Context...")
         if self._context:
             self._context.close()
-        if self._browser:
-            self._browser.close()
+        if hasattr(self, "_browser_instance") and self._browser_instance:
+            self._browser_instance.close()
         if self._playwright:
             self._playwright.stop()
 
+    def human_intervene_for_login(self, success_selector: str, message: str = "Please complete the login or verification in the browser. Press Enter here when done...", timeout: int = 600000):
+        """
+        Pauses the execution to allow a human to log in or solve a CAPTCHA.
+        """
+        self.logger.warning("=====================================================")
+        self.logger.warning(" HUMAN INTERVENTION REQUIRED ")
+        self.logger.warning(message)
+        self.logger.warning(f" Waiting for selector: '{success_selector}' to be visible.")
+        self.logger.warning("=====================================================")
+        
+        try:
+            # Wait for the user to login and the target selector to appear
+            self.page.locator(success_selector).wait_for(state="visible", timeout=timeout)
+            self.logger.info("Login successful, resuming execution...")
+        except Exception as e:
+            self.logger.error(f"Failed to verify login within {timeout}ms timeout: {e}")
+            raise RuntimeError(f"Login intervention failed or timed out: {e}")
+
     @contextmanager
     def sheet(self, name: str):
-        """
-        Sheet-level binding for structured execution.
-        """
         self.current_sheet = name
         self.logger.info(f"--- Entering Sheet: {name} ---")
         try:

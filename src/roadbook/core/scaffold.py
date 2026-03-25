@@ -50,7 +50,7 @@ class ScaffoldManager:
         gitignore_file = book_dir / ".gitignore"
         if not gitignore_file.exists():
             with open(gitignore_file, "w", encoding="utf-8") as f:
-                f.write(".rb/\noutputs/\nruntime/\n__pycache__/\n*.pyc\n")
+                f.write(".rb/profile/\noutputs/\nruntime/\n__pycache__/\n*.pyc\n")
         
         return paths
 

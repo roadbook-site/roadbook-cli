@@ -136,27 +136,28 @@ def load_user_config() -> Dict[str, Any]:
             pass
     return {}
 
-def load_project_config() -> Dict[str, Any]:
-    if PROJECT_CONFIG_FILE.exists():
+def load_project_config(project_root: Path = None) -> Dict[str, Any]:
+    config_file = project_root / ".rb" / "config.yaml" if project_root else PROJECT_CONFIG_FILE
+    if config_file.exists():
         try:
-            with open(PROJECT_CONFIG_FILE, "r", encoding="utf-8") as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
         except Exception:
             pass
     return {}
 
-def load_config() -> Dict[str, Any]:
+def load_config(project_root: Path = None) -> Dict[str, Any]:
     """
     Load configuration with priority:
-    1. Project Config (./.rb/config.yaml)
+    1. Project Config (./.rb/config.yaml or specified root)
     2. User Config (~/.roadbook/.core/config.yaml)
     3. Default Config
     """
     config = DEFAULT_CONFIG.copy()
     user_config = load_user_config()
     config = _merge_config(config, user_config)
-    
-    project_config = load_project_config()
+
+    project_config = load_project_config(project_root)
     config = _merge_config(config, project_config)
     
     return config
