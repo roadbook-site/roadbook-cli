@@ -20,9 +20,13 @@ This skill helps you execute a Roadbook, which is a structured guide for automat
 This skill requires the Roadbook package version to match the skill frontmatter `version`.
 Use the `version` value in this file header as the single source of truth.
 
+> **Note**: If the `roadbook` command is not found, use `python -m roadbook` instead.
+
 1. **Check installed Roadbook version**:
    ```bash
    roadbook --version
+   # OR
+   python -m roadbook --version
    ```
 
 2. **Version mismatch scenarios**:
@@ -38,8 +42,10 @@ Use the `version` value in this file header as the single source of truth.
 3. **Verify compatibility**:
    ```bash
    roadbook --version
+   # OR
+   python -m roadbook --version
    ```
-    Ensure `roadbook --version` equals the skill header `version`.
+    Ensure the version equals the skill header `version`.
 
 ## Usage
 
@@ -67,6 +73,8 @@ Use the `version` value in this file header as the single source of truth.
     - You can use `roadbook logs inspect <run_id>` to see detailed logs of the session.
 
 ## CLI Commands Reference
+
+> **Note**: If the `roadbook` command is not found, use `python -m roadbook` instead (e.g., `python -m roadbook list`).
 
 - `roadbook list`: List local roadbooks in the current project (`.roadbook/`).
 - `roadbook list -g`: List all globally installed roadbooks.

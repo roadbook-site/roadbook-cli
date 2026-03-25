@@ -20,9 +20,13 @@ This skill guides the Agent to create a robust, standard-compliant Roadbook by e
 This skill requires the Roadbook package version to match the skill frontmatter `version`.
 Use the `version` value in this file header as the single source of truth.
 
+> **Note**: If the `roadbook` command is not found, use `python -m roadbook` instead.
+
 1. **Check installed Roadbook version**:
    ```bash
    roadbook --version
+   # OR
+   python -m roadbook --version
    ```
 
 2. **Version mismatch scenarios**:
@@ -38,8 +42,10 @@ Use the `version` value in this file header as the single source of truth.
 3. **Verify compatibility**:
    ```bash
    roadbook --version
+   # OR
+   python -m roadbook --version
    ```
-  Ensure `roadbook --version` equals the skill header `version`.
+  Ensure the version equals the skill header `version`.
 
 ## Core Philosophy
 1. **Standardization**: Always use `roadbook init` to create the scaffold.
@@ -67,9 +73,9 @@ Use the `version` value in this file header as the single source of truth.
 ## Workflow
 
 ### Phase 1: Initialization & Scaffolding
-1.  **Context Check (MANDATORY)**: Ensure `roadbook` CLI is available and version MATcHES exactly (`roadbook --version`). If not, upgrade or update immediately as per the frontmatter check.
+1.  **Context Check (MANDATORY)**: Ensure `roadbook` CLI is available and version MATcHES exactly (`roadbook --version`). If the command is not found, use `python -m roadbook` instead. If not, upgrade or update immediately as per the frontmatter check.
 2.  **Intent Analysis**: Convert the user's request into a generic goal (e.g., "Find an iPhone 15 on Amazon" → "Search for a product on Amazon"). Propose a `kebab-case` name.
-3.  **Scaffolding**: Run `roadbook init <name> --description "<generalized_goal>" --entry-url "<target_url>"`
+3.  **Scaffolding**: Run `roadbook init <name> --description "<generalized_goal>" --entry-url "<target_url>"` (or `python -m roadbook init ...`)
 4.  **Complex Task Triage**: If the task involves multi-step workflows or complex dynamic UIs, **STOP HERE**. Instruct the user to run `roadbook edit <id>` to manually define the high-level steps first.
 
 ### Phase 2: Exploration (Test-Driven)

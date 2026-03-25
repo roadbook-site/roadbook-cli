@@ -8,7 +8,7 @@ version = "0.1.7"
 description = "AI-Agent Roadbook CLI"
 readme = "README.md"
 authors = [
-  { name = "Roadbook Team", email = "author@example.com" },
+  { name = "Roadbook Team", email = "gtvolcano@gmail.com" },
 ]
 license = { file = "LICENSE" }
 classifiers = [

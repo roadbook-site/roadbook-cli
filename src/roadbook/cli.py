@@ -47,6 +47,7 @@ Command Categories:
     remote    Manage remote resources
 """
     parser = argparse.ArgumentParser(
+        prog="roadbook",
         description=description,
         formatter_class=RichHelpFormatter
     )
