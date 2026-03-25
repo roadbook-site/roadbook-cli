@@ -26,10 +26,17 @@ class ScaffoldManager:
         """Creates the full roadbook scaffold (directories + roadbook.md)."""
         paths = ScaffoldManager.get_structure_paths(book_dir)
         
-        # Create Directories
+        # Create directories
         paths["scripts"].mkdir(parents=True, exist_ok=True)
         paths["runtime"].mkdir(parents=True, exist_ok=True)
         paths["outputs"].mkdir(parents=True, exist_ok=True)
+        
+        # Create config.yaml in the project root (.roadbook/config.yaml) if it doesn't exist
+        config_file = book_dir.parent / "config.yaml"
+        if not config_file.exists():
+            from .config import DEFAULT_CONFIG_YAML
+            with open(config_file, "w", encoding="utf-8") as f:
+                f.write(DEFAULT_CONFIG_YAML)
         
         # Create roadbook.md
         if not paths["roadbook_file"].exists():
@@ -91,13 +98,7 @@ class ScaffoldManager:
                 with open(init_py, "w") as f:
                     pass
 
-            # 3. Create utils/browser.py
-            browser_py = scripts_dir / "utils" / "browser.py"
-            if not browser_py.exists():
-                with open(browser_py, "w", encoding="utf-8") as f:
-                    f.write(ScaffoldManager._generate_browser_utils_content())
-
-            # 4. Create script.py
+            # 3. Create script.py
             script_path = scripts_dir / "script.py"
             if not script_path.exists():
                 content = ScaffoldManager._generate_python_script_template(rb_id, name, roadbook_model)
@@ -124,13 +125,6 @@ class ScaffoldManager:
                            .replace("{uuid_4}", uuid.uuid4().hex[:5])
 
     @staticmethod
-    def _generate_browser_utils_content():
-        template_bytes = pkgutil.get_data(__package__, "templates/browser.py.tpl")
-        if not template_bytes:
-            raise RuntimeError("Could not find browser.py.tpl template")
-        return template_bytes.decode("utf-8")
-
-    @staticmethod
     def _generate_python_script_template(rb_id, name, roadbook_model: Optional[RoadbookModel] = None):
         import datetime
         date_str = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -146,79 +140,55 @@ class ScaffoldManager:
             
             # --- Setup Phase ---
             if setup_sheets:
-                logic_blocks.append("            # --- Phase 1: Setup ---")
+                logic_blocks.append("        # --- Phase 1: Setup ---")
                 for i, sheet in enumerate(setup_sheets, 1):
-                    logic_blocks.append(f'            # Phase 1.{i}: {sheet.title}')
-                    logic_blocks.append(f'            logger.info("Phase 1.{i}: {sheet.title}")')
-                    logic_blocks.append(f'            with step("{sheet.title}"):  # ID: {sheet.id}')
+                    logic_blocks.append(f'        with rb.sheet("{sheet.title}"):  # ID: {sheet.id}')
                     if sheet.url:
-                        logic_blocks.append(f'                # URL: {sheet.url}')
-                        logic_blocks.append(f'                if "{sheet.url}" != "{{entry_url}}":')
-                        logic_blocks.append(f'                     page.goto("{sheet.url}")')
+                        logic_blocks.append(f'            # URL: {sheet.url}')
+                        logic_blocks.append(f'            # if "{sheet.url}" != entry_url:')
+                        logic_blocks.append(f'            #     page.goto("{sheet.url}")')
                     if sheet.steps:
                         for s in sheet.steps:
-                            logic_blocks.append(f'                # {s.original_text or s.action}')
-                    logic_blocks.append(f'                pass')
+                            logic_blocks.append(f'            # {s.original_text or s.action}')
+                    logic_blocks.append(f'            pass')
                     logic_blocks.append('')
             
             # --- Process Phase ---
             if process_sheets:
-                logic_blocks.append("            # --- Phase 2: Process ---")
+                logic_blocks.append("        # --- Phase 2: Process ---")
                 for i, sheet in enumerate(process_sheets, 1):
-                    logic_blocks.append(f'            # Phase 2.{i}: {sheet.title}')
-                    logic_blocks.append(f'            logger.info("Phase 2.{i}: {sheet.title}")')
-                    logic_blocks.append(f'            with step("{sheet.title}"):  # ID: {sheet.id}')
+                    logic_blocks.append(f'        with rb.sheet("{sheet.title}"):  # ID: {sheet.id}')
                     if sheet.description:
-                        logic_blocks.append(f'                # {sheet.description}')
+                        logic_blocks.append(f'            # {sheet.description}')
                     if sheet.steps:
                         for s in sheet.steps:
-                            logic_blocks.append(f'                # {s.original_text or s.action}')
+                            logic_blocks.append(f'            # {s.original_text or s.action}')
                     
                     # Provide a helpful placeholder comment for function extraction
                     func_name = sheet.id if sheet.id else f"process_sheet_{i}"
                     func_name = func_name.replace('-', '_').replace(' ', '_').lower()
-                    logic_blocks.append(f'                # [AGENT INSTRUCTION] Implement logic for {func_name} here.')
-                    logic_blocks.append(f'                # {func_name}(page, data)')
-                    logic_blocks.append(f'                pass')
+                    logic_blocks.append(f'            # [AGENT INSTRUCTION] Implement logic for {func_name} here.')
+                    logic_blocks.append(f'            # {func_name}(page, rb)')
+                    logic_blocks.append(f'            pass')
                     logic_blocks.append('')
             
             # --- Delivery Phase ---
             if delivery_sheets:
-                logic_blocks.append("            # --- Phase 3: Delivery ---")
+                logic_blocks.append("        # --- Phase 3: Delivery ---")
                 for i, sheet in enumerate(delivery_sheets, 1):
-                    logic_blocks.append(f'            # Phase 3.{i}: {sheet.title}')
-                    logic_blocks.append(f'            logger.info("Phase 3.{i}: {sheet.title}")')
-                    logic_blocks.append(f'            with step("{sheet.title}"):  # ID: {sheet.id}')
+                    logic_blocks.append(f'        with rb.sheet("{sheet.title}"):  # ID: {sheet.id}')
                     if sheet.steps:
                         for s in sheet.steps:
-                            logic_blocks.append(f'                # {s.original_text or s.action}')
-                    logic_blocks.append(f'                pass')
+                            logic_blocks.append(f'            # {s.original_text or s.action}')
+                    logic_blocks.append(f'            pass')
                     logic_blocks.append('')
                 
         else:
             # Default Template if no model
-            logic_blocks.append("            # --- Phase 1: Initialization ---")
-            logic_blocks.append("            logger.info(\"Phase 1: Initialization\")")
-            logic_blocks.append("            page.goto(entry_url)")
-            # Use wait_for_page_load for better stability
-            logic_blocks.append("            wait_for_page_load(page, \"domcontentloaded\")")
-            logic_blocks.append("")
-            logic_blocks.append("            # --- Phase 2: Process ---")
-            logic_blocks.append("            # Phase 2.1: Process Sheet 1 (Example)")
-            logic_blocks.append("            logger.info(\"Phase 2.1: sample sheet title\")")
-            logic_blocks.append("            with step(\"Process Sheet 1\"):")
-            logic_blocks.append("                # process_sheet_1(page, data)")
-            logic_blocks.append("                pass")
-            logic_blocks.append("")
-            logic_blocks.append("            # Phase 2.2: Process Sheet 2 (Example)")
-            logic_blocks.append("            logger.info(\"Phase 2.2: sample sheet title 2\")")
-            logic_blocks.append("            with step(\"Process Sheet 2\"):")
-            logic_blocks.append("                # process_sheet_2(page, data)")
-            logic_blocks.append("                pass")
-            logic_blocks.append("")
-            logic_blocks.append("            # --- Phase 3: Delivery ---")
-            logic_blocks.append("            logger.info(\"Phase 3: Delivery\")")
-            logic_blocks.append("            data[\"result\"] = \"Operation completed successfully\"")
+            logic_blocks.append("        # --- Phase 1: Initialization ---")
+            logic_blocks.append("        with rb.sheet(\"Initialization\"):")
+            logic_blocks.append("            page.goto(\"{entry_url_fallback}\")")
+            logic_blocks.append("            pass")
 
         logic_body = "\n".join(logic_blocks)
         

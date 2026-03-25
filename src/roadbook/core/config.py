@@ -195,7 +195,7 @@ scaffold:
   default_timeout: 10000
   
   # Optional Proxy server URL for the automated browser requests (e.g., "http://127.0.0.1:8080")
-  # Supported: null (no proxy), or a valid proxy string. Note: currently needs manual integration in browser.py.tpl
+  # Supported: null (no proxy), or a valid proxy string.
   proxy: null
   
   # Optional custom User-Agent string to masquerade the browser footprint
