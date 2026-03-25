@@ -11,18 +11,24 @@ from .storage import Storage
 from .logger import get_logger
 
 class RoadbookContext:
-    def __init__(self, run_dir: str = None, headless: bool = None, cdp_url: str = None):
+    def __init__(self, run_dir: str = None, outputs_dir: str = None, headless: bool = None, cdp_url: str = None):
         if run_dir:
             self.run_dir = Path(run_dir)
+            self.outputs_dir = Path(outputs_dir) if outputs_dir else Path(run_dir).parent.parent / "outputs" / Path(run_dir).name
         else:
             # Fallback or from env
             env_dir = os.environ.get("ROADBOOK_RUN_DIR")
-            self.run_dir = Path(env_dir) if env_dir else Path.cwd() / "runtime" / "runs" / "local_run"
+            env_outputs_dir = os.environ.get("ROADBOOK_OUTPUTS_DIR")
+            
+            # In standard setup, it's runtime/run_xxxx. For ad-hoc local runs without CLI, use runtime/local_run
+            self.run_dir = Path(env_dir) if env_dir else Path.cwd() / "runtime" / "local_run"
+            self.outputs_dir = Path(env_outputs_dir) if env_outputs_dir else Path.cwd() / "outputs" / "local_run"
             
         self.run_dir.mkdir(parents=True, exist_ok=True)
+        self.outputs_dir.mkdir(parents=True, exist_ok=True)
         
-        self.io = IOManager(self.run_dir)
-        self.storage = Storage(self.run_dir)
+        self.io = IOManager(self.outputs_dir)
+        self.storage = Storage(self.run_dir, self.outputs_dir)
         self.logger = get_logger()
         
         # Load unified CLI configuration if available

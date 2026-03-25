@@ -18,7 +18,7 @@ def run_history(args):
 
     # Check workspace copy first for listing history
     cwd = Path.cwd()
-    workspace_dir = cwd / ".roadbook" / rb_id
+    workspace_dir = cwd / rb_id
     target_dir = workspace_dir if workspace_dir.exists() else book.path.parent
 
     runs = RuntimeManager.list_runs(rb_id, book_dir=target_dir)
@@ -48,7 +48,7 @@ def _find_run(run_id):
     
     for book in books:
         # 1. Check workspace copy first (Priority)
-        workspace_dir = cwd / ".roadbook" / book.id
+        workspace_dir = cwd / book.id
         if workspace_dir.exists():
             r = RuntimeManager.get_run(book.id, run_id, book_dir=workspace_dir)
             if r:
@@ -99,7 +99,7 @@ def run_last(args):
     
     for book in books:
         # Check workspace copy
-        workspace_dir = cwd / ".roadbook" / book.id
+        workspace_dir = cwd / book.id
         target_dirs = [workspace_dir] if workspace_dir.exists() else []
         target_dirs.append(book.path.parent)
         

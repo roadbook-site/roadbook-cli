@@ -117,7 +117,14 @@ class RuntimeManager:
 
     @staticmethod
     def get_runs_dir(rb_id: str, book_dir: Optional[Path] = None) -> Path:
-        path = RuntimeManager.get_runtime_dir(rb_id, book_dir) / "runs"
+        # Returns the base directory for runs (which is just runtime/ now, previously runtime/runs)
+        path = RuntimeManager.get_runtime_dir(rb_id, book_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @staticmethod
+    def get_outputs_dir(rb_id: str, book_dir: Optional[Path] = None) -> Path:
+        path = RuntimeManager._resolve_book_dir(rb_id, book_dir) / "outputs"
         path.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -140,18 +147,12 @@ class RuntimeManager:
             extensions = [".py", ".js", ".ts"]
 
         for ext in extensions:
-            # 1. Check workspace .roadbook (New Standard)
-            workspace_roadbook_script = cwd / ".roadbook" / rb_id / "scripts" / f"script{ext}"
-            if workspace_roadbook_script.exists():
-                return workspace_roadbook_script
-            
-            # 2. Check current workspace (Legacy High priority)
-            # Check ./scripts/script<ext>
+            # 1. Check if current workspace is the roadbook project
             workspace_script = cwd / "scripts" / f"script{ext}"
             if workspace_script.exists():
                 return workspace_script
-
-            # Check ./<rb_id><ext>
+            
+            # 2. Check legacy workspace direct (e.g. ./<rb_id><ext>)
             workspace_script_direct = cwd / f"{rb_id}{ext}"
             if workspace_script_direct.exists():
                 return workspace_script_direct

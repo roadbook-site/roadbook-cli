@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Any, Dict
 
 class IOManager:
-    def __init__(self, run_dir: Path):
-        self.run_dir = run_dir
+    def __init__(self, outputs_dir: Path):
+        self.outputs_dir = outputs_dir
         self.inputs = self._load_inputs()
         self.outputs = []
-        self.output_file = run_dir / "output.json"
+        self.output_file = outputs_dir / "output.json"
 
     def _load_inputs(self) -> Dict[str, Any]:
         """Loads inputs from environment variables or a predefined file."""

@@ -108,7 +108,7 @@ def pull(args):
             if global_scope:
                 books_dir = get_books_dir()
             else:
-                books_dir = Path.cwd() / ".roadbook"
+                books_dir = Path.cwd()
                 
             target_dir = books_dir / rb_id
             

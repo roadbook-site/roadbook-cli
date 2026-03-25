@@ -50,7 +50,7 @@ def show_book(args):
     # Check if we have a workspace copy
     import pathlib
     cwd = pathlib.Path.cwd()
-    workspace_roadbook_dir = cwd / ".roadbook" / book.id
+    workspace_roadbook_dir = cwd / book.id
     if workspace_roadbook_dir.exists():
         book_dir = workspace_roadbook_dir
         

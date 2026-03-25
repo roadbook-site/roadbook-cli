@@ -4,10 +4,11 @@ import time
 from pathlib import Path
 
 class Storage:
-    def __init__(self, run_dir: Path):
+    def __init__(self, run_dir: Path, outputs_dir: Path):
         self.run_dir = run_dir
+        self.outputs_dir = outputs_dir
         self.screenshots_dir = run_dir / "screenshots"
-        self.artifacts_dir = run_dir / "artifacts"
+        self.artifacts_dir = outputs_dir / "artifacts"
         
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)

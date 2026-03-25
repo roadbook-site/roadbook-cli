@@ -15,6 +15,7 @@ class ScaffoldManager:
         """Returns standard paths for a roadbook directory."""
         return {
             "root": book_dir,
+            "config": book_dir / ".rb",
             "scripts": book_dir / "scripts",
             "runtime": book_dir / "runtime",
             "outputs": book_dir / "outputs",
@@ -27,12 +28,13 @@ class ScaffoldManager:
         paths = ScaffoldManager.get_structure_paths(book_dir)
         
         # Create directories
+        paths["config"].mkdir(parents=True, exist_ok=True)
         paths["scripts"].mkdir(parents=True, exist_ok=True)
         paths["runtime"].mkdir(parents=True, exist_ok=True)
         paths["outputs"].mkdir(parents=True, exist_ok=True)
         
-        # Create config.yaml in the project root (.roadbook/config.yaml) if it doesn't exist
-        config_file = book_dir.parent / "config.yaml"
+        # Create config.yaml in the project root (.rb/config.yaml) if it doesn't exist
+        config_file = paths["config"] / "config.yaml"
         if not config_file.exists():
             from .config import DEFAULT_CONFIG_YAML
             with open(config_file, "w", encoding="utf-8") as f:
@@ -43,6 +45,12 @@ class ScaffoldManager:
             content = ScaffoldManager._generate_roadbook_md_content(rb_id, name, description, entry_url)
             with open(paths["roadbook_file"], "w", encoding="utf-8") as f:
                 f.write(content)
+
+        # Create .gitignore
+        gitignore_file = book_dir / ".gitignore"
+        if not gitignore_file.exists():
+            with open(gitignore_file, "w", encoding="utf-8") as f:
+                f.write(".rb/\noutputs/\nruntime/\n__pycache__/\n*.pyc\n")
         
         return paths
 

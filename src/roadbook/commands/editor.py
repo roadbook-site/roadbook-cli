@@ -83,9 +83,7 @@ def start_editor(args):
         def find_local_roadbook(start_path: Path):
             curr = start_path.resolve()
             while True:
-                if (curr / ".roadbook").is_dir():
-                    return curr / ".roadbook"
-                if curr.name == ".roadbook":
+                if (curr / ".rb").is_dir():
                     return curr
                 parent = curr.parent
                 if parent == curr:
@@ -100,7 +98,7 @@ def start_editor(args):
             found_rb = find_local_roadbook(cwd)
             if found_rb:
                 work_dir = str(found_rb)
-                mode = "Local (.roadbook)"
+                mode = "Local Roadbook Project"
             else:
                 # If local does not exist, use current directory as fallback
                 work_dir = str(cwd)
@@ -163,15 +161,22 @@ def start_editor(args):
                 
         if target_file:
             # Ensure the target_file is within the work_dir (for security/accessibility)
-            # If target_file contains .roadbook in its path, set work_dir up to .roadbook
             target_path = Path(target_file)
-            if ".roadbook" in target_path.parts:
-                rb_idx = target_path.parts.index(".roadbook")
-                # Need to handle Windows paths correctly, Path(*parts) on Windows with C:\ doesn't form root properly sometimes if we are not careful
-                # Usually parts[0] is 'C:\\' so Path(*parts) works.
-                new_work_dir = Path(*target_path.parts[:rb_idx+1])
-                work_dir = str(new_work_dir)
-                mode = "Local (.roadbook)"
+            
+            # Find the root of the roadbook project by looking for .rb
+            curr = target_path.parent
+            rb_root = None
+            while True:
+                if (curr / ".rb").is_dir():
+                    rb_root = curr
+                    break
+                if curr.parent == curr:
+                    break
+                curr = curr.parent
+
+            if rb_root:
+                work_dir = str(rb_root)
+                mode = "Local Roadbook Project"
             else:
                 # Fallback to its parent directory if not in work_dir
                 try:

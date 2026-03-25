@@ -146,7 +146,7 @@ def run_book(args):
     
     # Check if we have a workspace copy
     cwd = Path.cwd()
-    workspace_roadbook_dir = cwd / ".roadbook" / rb_id
+    workspace_roadbook_dir = cwd / rb_id
     if workspace_roadbook_dir.exists():
         book_dir = workspace_roadbook_dir
         
@@ -163,10 +163,14 @@ def run_book(args):
         run_id = RuntimeManager.create_run(rb_id, book_dir=book_dir)
         run_dir = RuntimeManager.get_runs_dir(rb_id, book_dir) / run_id
         
+        outputs_dir = RuntimeManager.get_outputs_dir(rb_id, book_dir) / run_id
+        outputs_dir.mkdir(parents=True, exist_ok=True)
+        
         # Pass Run ID via environment variables
         env = os.environ.copy()
         env["ROADBOOK_RUN_ID"] = run_id
         env["ROADBOOK_RUN_DIR"] = str(run_dir)
+        env["ROADBOOK_OUTPUTS_DIR"] = str(outputs_dir)
         
         print_info(f"[Runtime] Run ID: {run_id}")
         print_info(f"[*] Executing script...")
@@ -223,7 +227,7 @@ def run_book(args):
             
             # Try to capture outputs
             outputs = {}
-            outputs_file = run_dir / "artifacts" / "outputs.json"
+            outputs_file = outputs_dir / "output.json"
             if outputs_file.exists():
                 try:
                     with open(outputs_file, "r", encoding="utf-8") as f:

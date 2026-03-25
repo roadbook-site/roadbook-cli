@@ -22,7 +22,7 @@ CORE_DIR = ROADBOOK_DIR / ".core"
 BOOKS_DIR = ROADBOOK_DIR  # Books are now direct children
 USER_CONFIG_FILE = CORE_DIR / "config.yaml"
 USER_ENV_FILE = CORE_DIR / "credentials.env"
-PROJECT_CONFIG_FILE = Path.cwd() / ".roadbook" / "config.yaml"
+PROJECT_CONFIG_FILE = Path.cwd() / ".rb" / "config.yaml"
 
 DEFAULT_CONFIG = {
     "core": {
@@ -48,6 +48,9 @@ def ensure_roadbook_dir():
     
     if not CORE_DIR.exists():
         CORE_DIR.mkdir()
+        
+    if not BOOKS_DIR.exists():
+        BOOKS_DIR.mkdir()
     
     # Config Migration
     if not USER_CONFIG_FILE.exists():
@@ -145,8 +148,8 @@ def load_project_config() -> Dict[str, Any]:
 def load_config() -> Dict[str, Any]:
     """
     Load configuration with priority:
-    1. Project Config (./.roadbook/config.yaml)
-    2. User Config (~/.roadbook/config.yaml)
+    1. Project Config (./.rb/config.yaml)
+    2. User Config (~/.roadbook/.core/config.yaml)
     3. Default Config
     """
     config = DEFAULT_CONFIG.copy()

@@ -66,29 +66,39 @@ Use the `version` value in this file header as the single source of truth.
 - **DON'T** skip the version check step. It must be done before anything else.
 - **DON'T** delete or bypass `RoadbookContext` in `script.py` to use raw Playwright API manually. The SDK handles lifecycle safely.
 - **DON'T** attempt to bypass or brute-force Login screens or CAPTCHAs autonomously.
-- **DON'T** create temporary test files in the project root. Always use `.roadbook/<id>/scripts/tests/`.
+- **DON'T** create temporary test files in the project root. Always use `scripts/tests/`.
 - **DON'T** hardcode search queries or dynamic parameters in the script; extract them to the `inputs` section.
 - **DON'T** put environment configurations (like CDP debugging ports or headless flags) inside `inputs` or `roadbook.md`. Those are strictly for business data and domain variables.
+
+## Project Directory Structure
+All roadbook projects follow a standard directory structure:
+- **`.rb/`**: Local configuration layer (e.g., `.rb/config.yaml`). Do not hardcode project paths; the system uses this folder to identify the project root. Configuration loading follows a waterfall flow:
+    1. Project Config (`./.rb/config.yaml`) - highest priority.
+    2. User Config (`~/.roadbook/.core/config.yaml`).
+    3. Default Config.
+- **`scripts/`**: Automation scripts (e.g., `scripts/script.py`, `scripts/utils/`).
+- **`outputs/`**: Business outputs and data extraction results (e.g., `outputs/run_{run_id}/output.json`).
+- **`runtime/`**: Execution state, logs, and screenshots for debugging (e.g., `runtime/run_{run_id}/run.log`).
 
 ## Workflow
 
 ### Phase 1: Initialization & Scaffolding
 1.  **Context Check (MANDATORY)**: Ensure `roadbook` CLI is available and version MATcHES exactly (`roadbook --version`). If the command is not found, use `python -m roadbook` instead. If not, upgrade or update immediately as per the frontmatter check.
 2.  **Intent Analysis**: Convert the user's request into a generic goal (e.g., "Find an iPhone 15 on Amazon" → "Search for a product on Amazon"). Propose a `kebab-case` name.
-3.  **Scaffolding**: Run `roadbook init <name> --description "<generalized_goal>" --entry-url "<target_url>"` (or `python -m roadbook init ...`)
+3.  **Scaffolding**: Run `roadbook init <name> --description "<generalized_goal>" --entry-url "<target_url>"` (or `python -m roadbook init ...`). This creates a new project directory `<name>`. Move into it `cd <name>`.
 4.  **Complex Task Triage**: If the task involves multi-step workflows or complex dynamic UIs, **STOP HERE**. Instruct the user to run `roadbook edit <id>` to manually define the high-level steps first.
 
 ### Phase 2: Exploration (Test-Driven)
 *The Agent should iterate in this phase until the goal is achieved.*
-1.  **Micro-Testing**: Open `.roadbook/<id>/scripts/tests/sample_test.py` and read the instructions. Write minimal tests for complex interactions here first.
-2.  **Develop Workflow**: Read and modify `.roadbook/<id>/scripts/script.py`. Follow the inline `[AGENT INSTRUCTION]` blocks for selectors and artifact handling. Use `rb.sheet` to map your logic to sheets.
+1.  **Micro-Testing**: Open `scripts/tests/sample_test.py` and read the instructions. Write minimal tests for complex interactions here first.
+2.  **Develop Workflow**: Read and modify `scripts/script.py`. Follow the inline `[AGENT INSTRUCTION]` blocks for selectors and artifact handling. Use `rb.sheet` to map your logic to sheets.
 3.  **Programmatic Output (Script Sheet)**: Output structured data (JSON/dict) representing the discovered workflow steps and outputs using `rb.push_data()`.
 4.  **Verify & Sync**: Run the script to verify. Clean up dead ends and isolate the successful path.
 
 ### Phase 3: Transcription (Sync to Roadbook)
 1.  **Translate & Review**: Review the programmatic Script Sheet output. Clean up invalid data, deduplicate, and add context.
 2.  **Translate Actions**: Convert the verified Python Playwright calls into AARP Action Primitives. (Refer to the `[AGENT INSTRUCTION - AARP TRANSLATION GUIDE]` inside the generated `script.py`).
-3.  **Update Roadbook**: Open `.roadbook/<id>/roadbook.md`, replace the placeholder sheets, and finalize expected outputs in the `## Delivery` sheet based on your reviewed Script Sheet.
+3.  **Update Roadbook**: Open `roadbook.md`, replace the placeholder sheets, and finalize expected outputs in the `## Delivery` sheet based on your reviewed Script Sheet.
 
 ### Phase 4: Finalization
 1.  **Sync Verification**: Ensure the `roadbook.md` matches the proven `script.py`.

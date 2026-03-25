@@ -76,7 +76,7 @@ Use the `version` value in this file header as the single source of truth.
 
 > **Note**: If the `roadbook` command is not found, use `python -m roadbook` instead (e.g., `python -m roadbook list`).
 
-- `roadbook list`: List local roadbooks in the current project (`.roadbook/`).
+- `roadbook list`: List local roadbooks in the current project.
 - `roadbook list -g`: List all globally installed roadbooks.
 - `roadbook inspect <id> [-g]`: Show details of a roadbook (alias for `show`).
 - `roadbook run <id> [-g]`: Execute a roadbook automatically (script-first). Use `-g` if roadbook is in the global library.
@@ -87,13 +87,17 @@ Use the `version` value in this file header as the single source of truth.
 ## Script Management & Artifacts
 
 - **IMPORTANT - Reusability & Token Efficiency**: Scripts are the core of Roadbook's efficiency. They can be reused without consuming tokens. **Always strive to generate a robust script instead of relying on interactive semantic execution every time.**
-- **Workspace Structure**: Roadbooks are executed in a dedicated workspace directory. For local roadbooks, this is `.roadbook/<roadbook_id>/`.
-    - **Scripts**: Located in `.roadbook/<roadbook_id>/scripts/script.py`.
-    - **Outputs**: Located in `.roadbook/<roadbook_id>/outputs/`.
-    - **Runtime**: Located in `.roadbook/<roadbook_id>/runtime/` (internal system use).
+- **Workspace Structure**: Roadbooks are executed in their independent project directory.
+    - **Configuration**: Located in `.rb/config.yaml`. Configuration loading follows a waterfall flow:
+        1. Project Config (`./.rb/config.yaml`) - highest priority.
+        2. User Config (`~/.roadbook/.core/config.yaml`).
+        3. Default Config.
+    - **Scripts**: Located in `scripts/script.py`.
+    - **Outputs**: Located in `outputs/run_{run_id}/` (business data).
+    - **Runtime**: Located in `runtime/run_{run_id}/` (internal system use, traces, screenshots).
 - **Output Management**:
-    - All execution outputs (downloads, screenshots, logs) MUST be saved in `.roadbook/<id>/outputs/<session_id>/`.
+    - All execution outputs (downloads, data) MUST be saved in `outputs/<session_id>/`.
     - The scaffolded script automatically detects the `ROADBOOK_RUN_ID` environment variable and sets `OUTPUT_DIR` accordingly.
     - If running manually without CLI context, it falls back to a timestamped directory in `outputs/`.
-- **Do not move to global**: Keep the script and artifacts in the workspace `.roadbook/` directory.
+- **Do not move to global**: Keep the script and artifacts in the local project directory.
 - **Verification**: Always verify the script works before finalizing.

@@ -51,7 +51,7 @@ def init_book(args):
     else:
         # Create directory structure in current workspace
         cwd = Path.cwd()
-        work_dir = cwd / ".roadbook"
+        work_dir = cwd
         
     book_dir = work_dir / rb_id
     

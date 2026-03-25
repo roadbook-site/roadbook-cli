@@ -36,9 +36,7 @@ class RoadbookManager:
         else:
             # Workspace
             cwd = Path.cwd()
-            local_books = cwd / ".roadbook"
-            if local_books.exists():
-                paths.append(local_books)
+            paths.append(cwd)
             
         return paths
 
