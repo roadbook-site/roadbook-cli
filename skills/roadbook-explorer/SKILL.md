@@ -59,13 +59,16 @@ Use the `version` value in this file header as the single source of truth.
 - **DO** always read the `[AGENT INSTRUCTION]` comments in the generated `script.py` and `sample_test.py` after scaffolding.
 - **DO** use the `tests/` directory for micro-testing complex UI elements before merging logic into `script.py`.
 - **DO** ask the user for help (`AskUserQuestion`) if you receive unclear prompt objectives.
-- **DO** strictly use `rb.human_intervene_for_login(success_selector="...", message="...")` when encountering login structures or CAPTCHAs. Rely on the SDK for state management.
+- **DO** guide the user to configure settings (like API keys or specific credentials) if the task requires them, explaining where and how to set them up.
+- **DO** strictly use `rb.human_intervene_for_login(wait_for_user_input=True)` when encountering login structures or CAPTCHAs. Rely on the SDK for state management.
+- **DO** remind the user to run scripts requiring human intervention in their own visible terminal, as the agent's background terminal may not display browser UI properly.
 - **DO** use semantic selectors (e.g., `get_by_role`, `get_by_text`) whenever possible.
 
 **✗ Don't:**
 - **DON'T** skip the version check step. It must be done before anything else.
 - **DON'T** delete or bypass `RoadbookContext` in `script.py` to use raw Playwright API manually. The SDK handles lifecycle safely.
 - **DON'T** attempt to bypass or brute-force Login screens or write automated password inputs. Always use `rb.human_intervene_for_login`.
+- **DON'T** run scripts that require `human_intervene_for_login` silently in the background; always prompt the user to execute them in their visible terminal.
 - **DON'T** create your own local storage, browser initialization overrides, or CDP configs.
 - **DON'T** create temporary test files in the project root. Always use `scripts/tests/`.
 - **DON'T** hardcode search queries or dynamic parameters in the script; extract them to the `inputs` section.

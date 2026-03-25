@@ -146,7 +146,7 @@ class RoadbookContext:
                 connected = True
                 self.logger.info("Successfully connected to existing browser via CDP.")
             except Exception as e:
-                self.logger.warning(f"Failed to connect to CDP at {self.cdp_url}: {e}. Falling back...")
+                self.logger.info("CDP connection failed, falling back to standalone browser.")
         
         if not connected:
             self.logger.info(f"Launching ephemeral context with state (headless={self.headless})...")
@@ -190,20 +190,28 @@ class RoadbookContext:
         if self._playwright:
             self._playwright.stop()
 
-    def human_intervene_for_login(self, success_selector: str, message: str = "Please complete the login or verification in the browser. Press Enter here when done...", timeout: int = 600000):
+    def human_intervene_for_login(self, success_selector: str = None, message: str = "Please complete the login or verification in the browser.", timeout: int = 600000, wait_for_user_input: bool = False):
         """
         Pauses the execution to allow a human to log in or solve a CAPTCHA.
         """
         self.logger.warning("=====================================================")
         self.logger.warning(" HUMAN INTERVENTION REQUIRED ")
         self.logger.warning(message)
-        self.logger.warning(f" Waiting for selector: '{success_selector}' to be visible.")
+        if success_selector:
+            self.logger.warning(f" Waiting for selector: '{success_selector}' to be visible.")
+        if wait_for_user_input or not success_selector:
+             self.logger.warning(" Press Enter in the terminal when done...")
         self.logger.warning("=====================================================")
         
         try:
-            # Wait for the user to login and the target selector to appear
-            self.page.locator(success_selector).wait_for(state="visible", timeout=timeout)
-            self.logger.info("Login successful, resuming execution...")
+            if wait_for_user_input or not success_selector:
+                # Wait for terminal input (Enter)
+                input("Press Enter to continue after you have logged in...")
+                self.logger.info("Manual confirmation received, resuming execution...")
+            elif success_selector:
+                # Wait for the user to login and the target selector to appear
+                self.page.locator(success_selector).wait_for(state="visible", timeout=timeout)
+                self.logger.info("Login successful, resuming execution...")
         except Exception as e:
             self.logger.error(f"Failed to verify login within {timeout}ms timeout: {e}")
             raise RuntimeError(f"Login intervention failed or timed out: {e}")
