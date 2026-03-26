@@ -59,6 +59,7 @@ Use the `version` value in this file header as the single source of truth.
 
 4.  **Robust Execution Guidelines**:
     - **SDK-Driven Scripting**: All execution scripts MUST use `roadbook.sdk.RoadbookContext`. Use `with rb.sheet("...")` for sheet tracking and `rb.push_data()` for data outputs. NEVER invoke `agent-browser`.
+    - **Site Constraints Handling**: Read the `**Constraints**:` block from `roadbook.md` (e.g., `auto_solve_captcha`, `stealth_mode`, `viewport`) and ensure these are faithfully injected as a dictionary to the `site_overrides` parameter when instantiating `RoadbookContext` in `script.py`.
     - **Selector Fallback**: Treat selectors in the Roadbook as **hints**. If a specific CSS selector fails (e.g., timeout), DO NOT give up immediately.
         - **Try alternatives**: Look for other attributes (text, aria-label, etc.) that identify the same element.
         - **Semantic matching**: Use text content or visual relationship to find the element.

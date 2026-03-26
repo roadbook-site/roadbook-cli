@@ -51,8 +51,9 @@ Use the `version` value in this file header as the single source of truth.
 1. **Standardization**: Always use `roadbook init` to create the scaffold.
 2. **Context-in-Place**: The generated `script.py` and `tests/` directory contain specific `[AGENT INSTRUCTION]` blocks. **ALWAYS read these instructions within the generated files** before coding.
 3. **SDK-Driven**: ALWAYS use `roadbook.sdk.RoadbookContext` for lifecycle, logging, and I/O. Strictly use `with rb.sheet("Sheet Name")` to declare steps and `rb.push_data()` for outputs. NEVER mention or use `agent-browser`.
-4. **Script Sheet Workflow**: Before finalizing the markdown, structure your script's outputs programmatically (Script Sheet). Review, clean, and then sync to `roadbook.md` as the Single Source of Truth.
-5. **Fast Fail**: If sophisticated login/captcha is encountered, pause and ask for human help.
+4. **Site Constraints**: Support special execution environments (like captchas, stealth mode, or specific viewports) by accurately documenting and extracting `**Constraints**:` from `roadbook.md` and passing them via the `site_overrides` parameter to `RoadbookContext` in `script.py`.
+5. **Script Sheet Workflow**: Before finalizing the markdown, structure your script's outputs programmatically (Script Sheet). Review, clean, and then sync to `roadbook.md` as the Single Source of Truth.
+6. **Fast Fail**: If sophisticated login/captcha is encountered, pause and ask for human help.
 
 ## DO's and DON'Ts
 **✓ Do:**
@@ -60,6 +61,7 @@ Use the `version` value in this file header as the single source of truth.
 - **DO** use the `tests/` directory for micro-testing complex UI elements before merging logic into `script.py`.
 - **DO** ask the user for help (`AskUserQuestion`) if you receive unclear prompt objectives.
 - **DO** guide the user to configure settings (like API keys or specific credentials) if the task requires them, explaining where and how to set them up.
+- **DO** define any required site-specific environmental conditions (e.g., `auto_solve_captcha: true`, `stealth_mode: true`) under a `**Constraints**:` block in the setup sheet of `roadbook.md`, and pass them via `site_overrides` when initializing `RoadbookContext` in `script.py`.
 - **DO** strictly use `rb.human_intervene_for_login(wait_for_user_input=True)` when encountering login structures or CAPTCHAs. Rely on the SDK for state management.
 - **DO** remind the user to run scripts requiring human intervention in their own visible terminal, as the agent's background terminal may not display browser UI properly.
 - **DO** use semantic selectors (e.g., `get_by_role`, `get_by_text`) whenever possible.
