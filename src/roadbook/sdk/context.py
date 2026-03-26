@@ -11,7 +11,7 @@ from .storage import Storage
 from .logger import get_logger
 
 class RoadbookContext:
-    def __init__(self, rb_id: str = None, root_dir: str = None, run_dir: str = None, outputs_dir: str = None, headless: bool = None, cdp_url: str = None, site_overrides: dict = None):
+    def __init__(self, rb_id: str = None, root_dir: str = None, run_dir: str = None, outputs_dir: str = None, cdp_url: str = None, site_overrides: dict = None):
         self.logger = get_logger()
         self.rb_id = rb_id
         self.site_overrides = site_overrides or {}
@@ -55,7 +55,7 @@ class RoadbookContext:
         self.storage = Storage(self.run_dir, self.outputs_dir)
         
         # 4. 载入统一配置
-        self._load_config(headless, cdp_url)
+        self._load_config(cdp_url)
 
         # Playwright internals
         self._playwright: Playwright = None
@@ -96,41 +96,35 @@ class RoadbookContext:
         except ImportError:
             return Path.home() / ".roadbook"
 
-    def _load_config(self, headless_override=None, cdp_override=None):
+    def _load_config(self, cdp_override=None):
         try:
             from roadbook.core.config import load_config
             self._cli_config = load_config(self.root_dir)
         except Exception:
             self._cli_config = {}
         
-        scaffold_config = self._cli_config.get("scaffold", {})
+        # Merge browser config, fallback to scaffold for legacy support
+        browser_config = self._cli_config.get("browser", {})
+        legacy_scaffold = self._cli_config.get("scaffold", {})
         
-        # Merge site_overrides
-        # headless logic: site_overrides (e.g. force_headful -> headless=False) > user param > config
-        user_headless = headless_override if headless_override is not None else scaffold_config.get("headless", False)
-        if "force_headful" in self.site_overrides and self.site_overrides["force_headful"]:
-            self.headless = False
-        elif "headless" in self.site_overrides:
-            self.headless = self.site_overrides["headless"]
-        else:
-            self.headless = user_headless
-            
-        self.browser_mode = scaffold_config.get("browser_mode", "auto")
-        self.stealth_mode = self.site_overrides.get("stealth_mode", False)
+        self.browser_mode = browser_config.get("mode", "cdp")
+        self.executable_path = browser_config.get("executable_path")
+        self.user_data_dir = browser_config.get("user_data_dir")
+        self.launch_args = browser_config.get("launch_args", ["--no-first-run", "--no-default-browser-check"])
         
         if cdp_override:
             self.cdp_url = cdp_override
         else:
-            cdp_port = scaffold_config.get("cdp_port")
+            cdp_port = browser_config.get("cdp_port") or legacy_scaffold.get("cdp_port", 9222)
             self.cdp_url = f"http://localhost:{cdp_port}" if cdp_port else None
             
-        self.viewport = self.site_overrides.get("viewport", scaffold_config.get("viewport", None))
+        self.viewport = self.site_overrides.get("viewport", browser_config.get("viewport", None))
         if isinstance(self.viewport, str): # e.g. "1920x1080"
             parts = self.viewport.split('x')
             if len(parts) == 2:
                 self.viewport = {"width": int(parts[0]), "height": int(parts[1])}
                 
-        self.global_delay = self.site_overrides.get("global_delay", scaffold_config.get("global_delay", 0))
+        self.global_delay = self.site_overrides.get("global_delay", browser_config.get("global_delay", 0))
             
         self.state_file = self.rb_dir / "state.json"
 
@@ -165,35 +159,82 @@ class RoadbookContext:
                 connected = True
                 self.logger.info("Successfully connected to existing browser via CDP.")
             except Exception as e:
-                self.logger.info("CDP connection failed, falling back to standalone browser.")
+                self.logger.info(f"CDP connection failed. Attempting to launch local browser and retry CDP...")
+                try:
+                    import subprocess
+                    import time
+                    import urllib.parse
+                    from roadbook.utils.browser_locator import find_chrome_executable
+                    
+                    # Try to get executable from config, fallback to auto-detect
+                    exe_path = self.executable_path or find_chrome_executable()
+                    
+                    if exe_path:
+                        parsed_url = urllib.parse.urlparse(self.cdp_url)
+                        port = parsed_url.port or 9222
+                        
+                        # Use configured user_data_dir or default to profile_dir
+                        data_dir = self.user_data_dir or self.profile_dir
+                        
+                        cmd = [
+                            exe_path,
+                            f"--remote-debugging-port={port}",
+                            f"--user-data-dir={data_dir}"
+                        ]
+                        
+                        # Add configured launch args
+                        if hasattr(self, "launch_args") and isinstance(self.launch_args, list):
+                            cmd.extend(self.launch_args)
+                        
+                        self.logger.info(f"Launching local browser: {exe_path}")
+                        self._local_browser_proc = subprocess.Popen(cmd)
+                        
+                        # Wait for the browser to start and bind to the port
+                        time.sleep(3.0)
+                        
+                        # Retry CDP connection
+                        self.logger.info(f"Retrying CDP connection to {self.cdp_url}...")
+                        try:
+                            browser = browser_type.connect_over_cdp(self.cdp_url)
+                            self._context = browser.contexts[0] if browser.contexts else browser.new_context()
+                            self.page = self._context.pages[0] if self._context.pages else self._context.new_page()
+                            connected = True
+                            self.logger.info("Successfully connected to local browser via CDP.")
+                        except Exception as cdp_err:
+                            self.logger.error(f"Failed to connect to browser CDP port {port} after launch.")
+                            self.logger.error("Hint: The port might be occupied, or the browser failed to start.")
+                            self.logger.error(f"Try running: `netstat -ano | findstr :{port}` (Windows) or `lsof -i :{port}` (Mac/Linux) to check for port conflicts.")
+                            raise cdp_err
+                    else:
+                        self.logger.warning("Could not find local Chrome/Edge executable.")
+                        self.logger.warning("Hint: Run `roadbook browser` to configure your dedicated browser path.")
+                except Exception as ex:
+                    self.logger.warning(f"Failed to launch or connect to local browser: {ex}")
         
         if not connected:
-            self.logger.info(f"Launching ephemeral context (headless={self.headless}, stealth={self.stealth_mode})...")
-            launch_args = {"headless": self.headless}
-            
-            # Stealth mode args (basic implementation)
-            if self.stealth_mode:
-                launch_args["args"] = ["--disable-blink-features=AutomationControlled"]
+            self.logger.warning("CDP connection and local launch failed. Falling back to standalone headless browser.")
+            self.logger.warning("Hint: Run `roadbook browser` to configure your dedicated browser.")
+            if self.browser_mode == "standalone":
+                self.logger.info(f"Launching ephemeral standalone context...")
+                launch_args = {"headless": False}
                 
-            self._browser_instance = browser_type.launch(**launch_args)
-            
-            context_args = {"no_viewport": False}
-            if getattr(self, "viewport", None) and isinstance(self.viewport, dict):
-                context_args["viewport"] = self.viewport
+                self._browser_instance = browser_type.launch(**launch_args)
                 
-            if self.state_file.exists():
-                context_args["storage_state"] = str(self.state_file)
-                self.logger.info(f"Loaded previous storage state from {self.state_file.name}.")
-                
-            self._context = self._browser_instance.new_context(**context_args)
+                context_args = {"no_viewport": False}
+                if getattr(self, "viewport", None) and isinstance(self.viewport, dict):
+                    context_args["viewport"] = self.viewport
+                    
+                if self.state_file.exists():
+                    context_args["storage_state"] = str(self.state_file)
+                    self.logger.info(f"Loaded previous storage state from {self.state_file.name}.")
+                    
+                self._context = self._browser_instance.new_context(**context_args)
+                self.page = self._context.new_page()
+            else:
+                self.logger.error("Failed to connect to local browser and standalone mode is not enabled.")
+                raise RuntimeError("Failed to connect to local browser via CDP.")
             
-            # Add stealth script if needed
-            if self.stealth_mode:
-                self._context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-                
-            self.page = self._context.new_page()
-            
-        default_timeout = scaffold_config.get("default_timeout", 30000)
+        default_timeout = getattr(self, "_cli_config", {}).get("browser", {}).get("default_timeout", 30000)
         self._context.set_default_timeout(default_timeout)
             
         return self

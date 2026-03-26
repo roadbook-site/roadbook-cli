@@ -6,7 +6,7 @@ import warnings
 warnings.filterwarnings("ignore", message="Unable to find acceptable character detection dependency")
 
 from .core.config import ensure_roadbook_dir
-from .commands import library, search, executor, script, run, editor, auth, remote, config, doctor, initialize
+from .commands import library, search, executor, script, run, editor, auth, remote, config, doctor, initialize, browser
 from . import __version__
 
 class RichHelpFormatter(argparse.RawDescriptionHelpFormatter):
@@ -39,6 +39,7 @@ Command Categories:
 
   [Configure] Manage CLI settings
     config    Get/Set/List configuration values
+    browser   Initialize dedicated browser settings
 
   [Remote]    Interact with Roadbook Server
     login     Login to server
@@ -183,6 +184,33 @@ Command Categories:
     config_set_parser.add_argument("value", help="Configuration value")
     config_set_parser.add_argument("-g", "--global", dest="global_config", action="store_true", help="Set global configuration")
     config_set_parser.set_defaults(func=config.config_set)
+    
+    # Command: browser
+    browser_parser = subparsers.add_parser("browser", aliases=["init-browser"], help="Manage dedicated browser settings and lifecycle")
+    browser_subparsers = browser_parser.add_subparsers(dest="subcommand", help="Browser subcommands")
+
+    # browser init
+    browser_init_parser = browser_subparsers.add_parser("init", help="Initialize dedicated browser settings and create shortcut")
+    browser_init_parser.set_defaults(func=browser.browser_init)
+
+    # browser open
+    browser_open_parser = browser_subparsers.add_parser("open", help="Open the dedicated browser")
+    browser_open_parser.set_defaults(func=browser.browser_open)
+
+    # browser close
+    browser_close_parser = browser_subparsers.add_parser("close", help="Close the dedicated browser gracefully")
+    browser_close_parser.set_defaults(func=browser.browser_close)
+
+    # browser kill
+    browser_kill_parser = browser_subparsers.add_parser("kill", help="Force release the CDP port by killing the occupying process")
+    browser_kill_parser.set_defaults(func=browser.browser_kill)
+
+    # browser diagnose
+    browser_diagnose_parser = browser_subparsers.add_parser("diagnose", aliases=["doctor"], help="Diagnose CDP port, connectivity, and user data directory")
+    browser_diagnose_parser.set_defaults(func=browser.browser_diagnose)
+
+    # Ensure backward compatibility for `roadbook browser` without subcommand (fallback to init or help)
+    browser_parser.set_defaults(func=browser.browser_main)
 
     # --- Group: Remote ---
     # Command: login

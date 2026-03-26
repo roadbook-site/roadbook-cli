@@ -70,3 +70,10 @@ def test_cli_config_get(mock_config_get):
         main()
         mock_config_get.assert_called_once()
 
+@patch('roadbook.cli.browser.browser_main')
+def test_cli_browser(mock_browser_main):
+    """Test the browser command"""
+    with patch.object(sys, 'argv', ['roadbook', 'browser']):
+        main()
+        mock_browser_main.assert_called_once()
+

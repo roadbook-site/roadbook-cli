@@ -31,13 +31,17 @@ DEFAULT_CONFIG = {
         "language": "auto"
     },
     "scaffold": {
-        "language": "python",
-        "headless": False,
-        "browser_type": "chromium",
+        "language": "python"
+    },
+    "browser": {
+        "mode": "cdp",
         "cdp_port": 9222,
-        "default_timeout": 10000,
-        "proxy": None,
-        "user_agent": None
+        "executable_path": None,
+        "user_data_dir": None,
+        "launch_args": [
+            "--no-first-run",
+            "--no-default-browser-check"
+        ]
     }
 }
 
@@ -162,49 +166,22 @@ def load_config(project_root: Path = None) -> Dict[str, Any]:
     
     return config
 
-DEFAULT_CONFIG_YAML = """# Roadbook Global Configuration
+DEFAULT_CONFIG_YAML = """# Roadbook Default Configuration
 
-# Core system settings
 core:
-  # Base URL for the Roadbook backend server
-  server_url: "http://localhost:8000"
-  
-  # Default timeout in seconds for API and core network requests
+  server_url: http://localhost:8000
   timeout: 30
-  
-  # CLI interface language ("auto", "en", "zh")
-  language: "auto"
+  language: auto
 
-# Options specifically controlling generated scaffolding scripts
-scaffold:
-  # Programming language for the generated scripts
-  # Supported: "python" (JavaScript/TypeScript support planned for future)
-  language: "python"
-  
-  # Run the generated script without a visible browser UI
-  # Supported: true (hidden), false (visible)
-  headless: false
-  
-  # Browser engine to use for Playwright
-  # Supported: "chromium" (default), "firefox", "webkit"
-  browser_type: "chromium"
-  
-  # Remote debugging port for connecting to an existing browser instance
-  # 9222 is the standard port for Chromium remote debugging
-  # Set to 0 or null to disable auto-connecting via CDP port
-  cdp_port: 9222
-  
-  # Default timeout for page loads and Playwright element actions (in milliseconds)
-  # Default is 10000ms (10 seconds)
-  default_timeout: 10000
-  
-  # Optional Proxy server URL for the automated browser requests (e.g., "http://127.0.0.1:8080")
-  # Supported: null (no proxy), or a valid proxy string.
-  proxy: null
-  
-  # Optional custom User-Agent string to masquerade the browser footprint
-  # Supported: null (use default Playwright UA), or a string. Note: currently needs manual integration in browser.py.tpl
-  user_agent: null
+browser:
+  mode: cdp                   # cdp (connect to local browser) or standalone (playwright launch)
+  cdp_port: 9222              # Remote debugging port
+  executable_path: null       # Path to Chrome/Edge executable. Null means auto-detect
+  user_data_dir: null         # Path to user data profile. Null means use default ~/.roadbook/.core/profile
+  launch_args:                # Additional args when launching browser
+    - "--no-first-run"
+    - "--no-default-browser-check"
+    # - "--disable-blink-features=AutomationControlled"
 """
 
 def save_user_config(config: Dict[str, Any]):
