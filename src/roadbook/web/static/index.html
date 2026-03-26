@@ -975,16 +975,23 @@
                                     col="col-span-12"
                                 />
                                   
-                                  {sheet.type === 'setup' && (
-                                      <TextListEditor
-                                          key={`constraints-${sheet.id}`}
-                                          label={t('constraints')}
-                                          value={sheet.constraints || {}}
-                                          onChange={v => updateField('constraints', v)}
-                                          col="col-span-12"
-                                          placeholder="force_headful: true&#10;stealth_mode: true&#10;viewport: 1920x1080"
-                                      />
-                                  )}
+                                {sheet.type === 'setup' && (
+                                    <TextListEditor
+                                        key={`constraints-${sheet.id}`}
+                                        label={t('constraints')}
+                                        value={sheet.constraints || {}}
+                                        onChange={v => updateField('constraints', v)}
+                                        col="col-span-12"
+                                        placeholder="force_headful: true&#10;stealth_mode: true&#10;viewport: 1920x1080"
+                                    />
+                                )}
+                            </div>
+
+                            <Field
+                                label={t('description_goal')}
+                                value={sheet.description}
+                                onChange={v => updateField('description', v)}
+                                textarea
                                 placeholder={t('description_placeholder')}
                             />
                             
