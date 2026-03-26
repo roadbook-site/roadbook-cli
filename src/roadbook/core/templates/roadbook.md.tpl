@@ -16,9 +16,15 @@ outputs: {}
 ## initialization
 **ID**: {uuid_1}
 **Type**: setup
-**Description**: Verify browser environment (connection method) and authentication state.
+**Description**: Verify browser environment (connection method), site constraints, and authentication state.
 **URL**: `{entry_url}`
 **Locators**: `body`
+
+**Constraints**:
+- `force_headful`: false
+- `stealth_mode`: false
+- `viewport`: 1280x720
+- `global_delay`: 0
 
 **Steps**:
 1. [Please fill in specific steps, e.g., `GOTO "{entry_url}"`]

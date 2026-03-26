@@ -12,6 +12,8 @@ class RoadbookSheet:
     title: str
     content: str
     index: int
+    type: str = "process"
+    constraints: dict = None
 
 @dataclass
 class RoadbookMeta:
@@ -113,10 +115,23 @@ class RoadbookManager:
                 # Remove trailing --- if present, and strip whitespace
                 sheet_content = parts[i+1].split('---')[0].strip()
                 
+                sheet_type = "process"
+                type_match = re.search(r"^\*\*(?:Type|type)\*\*:\s*(.+)$", sheet_content, re.MULTILINE | re.IGNORECASE)
+                if type_match:
+                    sheet_type = type_match.group(1).strip()
+                
+                constraints = {}
+                if sheet_type == "setup":
+                    # Simple extraction of constraints just for basic metadata
+                    # Real parsing is done by RoadbookParser
+                    pass # Or implement simple extraction here if needed
+
                 sheets.append(RoadbookSheet(
                     title=title,
                     content=sheet_content,
-                    index=sheet_idx
+                    index=sheet_idx,
+                    type=sheet_type,
+                    constraints=constraints
                 ))
                 sheet_idx += 1
                 

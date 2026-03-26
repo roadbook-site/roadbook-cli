@@ -162,7 +162,8 @@
                 'new_position': 'Enter new position (1 to ',
                 'expand_all': 'Expand All',
                 'collapse_all': 'Collapse All',
-                'insert_sheet_below': 'Insert Sheet Below'
+                'insert_sheet_below': 'Insert Sheet Below',
+                'constraints': 'Site Constraints'
             },
             'zh': {
                 'title': 'Roadbook Explorer',
@@ -230,7 +231,8 @@
                 'new_position': '请输入该页面的新位置 (1 到 ',
                 'expand_all': '全部展开',
                 'collapse_all': '全部收起',
-                'insert_sheet_below': '在下方插入新页'
+                'insert_sheet_below': '在下方插入新页',
+                'constraints': '网站约束 (Constraints)'
             }
         };
 
@@ -972,13 +974,17 @@
                                     placeholder='text="Login"'
                                     col="col-span-12"
                                 />
-                            </div>
-                            
-                            <Field 
-                                label={t('description_goal')}
-                                value={sheet.description} 
-                                onChange={v => updateField('description', v)} 
-                                textarea 
+                                  
+                                  {sheet.type === 'setup' && (
+                                      <TextListEditor
+                                          key={`constraints-${sheet.id}`}
+                                          label={t('constraints')}
+                                          value={sheet.constraints || {}}
+                                          onChange={v => updateField('constraints', v)}
+                                          col="col-span-12"
+                                          placeholder="force_headful: true&#10;stealth_mode: true&#10;viewport: 1920x1080"
+                                      />
+                                  )}
                                 placeholder={t('description_placeholder')}
                             />
                             

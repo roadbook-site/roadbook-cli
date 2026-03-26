@@ -200,6 +200,22 @@ class ScaffoldManager:
 
         logic_body = "\n".join(logic_blocks)
         
+        # Build site_constraints
+        site_constraints_dict = {}
+        if roadbook_model:
+            for s in roadbook_model.sheets:
+                if s.type == "setup" and s.constraints:
+                    site_constraints_dict.update(s.constraints)
+        
+        import json
+        constraints_str = json.dumps(site_constraints_dict, indent=4)
+        # Indent everything by 4 spaces
+        constraints_indented = ""
+        for line in constraints_str.split("\n"):
+            constraints_indented += f"    {line}\n"
+            
+        site_constraints_block = f"    # Agent extracted site constraints from setup sheet\n    site_constraints = {constraints_indented.strip()}"
+        
         template_bytes = pkgutil.get_data(__package__, "templates/script.py.tpl")
         if not template_bytes:
             raise RuntimeError("Could not find script.py.tpl template")
@@ -211,4 +227,5 @@ class ScaffoldManager:
                            .replace("{rb_id}", rb_id)\
                            .replace("{date_str}", date_str)\
                            .replace("{entry_url_fallback}", entry_url_fallback)\
-                           .replace("{logic_body}", logic_body)
+                           .replace("{logic_body}", logic_body)\
+                           .replace("{site_constraints_block}", site_constraints_block)

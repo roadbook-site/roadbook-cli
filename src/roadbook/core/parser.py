@@ -18,6 +18,7 @@ class Sheet(BaseModel):
     locators: str = ""
     reference: str = ""
     steps: List[Step] = Field(default_factory=list)
+    constraints: Dict[str, Any] = Field(default_factory=dict)
     # 用于保留未结构化解析的其他内容，以便还原
     extra_content: str = "" 
 
@@ -78,8 +79,10 @@ class RoadbookParser:
         lines = content.strip().split('\n')
         
         steps_mode = False
+        constraints_mode = False
         extra_lines = []
         steps = []
+        constraints = {}
         
         # Regex for key-value pairs like **ID**: value
         # Note: Markdown bold syntax is **text**, so we look for **Key**: Value
@@ -107,8 +110,13 @@ class RoadbookParser:
                     sheet.locators = value
                 elif key == "reference":
                     sheet.reference = value
+                elif key.startswith("constraints"):
+                    constraints_mode = True
+                    steps_mode = False
+                    continue # Skip this line
                 elif key == "steps":
                     steps_mode = True
+                    constraints_mode = False
                     continue # Skip this line
                 else:
                     # Unknown key, keep as extra
@@ -131,6 +139,23 @@ class RoadbookParser:
                     # If we hit a non-list item and not empty, maybe steps block ended?
                     # For now, let's treat it as extra content if it's not a separator
                     extra_lines.append(line)
+            # If in Constraints mode, parse constraints
+            elif constraints_mode:
+                cnst_match = re.match(r"^(?:-|\*)\s+`?([^`:]+)`?:\s*(.+)$", line_stripped)
+                if cnst_match:
+                    k = cnst_match.group(1).strip()
+                    v_str = cnst_match.group(2).strip()
+                    if v_str.lower() == 'true': v = True
+                    elif v_str.lower() == 'false': v = False
+                    elif v_str.isdigit(): v = int(v_str)
+                    else: v = v_str
+                    constraints[k] = v
+                elif line_stripped == "":
+                    continue
+                elif line_stripped.startswith("---"):
+                    continue
+                else:
+                    extra_lines.append(line)
             else:
                 if line_stripped.startswith("---"):
                     continue
@@ -138,6 +163,7 @@ class RoadbookParser:
                     extra_lines.append(line)
         
         sheet.steps = steps
+        sheet.constraints = constraints
         sheet.extra_content = "\n".join(extra_lines)
         return sheet
 
@@ -190,6 +216,15 @@ class RoadbookParser:
                 output.append(f"**Locators**: {sheet.locators}")
             if sheet.reference:
                 output.append(f"**Reference**: {sheet.reference}")
+            
+            if sheet.constraints:
+                output.append("\n**Constraints**:")
+                for k, v in sheet.constraints.items():
+                    if isinstance(v, bool):
+                        v_str = 'true' if v else 'false'
+                    else:
+                        v_str = str(v)
+                    output.append(f"- `{k}`: {v_str}")
             
             if sheet.steps:
                 output.append("\n**Steps**:")

@@ -11,9 +11,10 @@ from .storage import Storage
 from .logger import get_logger
 
 class RoadbookContext:
-    def __init__(self, rb_id: str = None, root_dir: str = None, run_dir: str = None, outputs_dir: str = None, headless: bool = None, cdp_url: str = None):
+    def __init__(self, rb_id: str = None, root_dir: str = None, run_dir: str = None, outputs_dir: str = None, headless: bool = None, cdp_url: str = None, site_overrides: dict = None):
         self.logger = get_logger()
         self.rb_id = rb_id
+        self.site_overrides = site_overrides or {}
         
         # 1. 自动推导项目根目录 (基于 rb_id, env 或是向上查找 .rb)
         if root_dir:
@@ -103,15 +104,33 @@ class RoadbookContext:
             self._cli_config = {}
         
         scaffold_config = self._cli_config.get("scaffold", {})
-        self.headless = headless_override if headless_override is not None else scaffold_config.get("headless", False)
         
+        # Merge site_overrides
+        # headless logic: site_overrides (e.g. force_headful -> headless=False) > user param > config
+        user_headless = headless_override if headless_override is not None else scaffold_config.get("headless", False)
+        if "force_headful" in self.site_overrides and self.site_overrides["force_headful"]:
+            self.headless = False
+        elif "headless" in self.site_overrides:
+            self.headless = self.site_overrides["headless"]
+        else:
+            self.headless = user_headless
+            
         self.browser_mode = scaffold_config.get("browser_mode", "auto")
+        self.stealth_mode = self.site_overrides.get("stealth_mode", False)
         
         if cdp_override:
             self.cdp_url = cdp_override
         else:
             cdp_port = scaffold_config.get("cdp_port")
             self.cdp_url = f"http://localhost:{cdp_port}" if cdp_port else None
+            
+        self.viewport = self.site_overrides.get("viewport", scaffold_config.get("viewport", None))
+        if isinstance(self.viewport, str): # e.g. "1920x1080"
+            parts = self.viewport.split('x')
+            if len(parts) == 2:
+                self.viewport = {"width": int(parts[0]), "height": int(parts[1])}
+                
+        self.global_delay = self.site_overrides.get("global_delay", scaffold_config.get("global_delay", 0))
             
         self.state_file = self.rb_dir / "state.json"
 
@@ -149,15 +168,29 @@ class RoadbookContext:
                 self.logger.info("CDP connection failed, falling back to standalone browser.")
         
         if not connected:
-            self.logger.info(f"Launching ephemeral context with state (headless={self.headless})...")
-            self._browser_instance = browser_type.launch(headless=self.headless)
+            self.logger.info(f"Launching ephemeral context (headless={self.headless}, stealth={self.stealth_mode})...")
+            launch_args = {"headless": self.headless}
+            
+            # Stealth mode args (basic implementation)
+            if self.stealth_mode:
+                launch_args["args"] = ["--disable-blink-features=AutomationControlled"]
+                
+            self._browser_instance = browser_type.launch(**launch_args)
             
             context_args = {"no_viewport": False}
+            if getattr(self, "viewport", None) and isinstance(self.viewport, dict):
+                context_args["viewport"] = self.viewport
+                
             if self.state_file.exists():
                 context_args["storage_state"] = str(self.state_file)
                 self.logger.info(f"Loaded previous storage state from {self.state_file.name}.")
                 
             self._context = self._browser_instance.new_context(**context_args)
+            
+            # Add stealth script if needed
+            if self.stealth_mode:
+                self._context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                
             self.page = self._context.new_page()
             
         default_timeout = scaffold_config.get("default_timeout", 30000)
