@@ -116,7 +116,16 @@ def run_doctor(args):
     # 4. Browsers (Playwright)
     browser_status = "[gray]UNKNOWN[/gray]"
     browser_detail = "Skipped"
-    if pw_ok:
+    
+    # Check explicitly configured path first
+    configured_exe = config.get("browser", {}).get("executable_path")
+    if configured_exe and os.path.exists(configured_exe):
+        browser_status = "[green]PASS[/green]"
+        browser_detail = f"Configured path found: {configured_exe}"
+    elif configured_exe:
+         browser_status = "[red]FAIL[/red]"
+         browser_detail = f"Configured path not found: {configured_exe}"
+    elif pw_ok:
         try:
             # Check if browsers are installed by checking executables via CLI
             # 'playwright install --dry-run' outputs needed browsers
@@ -125,7 +134,9 @@ def run_doctor(args):
             from playwright.sync_api import sync_playwright
             with sync_playwright() as p:
                 # executable_path is a method on BrowserType
-                path = p.chromium.executable_path
+                from roadbook.utils.browser_locator import find_chrome_executable
+                path = find_chrome_executable()
+                
                 if path:
                     browser_status = "[green]PASS[/green]"
                     browser_detail = f"Chromium found"

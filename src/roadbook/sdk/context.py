@@ -103,9 +103,8 @@ class RoadbookContext:
         except Exception:
             self._cli_config = {}
         
-        # Merge browser config, fallback to scaffold for legacy support
+        # Merge browser config
         browser_config = self._cli_config.get("browser", {})
-        legacy_scaffold = self._cli_config.get("scaffold", {})
         
         self.browser_mode = browser_config.get("mode", "cdp")
         self.executable_path = browser_config.get("executable_path")
@@ -115,7 +114,7 @@ class RoadbookContext:
         if cdp_override:
             self.cdp_url = cdp_override
         else:
-            cdp_port = browser_config.get("cdp_port") or legacy_scaffold.get("cdp_port", 9222)
+            cdp_port = browser_config.get("cdp_port", 9222)
             self.cdp_url = f"http://localhost:{cdp_port}" if cdp_port else None
             
         self.viewport = self.site_overrides.get("viewport", browser_config.get("viewport", None))
@@ -145,8 +144,8 @@ class RoadbookContext:
 
         self._playwright = sync_playwright().start()
         
-        scaffold_config = getattr(self, "_cli_config", {}).get("scaffold", {})
-        browser_type_name = scaffold_config.get("browser_type", "chromium")
+        browser_config = getattr(self, "_cli_config", {}).get("browser", {})
+        browser_type_name = browser_config.get("browser_type", "chromium")
         browser_type = getattr(self._playwright, browser_type_name, self._playwright.chromium)
         
         connected = False

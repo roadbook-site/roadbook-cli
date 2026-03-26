@@ -112,26 +112,28 @@ def load_user_config() -> Dict[str, Any]:
                 del config["core"]["api_key"]
                 changed = True
             
-            # Migrate old "browser" and "network" nested keys into "scaffold"
-            if "browser" in config:
-                if "scaffold" not in config:
-                    config["scaffold"] = {}
-                for bk, bv in config["browser"].items():
-                    config["scaffold"][bk] = bv
-                del config["browser"]
-                changed = True
-                
+            # Migrate old "browser" and "network" nested keys
+            # network is deprecated, move to browser? Actually let's just delete it or keep it as is.
             if "network" in config:
-                if "scaffold" not in config:
-                    config["scaffold"] = {}
-                for nk, nv in config["network"].items():
-                    config["scaffold"][nk] = nv
                 del config["network"]
                 changed = True
                 
-            if "scaffold" in config and "template_dir" in config["scaffold"]:
-                del config["scaffold"]["template_dir"]
-                changed = True
+            # Migrate old browser fields from scaffold to browser
+            if "scaffold" in config:
+                if "template_dir" in config["scaffold"]:
+                    del config["scaffold"]["template_dir"]
+                    changed = True
+                
+                # Move browser related fields from scaffold to browser
+                browser_fields = ["mode", "cdp_port", "executable_path", "user_data_dir", "launch_args"]
+                if "browser" not in config:
+                    config["browser"] = {}
+                
+                for field in browser_fields:
+                    if field in config["scaffold"]:
+                        config["browser"][field] = config["scaffold"][field]
+                        del config["scaffold"][field]
+                        changed = True
 
             if changed:
                 save_user_config(config)

@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ..core.config import load_user_config, save_user_config, CORE_DIR
-from ..utils.browser_locator import find_chrome_executable, find_all_browsers
+from ..utils.browser_locator import find_all_browsers
 from ..utils.shortcut import create_desktop_shortcut
 
 console = Console()
@@ -137,8 +137,6 @@ def _get_browser_info():
     config = load_user_config()
     b_config = config.get("browser", {})
     exe_path = b_config.get("executable_path")
-    if not exe_path or not os.path.exists(exe_path):
-        exe_path = find_chrome_executable()
         
     cdp_port = b_config.get("cdp_port", 9222)
     user_data_dir = b_config.get("user_data_dir", str(CORE_DIR / "profile"))
@@ -175,7 +173,7 @@ def browser_open(args):
     """Open the browser."""
     exe_path, cdp_port, user_data_dir = _get_browser_info()
     
-    if not exe_path:
+    if not exe_path or not os.path.exists(exe_path):
         console.print("[bold red]Error:[/bold red] Could not find browser executable. Please run `roadbook browser init` first.")
         return
         

@@ -12,8 +12,8 @@
 - [ ] **痛点 1: 脚手架模式导致的“野马”代码**
   - **现状**: CLI 目前通过生成样板代码（如 `browser.py.tpl`）将底层的 Playwright API 直接暴露给大模型。
   - **问题**: 缺乏统一的输入输出 (I/O) 定义、缺乏敏感信息脱敏的日志系统、缺乏对执行过程（Sheet）的精准监控，导致生成的脚本极难被上层系统统一调度和审计。
-- [ ] **痛点 2: `agent-browser` 引入的过度复杂性**
-  - **现状**: 采用 Client-Daemon 嵌套模式，通过 subprocess 调用 `agent-browser` CLI 来维持浏览器会话。
+- [ ] **痛点 2: 历史架构引入的过度复杂性**
+  - **现状**: 采用历史上的 Client-Daemon 嵌套模式，通过 subprocess 调用命令行工具来维持浏览器会话。
   - **问题**: 在 Windows 环境下运行极不稳定，极易产生僵尸进程；且这层封装属于“黑盒”，反而限制了 Playwright 原生能力的发挥，增加了调试难度。
 - [ ] **痛点 3: 文档与代码脱节**
   - **现状**: `roadbook.md` 和生成的 `script.py` 之间缺乏强制约束。
@@ -25,7 +25,7 @@
 
 我们的核心目标是将 Roadbook 从一个“代码生成工具”升级为一个**“受控的自动化执行框架”**，参考 Apify Actor 的优秀设计理念，但不盲目照搬，做适合本地桌面自动化的精简设计。
 
-### 2.1 彻底移除 `agent-browser` 依赖
+### 2.1 彻底移除历史架构依赖
 **构思**: 放弃 Daemon 守护模式，回归纯粹的 **"Python 进程直驱 Playwright"**。
 **细节**:
 - 将管理浏览器生命周期（包括 CDP 附着、持久化上下文等）的能力内化到全新的 `roadbook-sdk` 中。
@@ -56,7 +56,7 @@
 ## 3. 新架构行动计划 (Roadmap)
 
 ### 阶段一：清理与破冰 (Cleanup & Prep)
-1. **废除 `agent-browser`**: 删除项目中所有与 `agent-browser`、Daemon 相关的文档描述和调用代码。
+1. **废除历史驱动**: 删除项目中所有与旧驱动相关的文档描述和调用代码。
 2. **清理冗余模块**: 清理 `runtime.py` 等文件中为适配多进程而写的回调或轮询逻辑。
 
 ### 阶段二：打造核心 `roadbook-sdk`
@@ -66,7 +66,7 @@
 
 ### 阶段三：重构脚手架与 Agent 技能
 1. **极简模板**: 修改 `script.py.tpl`，只保留 `from roadbook.sdk import RoadbookContext` 的空骨架。
-2. **更新 Agent Prompt**: 修改 `roadbook-explorer` 和 `roadbook-executor` 的系统提示词，教导 Agent 必须遵守新的 SDK 规范（如强制使用 `rb.sheet` 和 `rb.push_data`），不再提及 `agent-browser`。
+2. **更新 Agent Prompt**: 修改 `roadbook-explorer` 和 `roadbook-executor` 的系统提示词，教导 Agent 必须遵守新的 SDK 规范（如强制使用 `rb.sheet` 和 `rb.push_data`），不再提及历史架构。
 3. **整合 Script Sheet 工作流**: 为 Agent 增加基于 `Script Sheet` 结构化输出与文档回填的工作流能力。
 
 ### 阶段四：测试与验证
