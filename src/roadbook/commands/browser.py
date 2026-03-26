@@ -8,12 +8,12 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 from rich.console import Console
-from rich.prompt import Confirm, Prompt
+from rich.prompt import Confirm, Prompt, IntPrompt
 from rich.panel import Panel
 from rich.table import Table
 
 from ..core.config import load_user_config, save_user_config, CORE_DIR
-from ..utils.browser_locator import find_chrome_executable
+from ..utils.browser_locator import find_chrome_executable, find_all_browsers
 from ..utils.shortcut import create_desktop_shortcut
 
 console = Console()
@@ -48,14 +48,24 @@ def browser_init(args):
         
     if reconfigure:
         console.print("\n[bold yellow]Step 1: Locating Browser[/bold yellow]")
-        detected_path = find_chrome_executable()
+        detected_browsers = find_all_browsers()
         
-        if detected_path:
-            use_detected = Confirm.ask(f"Detected Chrome/Edge at: [green]{detected_path}[/green]\nUse this browser?")
-            if use_detected:
-                exe_path = detected_path
+        if detected_browsers:
+            console.print("Detected the following supported browsers:")
+            for i, browser in enumerate(detected_browsers, 1):
+                console.print(f"  [bold cyan]{i}.[/bold cyan] {browser['name']} [dim]({browser['path']})[/dim]")
+            console.print(f"  [bold cyan]0.[/bold cyan] Custom path (enter manually)")
+            
+            choice = IntPrompt.ask(
+                "Select a browser to use", 
+                choices=[str(i) for i in range(len(detected_browsers) + 1)],
+                default=1
+            )
+            
+            if choice == 0:
+                exe_path = Prompt.ask("Please enter the full path to your Chrome/Edge/360 executable")
             else:
-                exe_path = Prompt.ask("Please enter the full path to your Chrome/Edge executable")
+                exe_path = detected_browsers[choice - 1]["path"]
         else:
             exe_path = Prompt.ask("Could not auto-detect browser. Please enter the full path to your Chrome/Edge executable")
             
@@ -103,7 +113,9 @@ def browser_init(args):
 
     # 4. Create Desktop Shortcut
     console.print("\n[bold yellow]Step 4: Desktop Shortcut[/bold yellow]")
-    create_sc = Confirm.ask("Would you like to create a desktop shortcut for this dedicated browser?")
+    console.print("This shortcut acts as a bridge between you and the AI agent, allowing you to share the same login state.")
+    console.print("It is highly recommended to create this shortcut to easily open the shared browser.")
+    create_sc = Confirm.ask("Would you like to create a desktop shortcut for this dedicated browser?", default=True)
     
     if create_sc:
         shortcut_name = "Roadbook Browser"
@@ -114,7 +126,7 @@ def browser_init(args):
             console.print(f"[bold green]✓ Shortcut '{shortcut_name}' created on your desktop![/bold green]")
             console.print("You can now double-click it to start the browser before running Roadbook scripts.")
         else:
-            console.print("[bold red]Failed to create shortcut. You can start the browser manually with:[/bold red]")
+            console.print("[bold red]Failed to create shortcut. You can also start the browser manually with [italic]roadbook browser open[/italic] or running:[/bold red]")
             console.print(f"\"{exe_path}\" {args_str}")
 
     console.print("\n[bold cyan]Setup Complete![/bold cyan]")

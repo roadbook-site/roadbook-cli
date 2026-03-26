@@ -52,6 +52,14 @@ Command Categories:
         description=description,
         formatter_class=RichHelpFormatter
     )
+    
+    # Intercept --version to also check PATH
+    if '--version' in sys.argv:
+        print(f"roadbook {__version__}")
+        from .utils.env import check_path_warning
+        check_path_warning()
+        sys.exit(0)
+        
     parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     subparsers = parser.add_subparsers(dest="command", help=argparse.SUPPRESS)
 

@@ -93,6 +93,12 @@ def run_doctor(args):
     py_ok, py_ver = check_python()
     table.add_row("Python", "[green]PASS[/green]" if py_ok else "[red]FAIL[/red]", f"v{py_ver} (>=3.8)")
     
+    # Check Roadbook PATH
+    from ..utils.env import check_path_warning
+    cmd_name = "roadbook.exe" if sys.platform == "win32" else "roadbook"
+    path_ok, path_detail = check_path_warning(print_warning=False)
+    table.add_row(f"Roadbook PATH ({cmd_name})", "[green]PASS[/green]" if path_ok else "[yellow]WARN[/yellow]", "Found in PATH" if path_ok else f"Missing. Expecting in {path_detail}")
+
     # 2. Dependencies
     pw_ok, pw_ver = check_package("playwright")
     table.add_row("Playwright Pkg", "[green]PASS[/green]" if pw_ok else "[red]FAIL[/red]", f"v{pw_ver}")
@@ -155,13 +161,18 @@ def run_doctor(args):
         issues.append("[yellow]Playwright browsers might be missing.[/yellow] Run: `playwright install`")
 
     if not cdp_ok:
+        cmd_prefix = "roadbook" if path_ok else "python -m roadbook"
         issues.append(f"[dim]Remote Debugging is inactive (Port {cdp_port} closed).[/dim]")
-        issues.append("  -> If you want to attach to an existing Chrome instance:")
-        issues.append(f"     Run Chrome with: `chrome.exe --remote-debugging-port={cdp_port}`")
-        issues.append("  -> Otherwise, Roadbook will launch a new browser instance automatically.")
+        issues.append("  -> To launch a dedicated browser with remote debugging enabled:")
+        issues.append(f"     Run: `{cmd_prefix} browser open`")
+        issues.append("  -> Otherwise, Roadbook will launch a temporary instance automatically.")
     
     if node_status == "[red]FAIL[/red]":
         issues.append("[red]Node.js is missing but required for JavaScript/TypeScript roadbooks.[/red]")
+
+    if not path_ok:
+        issues.append(f"[yellow]The '{cmd_name}' command is not in your system PATH.[/yellow]")
+        issues.append(f"  -> Please add [cyan]{path_detail}[/cyan] to your PATH, or use `python -m roadbook`.")
 
     if not issues:
         console.print("[green]Everything looks good![/green]")
