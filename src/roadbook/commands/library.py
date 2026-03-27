@@ -1,3 +1,4 @@
+import json
 from ..core.roadbook import RoadbookManager
 from ..utils.output import print_table, print_info, print_error
 
@@ -56,6 +57,56 @@ def show_book(args):
         
     script_path = RuntimeManager.find_script(book.id, book_dir=book_dir)
     
+    # Parse and Display Schemas
+    scripts_dir = book_dir / "scripts"
+    input_schema_path = scripts_dir / "input_schema.json"
+    output_schema_path = scripts_dir / "output_schema.json"
+    
+    if input_schema_path.exists():
+        try:
+            with open(input_schema_path, "r", encoding="utf-8") as f:
+                input_schema = json.load(f)
+            
+            print("\n[Input Schema]")
+            properties = input_schema.get("properties", {})
+            required = input_schema.get("required", [])
+            
+            if properties:
+                headers = ["Field", "Type", "Required", "Description"]
+                rows = []
+                for key, prop in properties.items():
+                    is_required = "Yes" if key in required else "No"
+                    desc = prop.get("description", "")
+                    # Append default value to description if present
+                    if "default" in prop:
+                        desc += f" (Default: {prop['default']})"
+                    rows.append([key, prop.get("type", "any"), is_required, desc])
+                print_table(headers, rows)
+            else:
+                print("  No input properties defined.")
+        except Exception as e:
+            print_error(f"Failed to parse input schema: {e}")
+            
+    if output_schema_path.exists():
+        try:
+            with open(output_schema_path, "r", encoding="utf-8") as f:
+                output_schema = json.load(f)
+                
+            print("\n[Output Schema]")
+            properties = output_schema.get("properties", {})
+            if properties:
+                headers = ["Field", "Type", "Description"]
+                rows = []
+                for key, prop in properties.items():
+                    rows.append([key, prop.get("type", "any"), prop.get("description", "")])
+                print_table(headers, rows)
+            else:
+                print("  No output properties defined.")
+        except Exception as e:
+            print_error(f"Failed to parse output schema: {e}")
+            
+    print("")
+
     if script_path:
         # Synchronization reminder
         RuntimeManager.check_sync_status(book.id, book_dir=book_dir)

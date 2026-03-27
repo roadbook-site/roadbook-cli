@@ -112,8 +112,57 @@ class ScaffoldManager:
                 content = ScaffoldManager._generate_python_script_template(rb_id, name, roadbook_model)
                 with open(script_path, "w", encoding="utf-8") as f:
                     f.write(content)
+                    
+            # 4. Create input/output schemas and local INPUT.json
+            input_schema_path = scripts_dir / "input_schema.json"
+            if not input_schema_path.exists():
+                schema_content = ScaffoldManager._generate_schema_template("input", name, roadbook_model)
+                with open(input_schema_path, "w", encoding="utf-8") as f:
+                    f.write(schema_content)
+                    
+            output_schema_path = scripts_dir / "output_schema.json"
+            if not output_schema_path.exists():
+                schema_content = ScaffoldManager._generate_schema_template("output", name, roadbook_model)
+                with open(output_schema_path, "w", encoding="utf-8") as f:
+                    f.write(schema_content)
+                    
+            local_input_path = paths["config"] / "INPUT.json"
+            if not local_input_path.exists():
+                with open(local_input_path, "w", encoding="utf-8") as f:
+                    f.write('{\n    "example_key": "example_value"\n}\n')
+                    
+            # 5. Create requirements.txt
+            req_path = scripts_dir / "requirements.txt"
+            if not req_path.exists():
+                with open(req_path, "w", encoding="utf-8") as f:
+                    f.write("playwright\njsonschema\n")
         
         return script_path
+
+    @staticmethod
+    def _generate_schema_template(schema_type: str, name: str, roadbook_model: Optional[RoadbookModel] = None) -> str:
+        import json
+        
+        schema = {
+            "title": f"{name} {schema_type.capitalize()} Schema",
+            "type": "object",
+            "properties": {}
+        }
+        
+        if roadbook_model and roadbook_model.meta:
+            fields = roadbook_model.meta.get(f"{schema_type}s", {})
+            if isinstance(fields, dict):
+                required = []
+                for key, desc in fields.items():
+                    schema["properties"][key] = {
+                        "type": "string",
+                        "description": desc
+                    }
+                    required.append(key)
+                if required:
+                    schema["required"] = required
+                    
+        return json.dumps(schema, indent=4, ensure_ascii=False)
 
     @staticmethod
     def _generate_roadbook_md_content(rb_id, name, description, entry_url="https://www.example.com"):

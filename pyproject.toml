@@ -25,6 +25,7 @@ dependencies = [
     "requests",
     "python-dotenv",
     "psutil",
+    "jsonschema",
 ]
 requires-python = ">=3.8"
 

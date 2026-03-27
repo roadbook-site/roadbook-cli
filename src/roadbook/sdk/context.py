@@ -1,13 +1,14 @@
-﻿# src/roadbook/sdk/context.py
+# src/roadbook/sdk/context.py
 import os
 import sys
 from pathlib import Path
 from contextlib import contextmanager
+from typing import Optional, Dict, Any
 
 from playwright.sync_api import sync_playwright, Playwright, BrowserContext, Page
 
-from .io import IOManager
-from .storage import Storage
+from .io import InputManager, DatasetManager
+from .storage import KeyValueStore
 from .logger import get_logger
 
 class RoadbookContext:
@@ -21,6 +22,8 @@ class RoadbookContext:
             self.root_dir = Path(root_dir)
         else:
             self.root_dir = self._find_project_root()
+            
+        self.scripts_dir = self.root_dir / "scripts"
         
         # 2. 核心路径定义
         self.rb_dir = self.root_dir / ".rb"
@@ -51,10 +54,12 @@ class RoadbookContext:
         self.profile_dir.mkdir(parents=True, exist_ok=True)
         self.rb_dir.mkdir(parents=True, exist_ok=True)
         
-        self.io = IOManager(self.outputs_dir)
-        self.storage = Storage(self.run_dir, self.outputs_dir)
+        # 4. Initialize I/O managers
+        self.input_manager = InputManager(self.rb_dir, self.scripts_dir)
+        self.dataset_manager = DatasetManager(self.outputs_dir, self.scripts_dir)
+        self.kv = KeyValueStore(self.run_dir, self.outputs_dir)
         
-        # 4. 载入统一配置
+        # 5. 载入统一配置
         self._load_config(cdp_url)
 
         # Playwright internals
@@ -302,8 +307,14 @@ class RoadbookContext:
         finally:
             self.current_sheet = None
 
-    def get_input(self, key: str, default=None):
-        return self.io.get_input(key, default)
+    def get_input(self, key: str, default: Any = None) -> Any:
+        """Helper to get input from InputManager."""
+        return self.input_manager.get(key, default)
 
-    def push_data(self, data: dict):
-        self.io.push_data(data)
+    def get_inputs(self) -> Dict[str, Any]:
+        """Helper to get all inputs from InputManager."""
+        return self.input_manager.get_all()
+
+    def push_data(self, data: Dict[str, Any], validate: bool = True):
+        """Helper to push structured data via DatasetManager."""
+        self.dataset_manager.push_data(data, validate)
