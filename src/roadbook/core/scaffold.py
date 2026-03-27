@@ -33,13 +33,6 @@ class ScaffoldManager:
         paths["runtime"].mkdir(parents=True, exist_ok=True)
         paths["outputs"].mkdir(parents=True, exist_ok=True)
         
-        # Create config.yaml in the project root (.rb/config.yaml) if it doesn't exist
-        config_file = paths["config"] / "config.yaml"
-        if not config_file.exists():
-            from .config import DEFAULT_CONFIG_YAML
-            with open(config_file, "w", encoding="utf-8") as f:
-                f.write(DEFAULT_CONFIG_YAML)
-        
         # Create roadbook.md
         if not paths["roadbook_file"].exists():
             content = ScaffoldManager._generate_roadbook_md_content(rb_id, name, description, entry_url)
