@@ -129,7 +129,7 @@ class ScaffoldManager:
             local_input_path = paths["config"] / "INPUT.json"
             if not local_input_path.exists():
                 with open(local_input_path, "w", encoding="utf-8") as f:
-                    f.write('{\n    "example_key": "example_value"\n}\n')
+                    f.write('{}\n')
                     
             # 5. Create requirements.txt
             req_path = scripts_dir / "requirements.txt"
@@ -258,6 +258,9 @@ class ScaffoldManager:
         
         import json
         constraints_str = json.dumps(site_constraints_dict, indent=4)
+        # Convert JSON booleans/null to Python syntax
+        constraints_str = constraints_str.replace(": false", ": False").replace(": true", ": True").replace(": null", ": None")
+        
         # Indent everything by 4 spaces
         constraints_indented = ""
         for line in constraints_str.split("\n"):

@@ -8,8 +8,7 @@ platform: "desktop"
 description: "{description}"
 entry_url: "{entry_url}"
 tags: []
-inputs: 
-  sample_param: "example_value"
+inputs: {}
 outputs: {}
 ---
 
