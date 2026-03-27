@@ -62,15 +62,15 @@ Use the `version` value in this file header as the single source of truth.
 - **DO** ask the user for help (`AskUserQuestion`) if you receive unclear prompt objectives.
 - **DO** guide the user to configure settings (like API keys or specific credentials) if the task requires them, explaining where and how to set them up.
 - **DO** define any required site-specific environmental conditions (e.g., `auto_solve_captcha: true`, `stealth_mode: true`) under a `**Constraints**:` block in the setup sheet of `roadbook.md`, and pass them via `site_overrides` when initializing `RoadbookContext` in `script.py`.
-- **DO** strictly use `rb.human_intervene_for_login(wait_for_user_input=True)` when encountering login structures or CAPTCHAs. Rely on the SDK for state management.
+- **DO** strictly use `rb.wait_for_human_action(wait_for_user_input=True)` when encountering login structures or CAPTCHAs. Rely on the SDK for state management.
 - **DO** remind the user to run scripts requiring human intervention in their own visible terminal, as the agent's background terminal may not display browser UI properly.
 - **DO** use semantic selectors (e.g., `get_by_role`, `get_by_text`) whenever possible.
 
 **✗ Don't:**
 - **DON'T** skip the version check step. It must be done before anything else.
 - **DON'T** delete or bypass `RoadbookContext` in `script.py` to use raw Playwright API manually. The SDK handles lifecycle safely.
-- **DON'T** attempt to bypass or brute-force Login screens or write automated password inputs. Always use `rb.human_intervene_for_login`.
-- **DON'T** run scripts that require `human_intervene_for_login` silently in the background; always prompt the user to execute them in their visible terminal.
+- **DON'T** attempt to bypass or brute-force Login screens or write automated password inputs. Always use `rb.wait_for_human_action`.
+- **DON'T** run scripts that require `wait_for_human_action` silently in the background; always prompt the user to execute them in their visible terminal.
 - **DON'T** create your own local storage, browser initialization overrides, or CDP configs.
 - **DON'T** create temporary test files in the project root. Always use `scripts/tests/`.
 - **DON'T** hardcode search queries or dynamic parameters in the script; extract them to the `inputs` section.
@@ -83,16 +83,20 @@ All roadbook projects follow a standard directory structure:
     2. User Config (`~/.roadbook/.core/config.yaml`).
     3. Default Config.
 - **`scripts/`**: Automation scripts (e.g., `scripts/script.py`, `scripts/utils/`).
-- **`outputs/`**: Business outputs and data extraction results (e.g., `outputs/run_{run_id}/output.json`).
-- **`runtime/`**: Execution state, logs, and screenshots for debugging (e.g., `runtime/run_{run_id}/run.log`).
+- **`outputs/`**: Business outputs and data extraction results.
+  - **`local_run/`**: Used during local development and testing (`roadbook run`). Overwrites previous results to avoid cluttering the developer's disk.
+  - **`run_{run_id}/`**: Used in production or cloud execution environments, where every execution generates a unique UUID for historical tracking and auditing.
+- **`runtime/`**: Execution state, logs, and screenshots for debugging (follows the same `local_run` vs `run_{run_id}` pattern).
 
 ## Workflow
 
 ### Phase 1: Initialization & Scaffolding
 1.  **Context Check (MANDATORY)**: Ensure `roadbook` CLI is available and version MATcHES exactly (`roadbook --version`). If the command is not found, use `python -m roadbook` instead. If not, upgrade or update immediately as per the frontmatter check.
-2.  **Intent Analysis**: Convert the user's request into a generic goal (e.g., "Find an iPhone 15 on Amazon" → "Search for a product on Amazon"). Propose a `kebab-case` name.
+2.  **Intent Analysis & Parameter Extraction**: Convert the user's request into a generic goal (e.g., "Find an iPhone 15 on Amazon" → "Search for a product on Amazon"). Propose a `kebab-case` name.
+    - **CRITICAL**: Differentiate between the "Target Site" (Entry URL) and "Business Parameters" (e.g., search queries, `max_items`, filters). The `entry_url` belongs to the Roadbook's core identity, while business parameters belong in `input_schema.json`.
 3.  **Scaffolding**: Run `roadbook init <name> --description "<generalized_goal>" --entry-url "<target_url>"` (or `python -m roadbook init ...`). This creates a new project directory `<name>`. In a separate command, move into it with `cd <name>`.
-4.  **Complex Task Triage**: If the task involves multi-step workflows or complex dynamic UIs, **STOP HERE**. Instruct the user to run `roadbook edit <id>` to manually define the high-level steps first.
+4.  **Schema Configuration**: Open `scripts/input_schema.json` and `.rb/INPUT.json`. Remove the default boilerplate and define the specific business parameters you extracted in Step 2 (e.g., `{"max_videos_to_fetch": 5}`).
+5.  **Complex Task Triage**: If the task involves multi-step workflows or complex dynamic UIs, **STOP HERE**. Instruct the user to run `roadbook edit <id>` to manually define the high-level steps first.
 
 ### Phase 2: Exploration (Test-Driven)
 *The Agent should iterate in this phase until the goal is achieved.*

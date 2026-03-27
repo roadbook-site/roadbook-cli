@@ -129,7 +129,7 @@ class ScaffoldManager:
             local_input_path = paths["config"] / "INPUT.json"
             if not local_input_path.exists():
                 with open(local_input_path, "w", encoding="utf-8") as f:
-                    f.write('{}\n')
+                    f.write('{\n    "search_query": "example",\n    "max_items_to_fetch": 10\n}\n')
                     
             # 5. Create requirements.txt
             req_path = scripts_dir / "requirements.txt"
@@ -149,7 +149,7 @@ class ScaffoldManager:
             "properties": {}
         }
         
-        if roadbook_model and roadbook_model.meta:
+        if roadbook_model and roadbook_model.meta and roadbook_model.meta.get(f"{schema_type}s"):
             fields = roadbook_model.meta.get(f"{schema_type}s", {})
             if isinstance(fields, dict):
                 required = []
@@ -161,6 +161,31 @@ class ScaffoldManager:
                     required.append(key)
                 if required:
                     schema["required"] = required
+        else:
+            # Provide a basic example if no model/meta is available
+            if schema_type == "input":
+                schema["properties"] = {
+                    "search_query": {
+                        "type": "string",
+                        "description": "Example: A search keyword to use on the site"
+                    },
+                    "max_items_to_fetch": {
+                        "type": "integer",
+                        "description": "Example: Maximum number of items to extract",
+                        "default": 10
+                    }
+                }
+            else:
+                schema["properties"] = {
+                    "title": {
+                        "type": "string",
+                        "description": "The title of the extracted item"
+                    },
+                    "url": {
+                        "type": "string",
+                        "description": "The URL of the extracted item"
+                    }
+                }
                     
         return json.dumps(schema, indent=4, ensure_ascii=False)
 

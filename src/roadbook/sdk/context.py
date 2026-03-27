@@ -268,9 +268,9 @@ class RoadbookContext:
         if self._playwright:
             self._playwright.stop()
 
-    def human_intervene_for_login(self, success_selector: str = None, message: str = "Please complete the login or verification in the browser.", timeout: int = 600000, wait_for_user_input: bool = False):
+    def wait_for_human_action(self, success_selector: str = None, message: str = "Please complete the required action (e.g., login, CAPTCHA) in the browser.", timeout: int = 600000, wait_for_user_input: bool = False):
         """
-        Pauses the execution to allow a human to log in or solve a CAPTCHA.
+        Pauses the execution to allow a human to perform actions like login, solving a CAPTCHA, or passing bot detection.
         """
         self.logger.warning("=====================================================")
         self.logger.warning(" HUMAN INTERVENTION REQUIRED ")
@@ -284,15 +284,15 @@ class RoadbookContext:
         try:
             if wait_for_user_input or not success_selector:
                 # Wait for terminal input (Enter)
-                input("Press Enter to continue after you have logged in...")
+                input("Press Enter to continue after you have completed the action...")
                 self.logger.info("Manual confirmation received, resuming execution...")
             elif success_selector:
-                # Wait for the user to login and the target selector to appear
+                # Wait for the user to complete action and the target selector to appear
                 self.page.locator(success_selector).wait_for(state="visible", timeout=timeout)
-                self.logger.info("Login successful, resuming execution...")
+                self.logger.info("Action successful, resuming execution...")
         except Exception as e:
-            self.logger.error(f"Failed to verify login within {timeout}ms timeout: {e}")
-            raise RuntimeError(f"Login intervention failed or timed out: {e}")
+            self.logger.error(f"Failed to verify action within {timeout}ms timeout: {e}")
+            raise RuntimeError(f"Human intervention failed or timed out: {e}")
 
     @contextmanager
     def sheet(self, name: str):
