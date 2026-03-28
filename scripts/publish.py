@@ -201,5 +201,9 @@ def main():
     print("   git push origin main")
     print("   git tag vX.Y.Z && git push origin vX.Y.Z")
 
+    print("\n📦 Step 4: Installing local package...")
+    run_cmd(f"{sys.executable} -m pip install -e .")
+    print("✅ Local package installed/updated.")
+
 if __name__ == "__main__":
     main()

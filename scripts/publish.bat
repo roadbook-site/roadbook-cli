@@ -59,4 +59,8 @@ if /I "%AUTO_PUSH%"=="y" (
 	)
 )
 
+echo.
+echo Installing local package...
+python -m pip install -e .
+
 endlocal
