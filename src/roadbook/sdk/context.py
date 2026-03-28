@@ -120,7 +120,7 @@ class RoadbookContext:
         self.launch_args = browser_config.get("launch_args", ["--no-first-run", "--no-default-browser-check"])
         
         if cdp_override:
-            self.cdp_url = cdp_override
+            self.cdp_url = cdp_override.rstrip('/')
         else:
             cdp_port = browser_config.get("cdp_port", 9222)
             self.cdp_url = f"http://localhost:{cdp_port}" if cdp_port else None

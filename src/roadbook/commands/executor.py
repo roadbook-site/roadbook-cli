@@ -378,6 +378,9 @@ def run_book(args):
         env["ROADBOOK_OUTPUTS_DIR"] = str(outputs_dir)
         env["ROADBOOK_INPUT_FILE"] = str(input_file)
         
+        # Force UTF-8 encoding for python subprocesses
+        env["PYTHONIOENCODING"] = "utf-8"
+        
         output_format = getattr(args, 'output_format', 'jsonl')
         env["ROADBOOK_OUTPUT_FORMAT"] = output_format
         
@@ -427,9 +430,15 @@ def run_book(args):
                 
                 # Stream output to both console and file
                 for line in iter(process.stdout.readline, b''):
-                    sys.stdout.buffer.write(line)
-                    sys.stdout.flush()
+                    # Write bytes directly to log file
                     f.write(line)
+                    # Decode to string to print to console (handles Windows encoding properly)
+                    try:
+                        text = line.decode('utf-8')
+                    except UnicodeDecodeError:
+                        text = line.decode('utf-8', errors='replace')
+                    sys.stdout.write(text)
+                    sys.stdout.flush()
                 
                 process.wait()
                 

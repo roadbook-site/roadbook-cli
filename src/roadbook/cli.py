@@ -1,5 +1,13 @@
 import argparse
 import sys
+
+# Ensure stdout uses UTF-8 to prevent UnicodeEncodeError and garbled Chinese text on Windows
+if sys.stdout.encoding.lower() != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+
 import warnings
 
 # Suppress requests dependency warning
