@@ -103,8 +103,8 @@ class DatasetManager:
                 logger.warning(f"Failed to load output schema from {schema_path}: {e}")
         return {}
 
-    def push_data(self, data: Dict[str, Any], validate: bool = True):
-        """Pushes data to the output dataset."""
+    def emit_output(self, data: Dict[str, Any], validate: bool = True):
+        """Emits data to the output dataset."""
         if validate and self.schema:
             try:
                 import jsonschema

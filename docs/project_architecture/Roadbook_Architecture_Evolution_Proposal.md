@@ -35,7 +35,7 @@
 **构思**: 不再让用户/Agent 裸写 Playwright 的初始化代码，而是提供统一的上下文管理器 `RoadbookContext`。
 **细节**:
 - **生命周期接管**: `with RoadbookContext() as rb:` 自动处理浏览器启动、异常捕获、现场截图和资源释放。
-- **标准化 I/O**: 提供 `rb.get_input()` 和 `rb.push_data()`，严格规范数据的流入和流出。
+- **标准化 I/O**: 提供 `rb.get_input()` 和 `rb.emit_output()`，严格规范数据的流入和流出。
 - **存储抽象 (Storage)**: 提供 `rb.storage.save_screenshot()` 等接口，确保每次执行的产物（Artifacts）都被整齐地收拢在 `runtime/runs/<run_id>` 目录下。
 
 ### 2.3 “文档驱动执行” (Documentation-Driven Execution)
@@ -66,7 +66,7 @@
 
 ### 阶段三：重构脚手架与 Agent 技能
 1. **极简模板**: 修改 `script.py.tpl`，只保留 `from roadbook.sdk import RoadbookContext` 的空骨架。
-2. **更新 Agent Prompt**: 修改 `roadbook-explorer` 和 `roadbook-executor` 的系统提示词，教导 Agent 必须遵守新的 SDK 规范（如强制使用 `rb.sheet` 和 `rb.push_data`），不再提及历史架构。
+2. **更新 Agent Prompt**: 修改 `roadbook-explorer` 和 `roadbook-executor` 的系统提示词，教导 Agent 必须遵守新的 SDK 规范（如强制使用 `rb.sheet` 和 `rb.emit_output`），不再提及历史架构。
 3. **整合 Script Sheet 工作流**: 为 Agent 增加基于 `Script Sheet` 结构化输出与文档回填的工作流能力。
 
 ### 阶段四：测试与验证

@@ -484,7 +484,7 @@ def run_book(args):
                 },
                 "scaffold_version": SCAFFOLD_VERSION
             }, book_dir=book_dir)
-            print_info("[Action] Use 'roadbook logs inspect <run_id>' to inspect this run.")
+            print_info(f"[Action] Use 'roadbook logs inspect {run_id}' to inspect this run.")
             
         except subprocess.CalledProcessError as e:
             end_time = time.time()
@@ -503,7 +503,7 @@ def run_book(args):
                 },
                 "scaffold_version": SCAFFOLD_VERSION
             }, book_dir=book_dir)
-            print_info("[Action] Use 'roadbook logs inspect <run_id>' to inspect failure details.")
+            print_info(f"[Action] Use 'roadbook logs inspect {run_id}' to inspect failure details.")
         except Exception as e:
             print_error(f"Script execution error: {e}")
             print_info(f"[Guidance] {diagnose_error(e)}")

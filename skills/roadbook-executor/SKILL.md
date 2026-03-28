@@ -58,7 +58,7 @@ Use the `version` value in this file header as the single source of truth.
     - **Script Generation**: If no script exists, the CLI will provide guidance on generating scaffolding.
 
 4.  **Robust Execution Guidelines**:
-    - **SDK-Driven Scripting**: All execution scripts MUST use `roadbook.sdk.RoadbookContext`. Use `with rb.sheet("...")` for sheet tracking and `rb.push_data()` for data outputs.
+    - **SDK-Driven Scripting**: All execution scripts MUST use `roadbook.sdk.RoadbookContext`. Use `with rb.sheet("...")` for sheet tracking. **CRITICAL**: `rb.emit_output()` is strictly for emitting the **final** output data that perfectly matches the `TaskOutput` Pydantic model. Do NOT use it for intermediate data or passing variables between phases (use `rb.state`, `rb.kv`, or function returns instead).
     - **Site Constraints Handling**: Read the `**Constraints**:` block from `roadbook.md` (e.g., `auto_solve_captcha`, `stealth_mode`, `viewport`) and ensure these are faithfully injected as a dictionary to the `site_overrides` parameter when instantiating `RoadbookContext` in `script.py`.
     - **Selector Fallback**: Treat selectors in the Roadbook as **hints**. If a specific CSS selector fails (e.g., timeout), DO NOT give up immediately.
         - **Try alternatives**: Look for other attributes (text, aria-label, etc.) that identify the same element.

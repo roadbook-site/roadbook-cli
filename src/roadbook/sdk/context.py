@@ -156,17 +156,32 @@ class RoadbookContext:
         browser_type_name = browser_config.get("browser_type", "chromium")
         browser_type = getattr(self._playwright, browser_type_name, self._playwright.chromium)
         
+        def _resolve_cdp_url(url: str) -> str:
+            if url.startswith("http://") or url.startswith("https://"):
+                import urllib.request
+                import json
+                version_url = f"{url.rstrip('/')}/json/version"
+                try:
+                    with urllib.request.urlopen(version_url, timeout=3) as response:
+                        data = json.loads(response.read().decode("utf-8"))
+                        if "webSocketDebuggerUrl" in data:
+                            return data["webSocketDebuggerUrl"]
+                except Exception as e:
+                    self.logger.debug(f"Failed to resolve websocket URL from {version_url}: {e}")
+            return url
+        
         connected = False
         if self.browser_mode == "cdp" or (self.browser_mode == "auto" and self.cdp_url):
             self.logger.info(f"Attempting to connect to CDP at {self.cdp_url}...")
             try:
-                browser = browser_type.connect_over_cdp(self.cdp_url)
+                connect_url = _resolve_cdp_url(self.cdp_url)
+                browser = browser_type.connect_over_cdp(connect_url)
                 self._context = browser.contexts[0] if browser.contexts else browser.new_context()
                 self.page = self._context.pages[0] if self._context.pages else self._context.new_page()
                 connected = True
                 self.logger.info("Successfully connected to existing browser via CDP.")
             except Exception as e:
-                self.logger.info(f"CDP connection failed. Attempting to launch local browser and retry CDP...")
+                self.logger.info(f"CDP connection failed: {e}. Attempting to launch local browser and retry CDP...")
                 try:
                     import subprocess
                     import time
@@ -202,7 +217,8 @@ class RoadbookContext:
                         # Retry CDP connection
                         self.logger.info(f"Retrying CDP connection to {self.cdp_url}...")
                         try:
-                            browser = browser_type.connect_over_cdp(self.cdp_url)
+                            connect_url = _resolve_cdp_url(self.cdp_url)
+                            browser = browser_type.connect_over_cdp(connect_url)
                             self._context = browser.contexts[0] if browser.contexts else browser.new_context()
                             self.page = self._context.pages[0] if self._context.pages else self._context.new_page()
                             connected = True
@@ -340,6 +356,8 @@ class RoadbookContext:
                 with open(self.scripts_dir / "input_schema.json", "w", encoding="utf-8") as f:
                     json.dump(schema, f, indent=4, ensure_ascii=False)
                 self.logger.info("Exported input_schema.json from Pydantic model.")
+                
+                self._sync_input_file(self._input_model)
             except Exception as e:
                 self.logger.warning(f"Failed to export input schema: {e}")
                 
@@ -352,8 +370,33 @@ class RoadbookContext:
             except Exception as e:
                 self.logger.warning(f"Failed to export output schema: {e}")
 
-    def push_data(self, data: Any, validate: bool = True):
-        """Helper to push structured data via DatasetManager."""
+    def _sync_input_file(self, input_model):
+        """Syncs the latest validated inputs back to .rb/INPUT.json."""
+        import json
+        try:
+            rb_dir = self.scripts_dir.parent / ".rb"
+            if not rb_dir.exists():
+                return
+                
+            input_file = rb_dir / "INPUT.json"
+            
+            # Get current raw inputs that were used in this run
+            raw_inputs = self.input_manager.get_all()
+            
+            # Use Pydantic to validate, hydrate defaults, and strip extra fields
+            try:
+                validated_inputs = input_model(**raw_inputs).model_dump(mode='json')
+                
+                with open(input_file, "w", encoding="utf-8") as f:
+                    json.dump(validated_inputs, f, indent=4, ensure_ascii=False)
+                self.logger.info("Synced .rb/INPUT.json with latest validated inputs.")
+            except Exception as e:
+                self.logger.warning(f"Could not sync .rb/INPUT.json (validation failed): {e}")
+        except Exception as e:
+            self.logger.warning(f"Failed to sync .rb/INPUT.json: {e}")
+
+    def emit_output(self, data: Any, validate: bool = True):
+        """Helper to emit structured output data matching TaskOutput."""
         # Validate against bound Pydantic model if available
         output_model = getattr(self, "_output_model", None)
         if validate and output_model:
@@ -372,4 +415,4 @@ class RoadbookContext:
         if hasattr(data, "model_dump"):
             data = data.model_dump()
 
-        self.dataset_manager.push_data(data, validate)
+        self.dataset_manager.emit_output(data, validate)
