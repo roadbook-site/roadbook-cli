@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any
 from playwright.sync_api import sync_playwright, Playwright, BrowserContext, Page
 
 from .io import InputManager, DatasetManager
-from .storage import KeyValueStore
+from .storage import StorageManager
 from .logger import get_logger
 
 class RoadbookContext:
@@ -60,7 +60,7 @@ class RoadbookContext:
         # 4. Initialize I/O managers
         self.input_manager = InputManager(self.rb_dir, self.scripts_dir)
         self.dataset_manager = DatasetManager(self.outputs_dir, self.scripts_dir)
-        self.kv = KeyValueStore(self.run_dir, self.outputs_dir)
+        self.storage = StorageManager(self.run_dir, self.outputs_dir)
         
         # 5. 载入统一配置
         self._load_config(cdp_url)

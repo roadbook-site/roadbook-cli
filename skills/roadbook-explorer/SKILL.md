@@ -50,7 +50,7 @@ Use the `version` value in this file header as the single source of truth.
 ## Core Philosophy
 1. **Standardization**: Always use `roadbook init` to create the scaffold.
 2. **Context-in-Place**: The generated `script.py` and `tests/` directory contain specific `[AGENT INSTRUCTION]` blocks. **ALWAYS read these instructions within the generated files** before coding.
-3. **SDK-Driven**: ALWAYS use `roadbook.sdk.RoadbookContext` for lifecycle, logging, and I/O. Strictly use `with rb.sheet("Sheet Name")` to declare steps. **CRITICAL**: Use `rb.emit_output()` ONLY for the final data matching the `TaskOutput` schema, not for intermediate variables (use `rb.state`, `rb.kv`, or function returns instead).
+3. **SDK-Driven**: ALWAYS use `roadbook.sdk.RoadbookContext` for lifecycle, logging, and I/O. Strictly use `with rb.sheet("Sheet Name")` to declare steps. **CRITICAL**: Use `rb.emit_output()` ONLY for the final data matching the `TaskOutput` schema, not for intermediate variables (use `rb.state`, `rb.storage`, or function returns instead). For file downloads, ALWAYS use `rb.storage.get_download_path("filename.ext")` to get the correct output directory path for the current run.
 4. **Site Constraints**: Support special execution environments (like captchas, stealth mode, or specific viewports) by accurately documenting and extracting `**Constraints**:` from `roadbook.md` and passing them via the `site_overrides` parameter to `RoadbookContext` in `script.py`.
 5. **Script Sheet Workflow**: Before finalizing the markdown, structure your script's outputs programmatically (Script Sheet). Review, clean, and then sync to `roadbook.md` as the Single Source of Truth.
 6. **Fast Fail**: If sophisticated login/captcha is encountered, pause and ask for human help.
