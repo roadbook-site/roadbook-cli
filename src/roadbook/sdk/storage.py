@@ -11,13 +11,15 @@ class KeyValueStore:
         self.run_dir = run_dir
         self.outputs_dir = outputs_dir
         self.screenshots_dir = run_dir / "screenshots"
-        self.kv_dir = outputs_dir / "kv_store"
+        # Store kv files (downloads/media) in a dedicated 'downloads' subdirectory
+        self.downloads_dir = outputs_dir / "downloads"
         
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
-        self.kv_dir.mkdir(parents=True, exist_ok=True)
+        self.outputs_dir.mkdir(parents=True, exist_ok=True)
+        self.downloads_dir.mkdir(parents=True, exist_ok=True)
 
     def set_value(self, key: str, value: Union[str, bytes], content_type: str = "text/plain"):
-        """Saves a value to the KV store. The key determines the filename."""
+        """Saves a value to the KV store (downloads dir). The key determines the filename."""
         # Simple heuristic to add extension based on content_type if missing
         ext = ""
         if "html" in content_type and not key.endswith(".html"):
@@ -28,7 +30,7 @@ class KeyValueStore:
             ext = ".png"
             
         filename = f"{key}{ext}"
-        filepath = self.kv_dir / filename
+        filepath = self.downloads_dir / filename
         
         mode = "wb" if isinstance(value, bytes) else "w"
         encoding = None if isinstance(value, bytes) else "utf-8"
@@ -39,8 +41,8 @@ class KeyValueStore:
         return str(filepath)
 
     def get_value(self, key: str) -> Union[str, bytes, None]:
-        """Reads a value from the KV store."""
-        for p in self.kv_dir.glob(f"{key}*"):
+        """Reads a value from the KV store (downloads dir)."""
+        for p in self.downloads_dir.glob(f"{key}*"):
             if p.is_file():
                 try:
                     with open(p, "r", encoding="utf-8") as f:

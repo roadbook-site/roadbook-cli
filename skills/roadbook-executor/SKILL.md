@@ -94,10 +94,10 @@ Use the `version` value in this file header as the single source of truth.
         2. User Config (`~/.roadbook/.core/config.yaml`).
         3. Default Config.
     - **Scripts**: Located in `scripts/script.py`.
-    - **Outputs**: Located in `outputs/run_{run_id}/` (business data).
+    - **Outputs**: Located in `outputs/run_{run_id}/` (business data: `result.jsonl` / `result.csv` etc., and a `downloads/` subdirectory for unstructured files).
     - **Runtime**: Located in `runtime/run_{run_id}/` (internal system use, traces, screenshots).
 - **Output Management**:
-    - All execution outputs (downloads, data) MUST be saved in `outputs/<session_id>/`.
+    - All execution outputs (downloads, data) MUST be saved in `outputs/run_{run_id}/`.
     - The scaffolded script automatically detects the `ROADBOOK_RUN_ID` environment variable and sets `OUTPUT_DIR` accordingly.
     - If running manually without CLI context, it falls back to a timestamped directory in `outputs/`.
 - **Do not move to global**: Keep the script and artifacts in the local project directory.

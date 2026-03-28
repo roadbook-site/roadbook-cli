@@ -378,6 +378,9 @@ def run_book(args):
         env["ROADBOOK_OUTPUTS_DIR"] = str(outputs_dir)
         env["ROADBOOK_INPUT_FILE"] = str(input_file)
         
+        output_format = getattr(args, 'output_format', 'jsonl')
+        env["ROADBOOK_OUTPUT_FORMAT"] = output_format
+        
         # Add local site-packages to PYTHONPATH
         site_packages = book_dir / ".rb" / "site-packages"
         if site_packages.exists():
@@ -437,15 +440,20 @@ def run_book(args):
             duration = end_time - start_time
             print_info(f"[Success] Script executed successfully in {duration:.2f}s.")
             
-            # Post-processing: Convert output format if needed
             output_format = getattr(args, 'output_format', 'jsonl')
-            dataset_file = outputs_dir / "dataset" / "default.jsonl"
-            if dataset_file.exists() and output_format != 'jsonl':
-                print_info(f"[Post-processing] Converting dataset to {output_format} format...")
+            dataset_file = outputs_dir / f"result.{output_format}"
+            
+            if output_format == 'quick' and dataset_file.exists():
+                print_info("\n[Quick Reply] Final Results:")
                 try:
-                    convert_dataset_format(dataset_file, outputs_dir, output_format)
-                except Exception as conv_err:
-                    print_error(f"Failed to convert dataset to {output_format}: {conv_err}")
+                    with open(dataset_file, "r", encoding="utf-8") as f:
+                        for line in f:
+                            if line.strip():
+                                print(f"  {line.strip()}")
+                except Exception as e:
+                    print_error(f"Failed to read quick results: {e}")
+            elif dataset_file.exists():
+                print_info(f"\n[Result] Data saved to {dataset_file}")
             
             # Try to capture outputs
             outputs = {}

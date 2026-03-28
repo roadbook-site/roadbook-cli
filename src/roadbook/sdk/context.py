@@ -45,8 +45,11 @@ class RoadbookContext:
             self.run_dir = Path(env_run_dir)
             self.outputs_dir = Path(env_outputs_dir) if env_outputs_dir else Path(env_run_dir).parent.parent / "outputs" / Path(env_run_dir).name
         else:
-            self.run_dir = self.root_dir / "runtime" / "local_run"
-            self.outputs_dir = self.root_dir / "outputs" / "local_run"
+            import time
+            import uuid
+            run_id = f"run_{time.strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}"
+            self.run_dir = self.root_dir / "runtime" / run_id
+            self.outputs_dir = self.root_dir / "outputs" / run_id
             
         # Ensure directories exist
         self.run_dir.mkdir(parents=True, exist_ok=True)

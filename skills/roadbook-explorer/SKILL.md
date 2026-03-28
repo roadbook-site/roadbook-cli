@@ -85,9 +85,8 @@ All roadbook projects follow a standard directory structure:
     3. Default Config.
 - **`scripts/`**: Automation scripts (e.g., `scripts/script.py`, `scripts/utils/`).
 - **`outputs/`**: Business outputs and data extraction results.
-  - **`local_run/`**: Used during local development and testing (`roadbook run`). Overwrites previous results to avoid cluttering the developer's disk.
-  - **`run_{run_id}/`**: Used in production or cloud execution environments, where every execution generates a unique UUID for historical tracking and auditing.
-- **`runtime/`**: Execution state, logs, and screenshots for debugging (follows the same `local_run` vs `run_{run_id}` pattern).
+  - **`run_{run_id}/`**: Every execution (both local development and production) generates a unique UUID for historical tracking, auditing, and preventing data overlap. Contains `result.jsonl` (or `.csv`/`.json`) and a `downloads/` directory.
+- **`runtime/`**: Execution state, logs, and screenshots for debugging (stored in `runtime/run_{run_id}/`).
 
 ## Workflow
 

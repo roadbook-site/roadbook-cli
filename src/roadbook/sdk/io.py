@@ -77,14 +77,20 @@ class InputManager:
 
 
 class DatasetManager:
-    """Manages structured data outputs (streaming to jsonl)."""
+    """Manages structured data outputs (streaming to jsonl, supports configurable formats)."""
     
     def __init__(self, outputs_dir: Path, scripts_dir: Path):
         self.outputs_dir = outputs_dir
         self.scripts_dir = scripts_dir
-        self.dataset_dir = outputs_dir / "dataset"
-        self.dataset_dir.mkdir(parents=True, exist_ok=True)
-        self.default_dataset_file = self.dataset_dir / "default.jsonl"
+        # Ensure outputs_dir exists
+        self.outputs_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Load output format preference (default to jsonl)
+        # In the future, this could be read from rb.config or environment variables
+        self.output_format = os.environ.get("ROADBOOK_OUTPUT_FORMAT", "jsonl").lower()
+        
+        # Set primary result file name
+        self.default_dataset_file = self.outputs_dir / f"result.{self.output_format}"
         self.schema = self._load_schema()
         
     def _load_schema(self) -> Dict[str, Any]:
@@ -108,6 +114,37 @@ class DatasetManager:
             except Exception as e:
                 logger.warning(f"Output validation warning: {e}")
                 
-        # Append to jsonl file
-        with open(self.default_dataset_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(data, ensure_ascii=False) + "\n")
+        # Handle different output formats
+        if self.output_format == "jsonl":
+            with open(self.default_dataset_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(data, ensure_ascii=False) + "\n")
+        elif self.output_format == "json":
+            # For JSON, we need to read, append, and rewrite the array
+            # This is less efficient than jsonl but supported for user preference
+            current_data = []
+            if self.default_dataset_file.exists():
+                try:
+                    with open(self.default_dataset_file, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            current_data = json.loads(content)
+                            if not isinstance(current_data, list):
+                                current_data = [current_data]
+                except Exception as e:
+                    logger.warning(f"Failed to read existing JSON: {e}")
+            
+            current_data.append(data)
+            with open(self.default_dataset_file, "w", encoding="utf-8") as f:
+                json.dump(current_data, f, ensure_ascii=False, indent=2)
+        elif self.output_format == "csv":
+            import csv
+            file_exists = self.default_dataset_file.exists()
+            with open(self.default_dataset_file, "a", encoding="utf-8", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=data.keys())
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerow(data)
+        else:
+            # Fallback to jsonl
+            with open(self.default_dataset_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(data, ensure_ascii=False) + "\n")
