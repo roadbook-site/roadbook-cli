@@ -30,16 +30,24 @@ Roadbook balances efficiency and generalization using a "Script First, Semantic 
 
 ## 3. Browser Configuration: The Crucial Bridge
 
-The browser is the most important bridge between the human, the Agent, and the web. Roadbook uses a lightweight, SDK-driven architecture to interact with the browser directly via Playwright.
+The browser is the most important bridge between the human, the Agent, and the web. Roadbook uses a lightweight, SDK-driven architecture to interact with the browser directly via Playwright, supporting a **"CDP Browser Takeover mode"**. This allows Roadbook to share the same login state and browser session seamlessly with you.
 
-To get started, we must initialize the browser environment:
+To get started, we must initialize the dedicated browser environment:
 
 1. **Install Dependencies:** Ensure the Roadbook CLI and its dependencies are properly installed.
-2. **Context Management:** Roadbook automatically manages the browser lifecycle, securely handling context and user profiles.
-3. **Configure User Profile:** Reuse login states automatically, bypassing repetitive password prompts securely.
+2. **Initialize Dedicated Browser:** Run the following command to start the configuration wizard:
+   ```bash
+   roadbook browser init
+   ```
+   This wizard will help you configure the browser executable path, CDP port (default 9222), and a dedicated user data directory to prevent mixing Roadbook data with your personal browsing data. It also allows you to create a desktop shortcut for easy access.
+3. **Manage Browser Lifecycle:** Use the following commands to manage the dedicated browser:
+   - `roadbook browser open`: Launch the dedicated browser using your configured profile.
+   - `roadbook browser close`: Close the dedicated browser gracefully.
+   - `roadbook browser kill`: Force release the CDP port if it's hanging.
+   - `roadbook browser diagnose`: Diagnose your browser configuration and CDP connectivity.
 4. **Visual Mapping:** The SDK handles complex CSS selectors and provides simplified UI interaction mechanisms, making it effortless for the Agent to interact with the page.
 
-*Action for Agent:* When a user reaches this step, help them verify if Roadbook is properly installed and assist them in configuring their persistent session profile.
+*Action for Agent:* When a user reaches this step, help them verify if Roadbook is properly installed and explicitly instruct them to run `roadbook browser init` to set up their persistent session profile. If they run into issues, suggest using `roadbook browser diagnose`.
 
 ## 4. Typical Reference Cases
 

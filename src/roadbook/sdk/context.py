@@ -260,6 +260,10 @@ class RoadbookContext:
             except Exception as e:
                 self.logger.warning(f"Failed to auto-save storage state: {e}")
                 
+        # Auto-export schemas if models are bound
+        if getattr(self, "_input_model", None) or getattr(self, "_output_model", None):
+            self.export_schemas()
+                
         self.logger.info("Closing Roadbook Context...")
         if self._context:
             self._context.close()
@@ -315,6 +319,54 @@ class RoadbookContext:
         """Helper to get all inputs from InputManager."""
         return self.input_manager.get_all()
 
-    def push_data(self, data: Dict[str, Any], validate: bool = True):
+    def bind_schemas(self, input_model=None, output_model=None):
+        """Bind Pydantic models for Input and Output to act as SSOT (Single Source of Truth)."""
+        self._input_model = input_model
+        self._output_model = output_model
+        return self
+
+    def export_schemas(self):
+        """Export bound Pydantic models to JSON schema files."""
+        import json
+        if not self.scripts_dir.exists():
+            return
+            
+        if getattr(self, "_input_model", None):
+            try:
+                schema = self._input_model.model_json_schema()
+                with open(self.scripts_dir / "input_schema.json", "w", encoding="utf-8") as f:
+                    json.dump(schema, f, indent=4, ensure_ascii=False)
+                self.logger.info("Exported input_schema.json from Pydantic model.")
+            except Exception as e:
+                self.logger.warning(f"Failed to export input schema: {e}")
+                
+        if getattr(self, "_output_model", None):
+            try:
+                schema = self._output_model.model_json_schema()
+                with open(self.scripts_dir / "output_schema.json", "w", encoding="utf-8") as f:
+                    json.dump(schema, f, indent=4, ensure_ascii=False)
+                self.logger.info("Exported output_schema.json from Pydantic model.")
+            except Exception as e:
+                self.logger.warning(f"Failed to export output schema: {e}")
+
+    def push_data(self, data: Any, validate: bool = True):
         """Helper to push structured data via DatasetManager."""
+        # Validate against bound Pydantic model if available
+        output_model = getattr(self, "_output_model", None)
+        if validate and output_model:
+            try:
+                if hasattr(data, "model_dump"):
+                    # It's already a Pydantic instance, we assume it's valid
+                    data = data.model_dump()
+                else:
+                    # Validate dict by instantiating the model
+                    data = output_model(**data).model_dump()
+            except Exception as e:
+                self.logger.error(f"Data validation failed against bound output_model: {e}")
+                raise
+        
+        # If it's still a Pydantic model (validate=False case)
+        if hasattr(data, "model_dump"):
+            data = data.model_dump()
+
         self.dataset_manager.push_data(data, validate)

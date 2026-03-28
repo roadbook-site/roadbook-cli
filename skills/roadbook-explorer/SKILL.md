@@ -67,6 +67,7 @@ Use the `version` value in this file header as the single source of truth.
 - **DO** use semantic selectors (e.g., `get_by_role`, `get_by_text`) whenever possible.
 
 **✗ Don't:**
+- **DON'T** manually edit `input_schema.json` or `output_schema.json`. Always update the Pydantic models in `script.py` instead.
 - **DON'T** skip the version check step. It must be done before anything else.
 - **DON'T** delete or bypass `RoadbookContext` in `script.py` to use raw Playwright API manually. The SDK handles lifecycle safely.
 - **DON'T** attempt to bypass or brute-force Login screens or write automated password inputs. Always use `rb.wait_for_human_action`.
@@ -95,7 +96,7 @@ All roadbook projects follow a standard directory structure:
 2.  **Intent Analysis & Parameter Extraction**: Convert the user's request into a generic goal (e.g., "Find an iPhone 15 on Amazon" → "Search for a product on Amazon"). Propose a `kebab-case` name.
     - **CRITICAL**: Differentiate between the "Target Site" (Entry URL) and "Business Parameters" (e.g., search queries, `max_items`, filters). The `entry_url` belongs to the Roadbook's core identity, while business parameters belong in `input_schema.json`.
 3.  **Scaffolding**: Run `roadbook init <name> --description "<generalized_goal>" --entry-url "<target_url>"` (or `python -m roadbook init ...`). This creates a new project directory `<name>`. In a separate command, move into it with `cd <name>`.
-4.  **Schema Configuration**: Open `scripts/input_schema.json` and `.rb/INPUT.json`. Remove the default boilerplate and define the specific business parameters you extracted in Step 2 (e.g., `{"max_videos_to_fetch": 5}`).
+4.  **Schema Configuration**: Open `scripts/script.py` and `.rb/INPUT.json`. Modify the `TaskInput` and `TaskOutput` Pydantic models in `script.py` to define the specific business parameters you extracted in Step 2. Then, update `.rb/INPUT.json` to provide mock values matching the `TaskInput` schema. Do NOT edit the JSON schema files directly.
 5.  **Complex Task Triage**: If the task involves multi-step workflows or complex dynamic UIs, **STOP HERE**. Instruct the user to run `roadbook edit <id>` to manually define the high-level steps first.
 
 ### Phase 2: Exploration (Test-Driven)

@@ -83,6 +83,18 @@ def find_all_browsers() -> list:
         add_linux_cmd("Microsoft Edge", ["microsoft-edge"])
         add_linux_cmd("Brave Browser", ["brave-browser", "brave"])
 
+    # Attempt to add Playwright's Chromium as a fallback
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            playwright_chrome_path = p.chromium.executable_path
+            if os.path.exists(playwright_chrome_path):
+                # avoid duplicates if path already added
+                if not any(b["path"] == playwright_chrome_path for b in browsers):
+                    browsers.append({"name": "Playwright Chromium (Fallback)", "path": playwright_chrome_path})
+    except Exception:
+        pass
+
     return browsers
 
 def find_chrome_executable() -> str:
