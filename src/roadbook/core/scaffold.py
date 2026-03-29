@@ -115,8 +115,6 @@ class ScaffoldManager:
                 if isinstance(inputs_meta, dict) and inputs_meta:
                     for key in inputs_meta.keys():
                         input_data[key] = "example_value"
-                else:
-                    input_data = {"search_query": "example", "max_items_to_fetch": 10}
                 with open(local_input_path, "w", encoding="utf-8") as f:
                     json.dump(input_data, f, indent=4, ensure_ascii=False)
                     
@@ -146,11 +144,7 @@ class ScaffoldManager:
                            .replace("{description}", description)\
                            .replace("{entry_url}", entry_url)\
                            .replace("{login_constraint}", login_constraint)\
-                           .replace("{login_reference}", login_reference)\
-                           .replace("{uuid_1}", uuid.uuid4().hex[:5])\
-                           .replace("{uuid_2}", uuid.uuid4().hex[:5])\
-                           .replace("{uuid_3}", uuid.uuid4().hex[:5])\
-                           .replace("{uuid_4}", uuid.uuid4().hex[:5])
+                           .replace("{login_reference}", login_reference)
 
     @staticmethod
     def _generate_python_script_template(rb_id, name, roadbook_model: Optional[RoadbookModel] = None):
@@ -204,6 +198,9 @@ class ScaffoldManager:
             for phase_type, sheets in all_sheets:
                 for i, sheet in enumerate(sheets, 1):
                     func_name = sheet.id.replace('-', '_').replace(' ', '_').lower() if sheet.id else f"{phase_type}_sheet_{i}"
+                    # 确保函数名是一个合法的 Python 标识符，且更有语义
+                    if not func_name.isidentifier():
+                        func_name = f"{phase_type}_sheet_{i}"
                     
                     func_def = [
                         f"def phase_{func_name}(rb: RoadbookContext, inputs: TaskInput):",

@@ -42,6 +42,18 @@ class TaskOutput(BaseModel):
 
 {phase_functions}
 
+# ==========================================
+# 🙋‍♂️ Human Intervention Example (Optional)
+# ==========================================
+# def phase_manual_login(rb: RoadbookContext, inputs: TaskInput):
+#     with rb.sheet("manual_login"):
+#         page = rb.page
+#         page.goto("https://example.com/login")
+#         # Pauses execution until the user manually logs in and the success selector appears
+#         rb.wait_for_human_action(
+#             success_selector=".user-profile-icon",
+#             message="Please log in manually in the browser."
+#         )
 
 # ==========================================
 # 🚀 Main Execution
@@ -69,7 +81,7 @@ def run():
             rb.logger.info("🎉 All sheets completed successfully.")
             
         except Exception as e:
-            rb.logger.error(f"❌ Task failed: {{str(e)}}")
+            rb.logger.error(f"❌ Task failed: {e}")
             raise
 
 if __name__ == "__main__":
