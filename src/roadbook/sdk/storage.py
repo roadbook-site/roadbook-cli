@@ -18,10 +18,14 @@ class StorageManager:
         self.outputs_dir.mkdir(parents=True, exist_ok=True)
         self.downloads_dir.mkdir(parents=True, exist_ok=True)
 
-    def get_download_path(self, filename: str) -> str:
-        """Returns the absolute path to save a downloaded file in the current run's outputs."""
-        filepath = self.downloads_dir / filename
-        return str(filepath)
+    def get_download_path(self, filename: str = None) -> str:
+        """Returns the absolute path to save a downloaded file in the current run's outputs.
+           If filename is not provided, returns the downloads directory path.
+        """
+        if filename:
+            filepath = self.downloads_dir / filename
+            return str(filepath)
+        return str(self.downloads_dir)
 
     def set_value(self, key: str, value: Union[str, bytes], content_type: str = "text/plain"):
         """Saves a value to the KV store (downloads dir). The key determines the filename."""

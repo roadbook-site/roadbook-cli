@@ -23,7 +23,7 @@ class ScaffoldManager:
         }
 
     @staticmethod
-    def create_roadbook_scaffold(book_dir: Path, rb_id: str, name: str, description: str, entry_url: str = "https://www.example.com"):
+    def create_roadbook_scaffold(book_dir: Path, rb_id: str, name: str, description: str, entry_url: str = "https://www.example.com", requires_login: bool = False):
         """Creates the full roadbook scaffold (directories + roadbook.md)."""
         paths = ScaffoldManager.get_structure_paths(book_dir)
         
@@ -35,7 +35,7 @@ class ScaffoldManager:
         
         # Create roadbook.md
         if not paths["roadbook_file"].exists():
-            content = ScaffoldManager._generate_roadbook_md_content(rb_id, name, description, entry_url)
+            content = ScaffoldManager._generate_roadbook_md_content(rb_id, name, description, entry_url, requires_login)
             with open(paths["roadbook_file"], "w", encoding="utf-8") as f:
                 f.write(content)
 
@@ -82,13 +82,13 @@ class ScaffoldManager:
                         "Focus on ONE single element or interaction (e.g., just clicking a complex dropdown).\n"
                         "Once the logic is verified here, merge it back into the main script.py.\n"
                         "\"\"\"\n"
-                        "from playwright.sync_api import sync_playwright\n\n"
+                        "from roadbook.sdk import RoadbookContext\n\n"
                         "def test_single_element():\n"
-                        "    with sync_playwright() as p:\n"
-                        "        browser = p.chromium.launch(headless=False)\n"
-                        "        page = browser.new_page()\n"
-                        "        # Add your micro-test logic here\n"
-                        "        browser.close()\n\n"
+                        "    # Using RoadbookContext automatically loads the saved login state\n"
+                        "    with RoadbookContext() as rb:\n"
+                        "        page = rb.page\n"
+                        "        # Example: page.goto('https://example.com')\n"
+                        "        # Add your micro-test logic here\n\n"
                         "if __name__ == '__main__':\n"
                         "    test_single_element()\n"
                     )
@@ -131,17 +131,22 @@ class ScaffoldManager:
 
 
     @staticmethod
-    def _generate_roadbook_md_content(rb_id, name, description, entry_url="https://www.example.com"):
+    def _generate_roadbook_md_content(rb_id, name, description, entry_url="https://www.example.com", requires_login=False):
         import uuid
         template_bytes = pkgutil.get_data(__package__, "templates/roadbook.md.tpl")
         if not template_bytes:
             raise RuntimeError("Could not find roadbook.md.tpl template")
         template_str = template_bytes.decode("utf-8")
         
+        login_constraint = "\n- `requires_login`: true" if requires_login else ""
+        login_reference = "\n**Reference**:\n![Logged in state](images/logged_in.png)\n_Describe here how the agent can determine if the user is logged in (e.g., 'A user avatar is visible in the top right corner')._" if requires_login else ""
+        
         return template_str.replace("{rb_id}", rb_id)\
                            .replace("{name}", name)\
                            .replace("{description}", description)\
                            .replace("{entry_url}", entry_url)\
+                           .replace("{login_constraint}", login_constraint)\
+                           .replace("{login_reference}", login_reference)\
                            .replace("{uuid_1}", uuid.uuid4().hex[:5])\
                            .replace("{uuid_2}", uuid.uuid4().hex[:5])\
                            .replace("{uuid_3}", uuid.uuid4().hex[:5])\

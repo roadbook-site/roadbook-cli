@@ -23,7 +23,8 @@ outputs: {}
 - `force_headful`: false
 - `stealth_mode`: false
 - `viewport`: 1280x720
-- `global_delay`: 0
+- `global_delay`: 0{login_constraint}
+{login_reference}
 
 **Steps**:
 1. [Please fill in specific steps, e.g., `GOTO "{entry_url}"`]

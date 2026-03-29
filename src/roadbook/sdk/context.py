@@ -395,8 +395,17 @@ class RoadbookContext:
         except Exception as e:
             self.logger.warning(f"Failed to sync .rb/INPUT.json: {e}")
 
+    def get_output_dir(self) -> Path:
+        """Returns the output directory path for the current run."""
+        return self.outputs_dir
+
     def emit_output(self, data: Any, validate: bool = True):
         """Helper to emit structured output data matching TaskOutput."""
+        # Log the output path on first emit
+        if not hasattr(self, "_has_emitted"):
+            self.logger.info(f"Emitting outputs to: {self.dataset_manager.default_dataset_file}")
+            self._has_emitted = True
+
         # Validate against bound Pydantic model if available
         output_model = getattr(self, "_output_model", None)
         if validate and output_model:

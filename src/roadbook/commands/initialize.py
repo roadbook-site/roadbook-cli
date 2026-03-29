@@ -60,12 +60,121 @@ def init_book(args):
             print(f"Initializing directory at {work_dir}")
             work_dir.mkdir(parents=True, exist_ok=True)
             
+        # Check if login is required
+        requires_login = False
+        if hasattr(args, 'login') and args.login:
+            if args.login.lower() in ['y', 'yes', 'true']:
+                requires_login = True
+
         # Use centralized scaffold manager
-        paths = ScaffoldManager.create_roadbook_scaffold(book_dir, rb_id, name, description, entry_url)
+        paths = ScaffoldManager.create_roadbook_scaffold(book_dir, rb_id, name, description, entry_url, requires_login=requires_login)
         with open(paths["roadbook_file"], "r", encoding="utf-8") as f:
             roadbook_content = f.read()
         ScaffoldManager.create_script_scaffold(book_dir, "python", rb_id, name, roadbook_content)
         
+        if requires_login:
+            console.print("\n[bold yellow]Login Required[/bold yellow]")
+            console.print(f"Opening browser for you to log in to: [cyan]{entry_url}[/cyan]")
+            console.print("Please complete the login process, and then press Enter here to save the state.")
+            
+            try:
+                from playwright.sync_api import sync_playwright
+                from ..core.config import load_user_config
+                
+                config = load_user_config()
+                browser_config = config.get("browser", {})
+                exe_path = browser_config.get("executable_path")
+                user_data_dir = browser_config.get("user_data_dir")
+                
+                state_file = paths["config"] / "state.json"
+                
+                with sync_playwright() as p:
+                    launch_args = {"headless": False}
+                    if exe_path:
+                        launch_args["executable_path"] = exe_path
+                    
+                    # 为了规避某些网站对自动化工具的检测（如 CDP 协议），
+                    # 我们采用纯净的 subprocess 方式启动浏览器，
+                    # 避免使用 Playwright 直接 attach，只在需要时启动它。
+                    import subprocess
+                    import time
+                    
+                    if exe_path:
+                        data_dir_arg = f"--user-data-dir={user_data_dir}" if user_data_dir else f"--user-data-dir={paths['config'] / 'profile'}"
+                        cmd = [
+                            exe_path, 
+                            data_dir_arg,
+                            "--no-first-run",
+                            "--no-default-browser-check",
+                            "--disable-features=Translate",
+                            entry_url
+                        ]
+                        console.print(f"[dim]Launching browser process: {' '.join(cmd)}[/dim]")
+                        
+                        # 启动独立浏览器进程
+                        browser_proc = subprocess.Popen(cmd)
+                        
+                        # Wait for user input
+                        input("Press Enter here after you have successfully logged in...")
+                        
+                        # 此时用户已经登录完成。
+                        # 为了避免 Profile 被锁定，以及防止下次带 CDP 启动时 CDP 不生效，必须先关闭这个浏览器进程
+                        console.print("Closing browser to release profile lock...")
+                        try:
+                            if browser_proc.poll() is None:
+                                import sys
+                                if sys.platform == "win32":
+                                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(browser_proc.pid)], capture_output=True)
+                                else:
+                                    browser_proc.terminate()
+                                    browser_proc.wait(timeout=5)
+                        except Exception as e:
+                            console.print(f"[dim]Note: Browser termination warning: {e}[/dim]")
+                            
+                        console.print("Extracting login state...")
+                        try:
+                            # 尝试以极短时间启动并立刻提取 state
+                            extract_args = {"headless": True, "executable_path": exe_path}
+                            context = p.chromium.launch_persistent_context(user_data_dir or str(paths['config'] / 'profile'), **extract_args)
+                            context.storage_state(path=str(state_file))
+                            context.close()
+                            console.print(f"[green]✓ Login state saved to:[/green] {state_file}")
+                        except Exception as extract_err:
+                            console.print(f"[yellow]Warning: Could not extract state immediately (browser might be locked).[/yellow]")
+                            console.print(f"Error details: {extract_err}")
+                            console.print("If you closed the browser, try running the command again. If it is still open, please close it.")
+                            
+                    else:
+                        # Fallback to Playwright native launch if no custom path
+                        if user_data_dir:
+                            context = p.chromium.launch_persistent_context(user_data_dir, **launch_args)
+                            page = context.pages[0] if context.pages else context.new_page()
+                        else:
+                            browser = p.chromium.launch(**launch_args)
+                            context = browser.new_context()
+                            page = context.new_page()
+                            
+                        # 注入特殊标记的 title 以便后续定位，或者纯粹作为提示
+                        page.goto(entry_url)
+                        try:
+                            page.evaluate("document.title = '[Roadbook Login] ' + document.title;")
+                        except Exception:
+                            pass
+                        
+                        # Wait for user input
+                        input("Press Enter here after you have successfully logged in...")
+                        
+                        # Save state
+                        context.storage_state(path=str(state_file))
+                        console.print(f"[green]✓ Login state saved to:[/green] {state_file}")
+                        
+                        if user_data_dir:
+                            context.close()
+                        else:
+                            browser.close()
+            except Exception as e:
+                print_error(f"Failed to handle interactive login: {e}")
+                
     except Exception as e:
         print_error(f"Failed to initialize roadbook: {e}")
         return

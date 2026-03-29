@@ -61,7 +61,7 @@ Use the `version` value in this file header as the single source of truth.
 - **DO** use the `tests/` directory for micro-testing complex UI elements before merging logic into `script.py`.
 - **DO** ask the user for help (`AskUserQuestion`) if you receive unclear prompt objectives.
 - **DO** guide the user to configure settings (like API keys or specific credentials) if the task requires them, explaining where and how to set them up.
-- **DO** define any required site-specific environmental conditions (e.g., `auto_solve_captcha: true`, `stealth_mode: true`) under a `**Constraints**:` block in the setup sheet of `roadbook.md`, and pass them via `site_overrides` when initializing `RoadbookContext` in `script.py`.
+- **DO** define any required site-specific environmental conditions (e.g., `auto_solve_captcha: true`, `stealth_mode: true`) under a `**Constraints**:` block in the setup sheet of `roadbook.md`, and pass them via `site_overrides` when initializing `RoadbookContext` in `script.py`. For login-required sites, set `requires_login: true` and prompt the user to log in via `roadbook init --login y`.
 - **DO** strictly use `rb.wait_for_human_action(wait_for_user_input=True)` when encountering login structures or CAPTCHAs. Rely on the SDK for state management.
 - **DO** remind the user to run scripts requiring human intervention in their own visible terminal, as the agent's background terminal may not display browser UI properly.
 - **DO** use semantic selectors (e.g., `get_by_role`, `get_by_text`) whenever possible.
@@ -76,6 +76,7 @@ Use the `version` value in this file header as the single source of truth.
 - **DON'T** create temporary test files in the project root. Always use `scripts/tests/`.
 - **DON'T** hardcode search queries or dynamic parameters in the script; extract them to the `inputs` section.
 - **DON'T** put environment configurations (like debugging ports or headless flags) inside `inputs` or `roadbook.md`. Those are strictly for business data and domain variables.
+- **DON'T** use `&&` to chain commands in Windows environments (PowerShell doesn't support it). Run commands sequentially or use `;` instead.
 
 ## Project Directory Structure
 All roadbook projects follow a standard directory structure:
@@ -94,7 +95,9 @@ All roadbook projects follow a standard directory structure:
 1.  **Context Check (MANDATORY)**: Ensure `roadbook` CLI is available and version MATcHES exactly (`roadbook --version`). If the command is not found, use `python -m roadbook` instead. If not, upgrade or update immediately as per the frontmatter check.
 2.  **Intent Analysis & Parameter Extraction**: Convert the user's request into a generic goal (e.g., "Find an iPhone 15 on Amazon" → "Search for a product on Amazon"). Propose a `kebab-case` name.
     - **CRITICAL**: Differentiate between the "Target Site" (Entry URL) and "Business Parameters" (e.g., search queries, `max_items`, filters). The `entry_url` belongs to the Roadbook's core identity, while business parameters belong in `input_schema.json`.
-3.  **Scaffolding**: Run `roadbook init <name> --description "<generalized_goal>" --entry-url "<target_url>"` (or `python -m roadbook init ...`). This creates a new project directory `<name>`. In a separate command, move into it with `cd <name>`.
+3.  **Scaffolding**: Run `roadbook init <name> --description "<generalized_goal>" --entry-url "<target_url>"` (or `python -m roadbook init ...`). 
+    - **Authentication**: If the target website requires the user to be logged in, append `--login y` to the init command (e.g., `roadbook init <name> ... --login y`). This will open a browser, allow the user to manually log in, and save the session state automatically to avoid anti-bot detection.
+    - After scaffolding, move into the new directory in a separate command: `cd <name>`.
 4.  **Schema Configuration**: Open `scripts/script.py` and `.rb/INPUT.json`. Modify the `TaskInput` and `TaskOutput` Pydantic models in `script.py` to define the specific business parameters you extracted in Step 2. Then, update `.rb/INPUT.json` to provide mock values matching the `TaskInput` schema. Do NOT edit the JSON schema files directly.
 5.  **Complex Task Triage**: If the task involves multi-step workflows or complex dynamic UIs, **STOP HERE**. Instruct the user to run `roadbook edit <id>` to manually define the high-level steps first.
 
