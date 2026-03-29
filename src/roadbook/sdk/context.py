@@ -10,6 +10,7 @@ from playwright.sync_api import sync_playwright, Playwright, BrowserContext, Pag
 from .io import InputManager, DatasetManager
 from .storage import StorageManager
 from .logger import get_logger
+from .radar import Radar
 
 class RoadbookContext:
     def __init__(self, rb_id: str = None, root_dir: str = None, run_dir: str = None, outputs_dir: str = None, cdp_url: str = None, site_overrides: dict = None):
@@ -70,6 +71,18 @@ class RoadbookContext:
         self._context: BrowserContext = None
         self.page: Page = None
         self.current_sheet = None
+
+    @property
+    def radar(self) -> Radar:
+        """
+        获取当前页面的 Radar 扫描工具。
+        可以在路书脚本中通过 rb.radar.scan_all() 等方法调用。
+        """
+        if not self.page:
+            raise ValueError("Page is not initialized yet. Ensure you are running within the RoadbookContext.")
+        if not hasattr(self, '_radar') or getattr(self, '_radar').page != self.page:
+            self._radar = Radar(self.page)
+        return self._radar
 
     def _find_project_root(self) -> Path:
         """根据 rb_id 或环境变量定位路书项目根目录"""
