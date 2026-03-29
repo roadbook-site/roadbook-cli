@@ -1,6 +1,6 @@
 ---
 name: roadbook-onboarding
-version: "0.2.1"
+version: "0.2.5"
 description: An interactive guide for onboarding users to the Roadbook system. Trigger this skill when a user asks about how to start using Roadbook, needs to understand the overall architecture, wants to initialize the environment, or needs help configuring their browser.
 ---
 
