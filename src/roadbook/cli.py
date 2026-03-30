@@ -41,6 +41,9 @@ Command Categories:
     init      Initialize a new roadbook scaffold
     edit      Start Roadbook Editor (WebUI)
     script    Manage local scripts
+    link      Symlink local roadbook to global
+    unlink    Remove symlink of a roadbook
+    remove    Delete a roadbook
     
   [Diagnose]  System diagnostics
     doctor    Check environment health and dependencies
@@ -178,6 +181,19 @@ Command Categories:
     link_parser.add_argument("id", nargs="?", help="Optional: Roadbook ID to link (defaults to all local roadbooks)")
     from .commands import link as link_cmd
     link_parser.set_defaults(func=link_cmd.link_book)
+
+    # Command: unlink
+    unlink_parser = subparsers.add_parser("unlink", help="Remove symlink of a roadbook")
+    unlink_parser.add_argument("id", nargs="?", help="Optional: Roadbook ID to unlink (defaults to all local roadbooks)")
+    from .commands import unlink as unlink_cmd
+    unlink_parser.set_defaults(func=unlink_cmd.unlink_book)
+
+    # Command: remove
+    remove_parser = subparsers.add_parser("remove", aliases=["rm"], help="Delete a roadbook")
+    remove_parser.add_argument("id", help="Roadbook ID")
+    remove_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
+    from .commands import remove as remove_cmd
+    remove_parser.set_defaults(func=remove_cmd.remove_book)
 
     # --- Group: Diagnose ---
     # Command: doctor

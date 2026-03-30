@@ -163,7 +163,8 @@
                 'expand_all': 'Expand All',
                 'collapse_all': 'Collapse All',
                 'insert_sheet_below': 'Insert Sheet Below',
-                'constraints': 'Site Constraints'
+                'constraints': 'Site Constraints',
+                'copy_id': 'Copy ID'
             },
             'zh': {
                 'title': 'Roadbook Explorer',
@@ -232,7 +233,8 @@
                 'expand_all': '全部展开',
                 'collapse_all': '全部收起',
                 'insert_sheet_below': '在下方插入新页',
-                'constraints': '网站约束 (Constraints)'
+                'constraints': '网站约束 (Constraints)',
+                'copy_id': '复制 ID'
             }
         };
 
@@ -920,7 +922,23 @@
                                     placeholder={t('sheet_title_placeholder')}
                                     onClick={e => e.stopPropagation()}
                                 />
-                                <div className="text-xs text-gray-400 mt-0.5 font-mono">ID: {sheet.id || 'N/A'}</div>
+                                <div className="text-xs text-gray-400 mt-0.5 font-mono flex items-center">
+                                    <span>ID: {sheet.id || 'N/A'}</span>
+                                    {sheet.id && (
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigator.clipboard.writeText(sheet.id);
+                                                // Optional: provide some visual feedback? 
+                                                // For now, simple copy is fine.
+                                            }}
+                                            className="ml-2 hover:text-blue-500 transition-colors focus:outline-none"
+                                            title={t('copy_id')}
+                                        >
+                                            <i className="ph ph-copy"></i>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center space-x-3">

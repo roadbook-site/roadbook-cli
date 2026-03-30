@@ -139,12 +139,17 @@ class ScaffoldManager:
         login_constraint = "\n- `requires_login`: true" if requires_login else ""
         login_reference = "\n**Reference**:\n![Logged in state](images/logged_in.png)\n_Describe here how the agent can determine if the user is logged in (e.g., 'A user avatar is visible in the top right corner')._" if requires_login else ""
         
+        sheet_id_1 = str(uuid.uuid4())[:5]
+        sheet_id_2 = str(uuid.uuid4())[:5]
+        
         return template_str.replace("{rb_id}", rb_id)\
                            .replace("{name}", name)\
                            .replace("{description}", description)\
                            .replace("{entry_url}", entry_url)\
                            .replace("{login_constraint}", login_constraint)\
-                           .replace("{login_reference}", login_reference)
+                           .replace("{login_reference}", login_reference)\
+                           .replace("{sheet_id_1}", sheet_id_1)\
+                           .replace("{sheet_id_2}", sheet_id_2)
 
     @staticmethod
     def _generate_python_script_template(rb_id, name, roadbook_model: Optional[RoadbookModel] = None):

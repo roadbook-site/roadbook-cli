@@ -33,7 +33,7 @@ outputs: {}
 ---
 
 ## sample sheet title
-**ID**: sample_sheet_1
+**ID**: {sheet_id_1}
 **Type**: process
 **Description**: [Describe the first sheet logic, e.g. "enter search query and submit"]
 **URL**: `{entry_url}`
@@ -47,7 +47,7 @@ outputs: {}
 ---
 
 ## sample sheet title 2
-**ID**: sample_sheet_2
+**ID**: {sheet_id_2}
 **Type**: process
 **Description**: [Describe the next sheet logic, e.g. "Process search results and extract data"]
 **URL**: `{entry_url}`
