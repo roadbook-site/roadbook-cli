@@ -321,41 +321,103 @@ class RoadbookContext:
         if self._playwright:
             self._playwright.stop()
 
-    def wait_for_human_action(self, success_selector: str = None, message: str = "Please complete the required action (e.g., login, CAPTCHA) in the browser.", timeout: int = 120000, wait_for_user_input: bool = False):
+    def pause_for_manual_action(self, message: str = "Please complete the required action in the browser.", debug: bool = False):
         """
-        Pauses the execution to allow a human to perform actions like login, solving a CAPTCHA, or passing bot detection.
+        Pauses the execution to allow a human to perform manual actions (e.g., login, CAPTCHA).
+        This is an experimental/debug tool used when you don't know the success selector yet.
+        
+        If debug=True, it will take a screenshot and DOM snapshot before and after the action,
+        saving them to the run directory to help you compare states and write selectors later.
         """
         self.logger.warning("=====================================================")
-        self.logger.warning(" HUMAN INTERVENTION REQUIRED ")
+        self.logger.warning(" HUMAN INTERVENTION REQUIRED (MANUAL PAUSE) ")
         self.logger.warning(message)
-        if success_selector:
-            self.logger.warning(f" Waiting for selector: '{success_selector}' to be visible.")
-        if wait_for_user_input or not success_selector:
-             self.logger.warning(" Input 1 and press Enter in the terminal when done...")
+        self.logger.warning(" Input 1 and press Enter in the terminal when done...")
         self.logger.warning("=====================================================")
         
-        try:
-            if wait_for_user_input or not success_selector:
-                import sys
-                if not sys.stdin.isatty():
-                    self.logger.error("Cannot wait for human action in a non-interactive (non-TTY) environment.")
-                    raise RuntimeError("Human intervention requested but no TTY is available.")
+        import sys
+        if not sys.stdin.isatty():
+            self.logger.error("Cannot wait for human action in a non-interactive (non-TTY) environment.")
+            raise RuntimeError("Human intervention requested but no TTY is available.")
+            
+        debug_dir = self.run_dir / "debug_snapshots"
+        timestamp = None
+        if debug:
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            import time
+            timestamp = int(time.time())
+            try:
+                self.page.screenshot(path=str(debug_dir / f"before_{timestamp}.png"), full_page=True)
+                with open(debug_dir / f"before_{timestamp}.html", "w", encoding="utf-8") as f:
+                    f.write(self.page.content())
+                self.logger.info(f"Saved 'before' snapshots to {debug_dir}")
+            except Exception as e:
+                self.logger.warning(f"Failed to take 'before' snapshot: {e}")
+
+        # Wait for terminal input (Enter)
+        while True:
+            user_input = input("Input 1 and press Enter to continue after you have completed the action: ")
+            if user_input.strip() == "1":
+                self.logger.info("Manual confirmation received, resuming execution...")
+                break
+            else:
+                print("Invalid input, please input 1 and press Enter.")
                 
-                # Wait for terminal input (Enter)
-                while True:
-                    user_input = input("Input 1 and press Enter to continue after you have completed the action: ")
-                    if user_input.strip() == "1":
-                        self.logger.info("Manual confirmation received, resuming execution...")
-                        break
-                    else:
-                        print("Invalid input, please input 1 and press Enter.")
-            elif success_selector:
-                # Wait for the user to complete action and the target selector to appear
-                self.page.locator(success_selector).wait_for(state="visible", timeout=timeout)
-                self.logger.info("Action successful, resuming execution...")
+        if debug and timestamp:
+            try:
+                self.page.screenshot(path=str(debug_dir / f"after_{timestamp}.png"), full_page=True)
+                with open(debug_dir / f"after_{timestamp}.html", "w", encoding="utf-8") as f:
+                    f.write(self.page.content())
+                self.logger.info(f"Saved 'after' snapshots to {debug_dir}")
+            except Exception as e:
+                self.logger.warning(f"Failed to take 'after' snapshot: {e}")
+
+    def wait_for_condition(self, success_selector: str, message: str = "Waiting for condition to be met...", require_confirmation: bool = False, timeout: int = 120000):
+        """
+        Production-ready method to wait for a specific selector to appear, indicating an action was successful.
+        
+        If require_confirmation=True, it will additionally pause in the terminal for user confirmation 
+        *after* the selector is found. This is useful when you have written a selector but aren't 100% sure it's correct.
+        """
+        self.logger.info(f"Waiting for selector: '{success_selector}' (Timeout: {timeout}ms)")
+        if message:
+            self.logger.info(message)
+            
+        try:
+            self.page.locator(success_selector).wait_for(state="visible", timeout=timeout)
+            self.logger.info(f"Selector '{success_selector}' is now visible.")
         except Exception as e:
-            self.logger.error(f"Failed to verify action within {timeout}ms timeout: {e}")
-            raise RuntimeError(f"Human intervention failed or timed out: {e}")
+            self.logger.error(f"Failed to verify selector '{success_selector}' within {timeout}ms: {e}")
+            raise RuntimeError(f"Condition not met or timed out: {e}")
+            
+        if require_confirmation:
+            self.logger.warning("=====================================================")
+            self.logger.warning(" CONDITION MET, SECONDARY CONFIRMATION REQUIRED ")
+            self.logger.warning(f" The selector '{success_selector}' appeared, but require_confirmation is True.")
+            self.logger.warning(" Input 1 and press Enter in the terminal to continue...")
+            self.logger.warning("=====================================================")
+            import sys
+            if not sys.stdin.isatty():
+                raise RuntimeError("Secondary confirmation requested but no TTY is available.")
+            while True:
+                user_input = input("Input 1 and press Enter to confirm: ")
+                if user_input.strip() == "1":
+                    self.logger.info("Secondary confirmation received, resuming...")
+                    break
+                else:
+                    print("Invalid input, please input 1 and press Enter.")
+
+    def wait_for_human_action(self, success_selector: str = None, message: str = "Please complete the required action (e.g., login, CAPTCHA) in the browser.", timeout: int = 120000, wait_for_user_input: bool = False):
+        """
+        DEPRECATED: Use `pause_for_manual_action` or `wait_for_condition` instead.
+        """
+        self.logger.warning("DeprecationWarning: `wait_for_human_action` is deprecated. Use `pause_for_manual_action` or `wait_for_condition` instead.")
+        if success_selector and not wait_for_user_input:
+            self.wait_for_condition(success_selector, message=message, timeout=timeout, require_confirmation=False)
+        elif success_selector and wait_for_user_input:
+            self.wait_for_condition(success_selector, message=message, timeout=timeout, require_confirmation=True)
+        else:
+            self.pause_for_manual_action(message=message, debug=False)
 
     @contextmanager
     def sheet(self, name: str):

@@ -19,7 +19,7 @@ class Authenticator:
         self.logger = context.logger
         self.snapshots: Dict[str, Any] = {}
 
-    def ensure_login(self, mode: AuthMode, verify_selector: str, entry_url: str, verify_url_pattern: str = None, login_timeout: int = 120000, anti_bot_strategy: str = "disconnect"):
+    def ensure_login(self, mode: AuthMode, verify_selector: str, entry_url: str, verify_url_pattern: str = None, login_timeout: int = 120000, anti_bot_strategy: str = "disconnect", debug: bool = True):
         """
         确保当前处于登录状态，根据不同的模式采用不同的登录策略。
         注: 如果之前有 state.json (Standalone) 或存在有效的 Profile (CDP)，
@@ -36,11 +36,18 @@ class Authenticator:
         if mode == AuthMode.LONG_LIVED or mode == AuthMode.SESSION_ONLY:
             # 模式1或2：直接在当前页面进行自动化或交互式登录
             self.ctx.page.goto(entry_url)
-            self.ctx.wait_for_human_action(
-                success_selector=verify_selector,
-                message=f"Please log in manually at {entry_url}",
-                timeout=login_timeout
-            )
+            
+            if not verify_selector:
+                self.ctx.pause_for_manual_action(
+                    message=f"Please log in manually at {entry_url}",
+                    debug=debug
+                )
+            else:
+                self.ctx.wait_for_condition(
+                    success_selector=verify_selector,
+                    message=f"Please log in manually at {entry_url}",
+                    timeout=login_timeout
+                )
             # 登录完成后，上下文会自动在 exit 时保存 state.json
 
         elif mode == AuthMode.ANTI_BOT_INTERACTIVE:
