@@ -32,6 +32,13 @@ class InputManager:
         
         # Load from injected file path (managed by executor)
         input_file = os.environ.get("ROADBOOK_INPUT_FILE")
+        
+        # Fallback for local dev: try .rb/INPUT.json
+        if not input_file:
+            potential_path = self.rb_dir / "INPUT.json"
+            if potential_path.exists():
+                input_file = str(potential_path)
+
         if input_file and Path(input_file).exists():
             try:
                 with open(input_file, "r", encoding="utf-8") as f:

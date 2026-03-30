@@ -1,4 +1,4 @@
-# src/roadbook/sdk/context.py
+﻿# src/roadbook/sdk/context.py
 import os
 import sys
 from pathlib import Path
@@ -11,6 +11,7 @@ from .io import InputManager, DatasetManager
 from .storage import StorageManager
 from .logger import get_logger
 from .radar import Radar
+from .auth import Authenticator
 
 class RoadbookContext:
     def __init__(self, rb_id: str = None, root_dir: str = None, run_dir: str = None, outputs_dir: str = None, cdp_url: str = None, site_overrides: dict = None):
@@ -71,6 +72,15 @@ class RoadbookContext:
         self._context: BrowserContext = None
         self.page: Page = None
         self.current_sheet = None
+
+    @property
+    def auth(self) -> Authenticator:
+        """
+        获取鉴权管理器，用于处理多模式登录及状态对比。
+        """
+        if not hasattr(self, '_auth'):
+            self._auth = Authenticator(self)
+        return self._auth
 
     @property
     def radar(self) -> Radar:
@@ -148,23 +158,20 @@ class RoadbookContext:
             
         self.state_file = self.rb_dir / "state.json"
 
-    def __enter__(self):
-        self.logger.info("Starting Roadbook Context...")
+    def reconnect(self):
+        """Re-establishes the browser connection (useful after suspending for pure-browser login)."""
+        if self._context:
+            try:
+                self._context.close()
+            except Exception:
+                pass
         
-        try:
-             # Patch for asyncio inside sync
-             import asyncio
-             if asyncio.get_running_loop():
-                 try:
-                     import nest_asyncio
-                     nest_asyncio.apply()
-                 except ImportError:
-                     pass
-        except Exception:
-             pass 
+        # We need to re-run the connection logic
+        self._connect_browser()
+        return self
 
-        self._playwright = sync_playwright().start()
-        
+    def _connect_browser(self):
+        """Internal method to handle browser connection/launching logic."""
         browser_config = getattr(self, "_cli_config", {}).get("browser", {})
         browser_type_name = browser_config.get("browser_type", "chromium")
         browser_type = getattr(self._playwright, browser_type_name, self._playwright.chromium)
@@ -238,22 +245,16 @@ class RoadbookContext:
                             self.logger.info("Successfully connected to local browser via CDP.")
                         except Exception as cdp_err:
                             self.logger.error(f"Failed to connect to browser CDP port {port} after launch.")
-                            self.logger.error("Hint: The port might be occupied, or the browser failed to start.")
-                            self.logger.error(f"Try running: `netstat -ano | findstr :{port}` (Windows) or `lsof -i :{port}` (Mac/Linux) to check for port conflicts.")
                             raise cdp_err
                     else:
                         self.logger.warning("Could not find local Chrome/Edge executable.")
-                        self.logger.warning("Hint: Run `roadbook browser` to configure your dedicated browser path.")
                 except Exception as ex:
                     self.logger.warning(f"Failed to launch or connect to local browser: {ex}")
         
         if not connected:
-            self.logger.warning("CDP connection and local launch failed. Falling back to standalone headless browser.")
-            self.logger.warning("Hint: Run `roadbook browser` to configure your dedicated browser.")
+            self.logger.warning("Falling back to standalone headless browser.")
             if self.browser_mode == "standalone":
-                self.logger.info(f"Launching ephemeral standalone context...")
                 launch_args = {"headless": False}
-                
                 self._browser_instance = browser_type.launch(**launch_args)
                 
                 context_args = {"no_viewport": False}
@@ -267,12 +268,28 @@ class RoadbookContext:
                 self._context = self._browser_instance.new_context(**context_args)
                 self.page = self._context.new_page()
             else:
-                self.logger.error("Failed to connect to local browser and standalone mode is not enabled.")
                 raise RuntimeError("Failed to connect to local browser via CDP.")
             
         default_timeout = getattr(self, "_cli_config", {}).get("browser", {}).get("default_timeout", 30000)
         self._context.set_default_timeout(default_timeout)
-            
+
+    def __enter__(self):
+        self.logger.info("Starting Roadbook Context...")
+        
+        try:
+             # Patch for asyncio inside sync
+             import asyncio
+             if asyncio.get_running_loop():
+                 try:
+                     import nest_asyncio
+                     nest_asyncio.apply()
+                 except ImportError:
+                     pass
+        except Exception:
+             pass 
+
+        self._playwright = sync_playwright().start()
+        self._connect_browser()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -304,7 +321,7 @@ class RoadbookContext:
         if self._playwright:
             self._playwright.stop()
 
-    def wait_for_human_action(self, success_selector: str = None, message: str = "Please complete the required action (e.g., login, CAPTCHA) in the browser.", timeout: int = 600000, wait_for_user_input: bool = False):
+    def wait_for_human_action(self, success_selector: str = None, message: str = "Please complete the required action (e.g., login, CAPTCHA) in the browser.", timeout: int = 120000, wait_for_user_input: bool = False):
         """
         Pauses the execution to allow a human to perform actions like login, solving a CAPTCHA, or passing bot detection.
         """
@@ -314,14 +331,24 @@ class RoadbookContext:
         if success_selector:
             self.logger.warning(f" Waiting for selector: '{success_selector}' to be visible.")
         if wait_for_user_input or not success_selector:
-             self.logger.warning(" Press Enter in the terminal when done...")
+             self.logger.warning(" Input 1 and press Enter in the terminal when done...")
         self.logger.warning("=====================================================")
         
         try:
             if wait_for_user_input or not success_selector:
+                import sys
+                if not sys.stdin.isatty():
+                    self.logger.error("Cannot wait for human action in a non-interactive (non-TTY) environment.")
+                    raise RuntimeError("Human intervention requested but no TTY is available.")
+                
                 # Wait for terminal input (Enter)
-                input("Press Enter to continue after you have completed the action...")
-                self.logger.info("Manual confirmation received, resuming execution...")
+                while True:
+                    user_input = input("Input 1 and press Enter to continue after you have completed the action: ")
+                    if user_input.strip() == "1":
+                        self.logger.info("Manual confirmation received, resuming execution...")
+                        break
+                    else:
+                        print("Invalid input, please input 1 and press Enter.")
             elif success_selector:
                 # Wait for the user to complete action and the target selector to appear
                 self.page.locator(success_selector).wait_for(state="visible", timeout=timeout)
