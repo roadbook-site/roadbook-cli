@@ -163,7 +163,14 @@
                 'collapse_all': 'Collapse All',
                 'insert_sheet_below': 'Insert Sheet Below',
                 'constraints': 'Site Constraints',
-                'copy_id': 'Copy ID'
+                'copy_id': 'Copy ID',
+                'tooltip_type': 'process: Regular steps\nsetup: Environment prep\ndelivery: Output data\ncrossroads: Condition branch',
+                'tooltip_url': 'The starting URL for this scene. Leave empty to inherit from previous sheet.',
+                'tooltip_desc': 'The main goal of this page.',
+                'tooltip_ref': 'Upload a screenshot of the target page for reference.',
+                'tooltip_steps': 'The actions to perform on this page.',
+                'tooltip_title': 'Name of the scene/page.',
+                'tooltip_constraints': 'Special constraints for the setup type.'
             },
             'zh': {
                 'title': 'Roadbook Explorer',
@@ -232,7 +239,14 @@
                 'collapse_all': '全部收起',
                 'insert_sheet_below': '在下方插入新页',
                 'constraints': '网站约束 (Constraints)',
-                'copy_id': '复制 ID'
+                'copy_id': '复制 ID',
+                'tooltip_type': 'process: 常规操作步骤\nsetup: 环境准备和前置条件\ndelivery: 结果输出或数据提取\ncrossroads: 条件分支或路由选择',
+                'tooltip_url': '当前场景的起始URL，留空则代表在当前页面继续操作。',
+                'tooltip_desc': '这个页面的主要任务目标是什么？',
+                'tooltip_ref': '上传目标页面的截图作为参考。',
+                'tooltip_steps': '在这个页面上需要执行的具体操作步骤。',
+                'tooltip_title': '场景或页面的名称。',
+                'tooltip_constraints': 'setup 类型的特殊约束条件。'
             }
         };
 
@@ -256,6 +270,85 @@
 
             return { lang, setLang, t };
         };
+
+        function HelpIcon({ text }) {
+            const [isOpen, setIsOpen] = useState(false);
+            const tooltipRef = useRef(null);
+            const contentRef = useRef(null);
+            const [offset, setOffset] = useState(0);
+
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (tooltipRef.current && !tooltipRef.current.contains(event.target)) {
+                        setIsOpen(false);
+                    }
+                };
+                
+                if (isOpen) {
+                    document.addEventListener('mousedown', handleClickOutside);
+                    
+                    // Adjust position to prevent clipping by screen or scroll container
+                    if (contentRef.current && tooltipRef.current) {
+                        const rect = contentRef.current.getBoundingClientRect();
+                        const scrollContainer = tooltipRef.current.closest('.overflow-y-auto');
+                        
+                        // Default bounds (viewport)
+                        let minLeft = 10;
+                        let maxRight = window.innerWidth - 10;
+                        
+                        // If inside scroll container, use its bounds
+                        if (scrollContainer) {
+                            const containerRect = scrollContainer.getBoundingClientRect();
+                            minLeft = Math.max(minLeft, containerRect.left + 10);
+                            maxRight = Math.min(maxRight, containerRect.right - 10);
+                        }
+                        
+                        let newOffset = 0;
+                        if (rect.left < minLeft) {
+                            newOffset = minLeft - rect.left;
+                        } else if (rect.right > maxRight) {
+                            newOffset = maxRight - rect.right;
+                        }
+                        setOffset(newOffset);
+                    }
+                } else {
+                    setOffset(0);
+                }
+                
+                return () => {
+                    document.removeEventListener('mousedown', handleClickOutside);
+                };
+            }, [isOpen]);
+
+            if (!text) return null;
+            return (
+                <div 
+                    ref={tooltipRef}
+                    className="relative inline-flex items-center ml-1 align-middle cursor-pointer"
+                    onClick={(e) => { 
+                        e.stopPropagation(); 
+                        e.preventDefault();
+                        setIsOpen(!isOpen); 
+                    }}
+                >
+                    <i className={`ph ph-question text-sm transition-colors ${isOpen ? 'text-blue-500' : 'text-gray-400 hover:text-blue-500'}`}></i>
+                    {isOpen && (
+                        <div 
+                            ref={contentRef}
+                            className="absolute top-full left-1/2 mt-2 w-max max-w-[260px] bg-gray-800 text-white text-xs rounded py-2 px-3 z-[100] whitespace-pre-wrap shadow-lg font-normal text-left leading-relaxed cursor-auto"
+                            style={{ transform: `translateX(calc(-50% + ${offset}px))` }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div 
+                                className="absolute bottom-full border-[5px] border-transparent border-b-gray-800"
+                                style={{ left: `calc(50% - ${offset}px)`, transform: 'translateX(-50%)' }}
+                            ></div>
+                            {text}
+                        </div>
+                    )}
+                </div>
+            );
+        }
 
         function App() {
             const { lang, setLang, t } = useLanguage();
@@ -626,11 +719,13 @@
             );
         }
 
-        function Field({ label, value, onChange, required, col, textarea, placeholder, readOnly, height }) {
+        function Field({ label, value, onChange, required, col, textarea, placeholder, readOnly, height, tooltip }) {
             return (
                 <div className={`${col || 'col-span-12'}`}>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                        {label} {required && <span className="text-red-400">*</span>}
+                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                        <span>{label}</span>
+                        {required && <span className="text-red-400 ml-1">*</span>}
+                        {tooltip && <HelpIcon text={tooltip} />}
                     </label>
                     {textarea ? (
                         <textarea 
@@ -654,7 +749,7 @@
             );
         }
 
-        function TextListEditor({ label, value, onChange, col, placeholder }) {
+        function TextListEditor({ label, value, onChange, col, placeholder, tooltip }) {
             const format = (val) => {
                 if (!val) return '';
                 return Object.entries(val).map(([k, v]) => `${k}: ${v}`).join('\n');
@@ -675,18 +770,11 @@
 
             const [text, setText] = useState(() => format(value));
             
-            // Update text if value prop changes significantly (e.g. file switch/undo)
-            // We use a simple check: if formatting the new value results in different text than 
-            // what we have (and what we parsed), maybe we should update.
-            // But to avoid cursor jumping, we usually rely on 'key' prop in parent to reset state on file switch.
-            // For undo/redo, effect dependency is needed. 
-            // Here we just use the Key prop strategy in the parent for file switches.
-            // For safety, we can sync if the value is completely different (e.g. from null to object)
-            
             return (
                 <div className={`${col || 'col-span-12'}`}>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                        {label}
+                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                        <span>{label}</span>
+                        {tooltip && <HelpIcon text={tooltip} />}
                     </label>
                     <textarea 
                         value={text} 
@@ -887,39 +975,42 @@
             }
 
             return (
-                <div className="bg-white rounded-xl shadow-sm border border-[#e5e0d6] overflow-hidden transition-all hover:shadow-md group">
+                <div className="bg-white rounded-xl shadow-sm border border-[#e5e0d6] transition-all hover:shadow-md group">
                     {/* Sheet Header */}
                     <div 
-                        className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-[#e5e0d6] flex justify-between items-center cursor-pointer select-none"
+                        className="bg-gradient-to-r from-gray-50 to-white rounded-t-xl px-6 py-4 border-b border-[#e5e0d6] flex justify-between items-center cursor-pointer select-none"
                         onClick={() => setIsCollapsed(!isCollapsed)}
                     >
                         <div className="flex items-center space-x-4 flex-1">
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const max = totalSheets;
-                                    const res = prompt(t('new_position') + max + '):', String(index + 1));
-                                    if (res !== null) {
-                                        const newIdx = parseInt(res, 10) - 1;
-                                        if (!isNaN(newIdx) && newIdx >= 0 && newIdx < max) {
-                                            onMove(newIdx);
-                                        }
+                            <select
+                                value={index}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                    const newIdx = parseInt(e.target.value, 10);
+                                    if (!isNaN(newIdx) && newIdx >= 0 && newIdx < totalSheets) {
+                                        onMove(newIdx);
                                     }
                                 }}
-                                className="w-8 h-8 rounded-full bg-[#2d2a26] hover:bg-blue-600 text-white flex items-center justify-center font-serif font-bold shrink-0 transition-colors"
+                                className="w-8 h-8 rounded-full bg-[#2d2a26] hover:bg-blue-600 text-white flex items-center justify-center font-serif font-bold shrink-0 transition-colors appearance-none cursor-pointer outline-none"
                                 title={t('move_sheet')}
+                                style={{ textAlignLast: 'center' }}
                             >
-                                {index + 1}
-                            </button>
-                            <div className="flex-1">
-                                <input 
-                                    type="text" 
-                                    value={sheet.title} 
-                                    onChange={e => { e.stopPropagation(); updateField('title', e.target.value); }}
-                                    className="font-bold text-lg bg-transparent border-none focus:ring-0 p-0 w-full placeholder-gray-400 text-[#2d2a26]"
-                                    placeholder={t('sheet_title_placeholder')}
-                                    onClick={e => e.stopPropagation()}
-                                />
+                                {Array.from({ length: totalSheets }, (_, i) => (
+                                    <option key={i} value={i} className="bg-white text-black text-center">{i + 1}</option>
+                                ))}
+                            </select>
+                            <div className="flex-1 flex flex-col">
+                                <div className="flex items-center w-full pr-4">
+                                    <input 
+                                        type="text" 
+                                        value={sheet.title} 
+                                        onChange={e => { e.stopPropagation(); updateField('title', e.target.value); }}
+                                        className="flex-1 font-bold text-lg bg-transparent border-none focus:ring-0 p-0 placeholder-gray-400 text-[#2d2a26]"
+                                        placeholder={t('sheet_title_placeholder')}
+                                        onClick={e => e.stopPropagation()}
+                                    />
+                                    <HelpIcon text={t('tooltip_title')} />
+                                </div>
                                 <div className="text-xs text-gray-400 mt-0.5 font-mono flex items-center">
                                     <span>ID: {sheet.id || 'N/A'}</span>
                                     {sheet.id && (
@@ -956,8 +1047,9 @@
                         <div className="p-6 space-y-6">
                             <div className="grid grid-cols-12 gap-6">
                                 <div className="col-span-3">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                                        {t('type_optional')}
+                                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                                        <span>{t('type_optional')}</span>
+                                        <HelpIcon text={t('tooltip_type')} />
                                     </label>
                                     <div className="relative">
                                         <select 
@@ -982,6 +1074,7 @@
                                     onChange={v => updateField('url', v)} 
                                     placeholder={t('url_placeholder')}
                                     col="col-span-9"
+                                    tooltip={t('tooltip_url')}
                                 />
                                   
                                 {sheet.type === 'setup' && (
@@ -992,6 +1085,7 @@
                                         onChange={v => updateField('constraints', v)}
                                         col="col-span-12"
                                         placeholder="force_headful: true&#10;stealth_mode: true&#10;viewport: 1920x1080"
+                                        tooltip={t('tooltip_constraints')}
                                     />
                                 )}
                             </div>
@@ -1002,12 +1096,16 @@
                                 onChange={v => updateField('description', v)}
                                 textarea
                                 placeholder={t('description_placeholder')}
+                                tooltip={t('tooltip_desc')}
                             />
                             
                             {/* Reference Image */}
                             <div className="bg-gray-50 rounded-lg p-4 border border-dashed border-gray-300" onPaste={handlePaste}>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center justify-between">
-                                    <span>{t('reference_image')}</span>
+                                    <div className="flex items-center">
+                                        <span>{t('reference_image')}</span>
+                                        <HelpIcon text={t('tooltip_ref')} />
+                                    </div>
                                     {uploadingImage && <span className="text-blue-500 normal-case text-xs"><i className="ph ph-spinner animate-spin inline-block mr-1"></i>{t('uploading')}</span>}
                                 </label>
                                 <div className="flex flex-col space-y-3">
@@ -1099,8 +1197,9 @@
                             {/* Steps */}
                             <div>
                                 <div className="flex items-center justify-between mb-3">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                        {t('action_steps')}
+                                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                        <span>{t('action_steps')}</span>
+                                        <HelpIcon text={t('tooltip_steps')} />
                                     </label>
                                 </div>
                                 <div className="space-y-2 relative">
@@ -1157,19 +1256,28 @@
         }
 
         function StepEditor({ index, step, isDragging, onChange, onRemove, onInsert, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd, t }) {
+            const [draggable, setDraggable] = useState(false);
             return (
                 <div 
-                    draggable="true"
+                    draggable={draggable}
                     onDragStart={onDragStart}
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}
-                    onDragEnd={onDragEnd}
+                    onDragEnd={(e) => {
+                        setDraggable(false);
+                        if (onDragEnd) onDragEnd(e);
+                    }}
                     className={`flex items-center space-x-3 group bg-white border rounded-lg p-2 transition-all ${
                         isDragging ? 'opacity-40 border-dashed border-gray-400 scale-[0.98]' : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
                     }`}
                 >
-                    <div className="cursor-grab text-gray-300 hover:text-gray-600 px-1 opacity-0 group-hover:opacity-100" title={t('drag_sort')}>
+                    <div 
+                        onMouseEnter={() => setDraggable(true)}
+                        onMouseLeave={() => setDraggable(false)}
+                        className="cursor-grab text-gray-300 hover:text-gray-600 px-1 opacity-0 group-hover:opacity-100" 
+                        title={t('drag_sort')}
+                    >
                         <i className="ph ph-dots-six-vertical text-lg"></i>
                     </div>
                     <span className="text-gray-400 font-mono w-4 text-center text-xs">{index + 1}.</span>
