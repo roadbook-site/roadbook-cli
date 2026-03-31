@@ -129,7 +129,8 @@ def validate_inputs_with_guidance(inputs: Dict[str, Any], book_dir: Path, rb_id:
             single_line_json = json.dumps(example)
             print_info("\n[Action] Please provide them using --inputs or a file:")
             if sys.platform == "win32":
-                print(f"  roadbook run {rb_id} --inputs \"{single_line_json.replace('\"', '\\\"')}\"")
+                escaped_json = single_line_json.replace('"', '\\"')
+                print(f"  roadbook run {rb_id} --inputs \"{escaped_json}\"")
             else:
                 print(f"  roadbook run {rb_id} --inputs '{single_line_json}'")
                 

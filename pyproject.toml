@@ -10,7 +10,7 @@ readme = "README.md"
 authors = [
   { name = "Roadbook Team", email = "gtvolcano@gmail.com" },
 ]
-license = "MIT"
+license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
