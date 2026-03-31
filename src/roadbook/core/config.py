@@ -25,23 +25,27 @@ USER_ENV_FILE = CORE_DIR / "credentials.env"
 PROJECT_CONFIG_FILE = Path.cwd() / ".rb" / "config.yaml"
 
 DEFAULT_CONFIG = {
+    # Core system settings
     "core": {
-        "server_url": "http://localhost:8000",
-        "timeout": 30,
-        "language": "auto"
+        "server_url": "http://localhost:8000",  # URL of the roadbook server
+        "timeout": 30,                          # Global timeout in seconds
+        "language": "auto"                      # Output language preference (e.g., auto, en, zh)
     },
-    "scaffold": {
-        "language": "python"
-    },
+    # Browser automation settings
     "browser": {
-        "mode": "cdp",
-        "cdp_port": 9222,
-        "executable_path": None,
-        "user_data_dir": None,
-        "launch_args": [
+        "mode": "cdp",                          # cdp (connect to local browser) or standalone (playwright launch)
+        "cdp_port": 9222,                       # Remote debugging port for CDP
+        "executable_path": None,                # Path to Chrome/Edge executable. Null means auto-detect
+        "user_data_dir": None,                  # Path to user data profile. Null means use default
+        "launch_args": [                        # Additional args when launching browser
             "--no-first-run",
             "--no-default-browser-check"
         ]
+    },
+    # Run history retention policy
+    "run_history": {
+        "keep_days": 7,                         # Maximum number of days to keep run history
+        "max_runs": 100                         # Maximum number of runs to keep in history
     }
 }
 
@@ -118,7 +122,7 @@ def load_user_config() -> Dict[str, Any]:
                 del config["network"]
                 changed = True
                 
-            # Migrate old browser fields from scaffold to browser
+            # Migrate old browser fields from scaffold to browser (and clean up scaffold)
             if "scaffold" in config:
                 if "template_dir" in config["scaffold"]:
                     del config["scaffold"]["template_dir"]
@@ -134,6 +138,10 @@ def load_user_config() -> Dict[str, Any]:
                         config["browser"][field] = config["scaffold"][field]
                         del config["scaffold"][field]
                         changed = True
+                
+                # We no longer use scaffold configuration, remove it entirely
+                del config["scaffold"]
+                changed = True
 
             if changed:
                 save_user_config(config)
@@ -170,11 +178,18 @@ def load_config(project_root: Path = None) -> Dict[str, Any]:
 
 DEFAULT_CONFIG_YAML = """# Roadbook Default Configuration
 
+# Core system settings
 core:
-  server_url: http://localhost:8000
-  timeout: 30
-  language: auto
+  server_url: http://localhost:8000       # URL of the roadbook server
+  timeout: 30                             # Global timeout in seconds
+  language: auto                          # Output language preference (e.g., auto, en, zh)
 
+# Run history retention policy
+run_history:
+  keep_days: 7                            # Maximum number of days to keep run history
+  max_runs: 100                           # Maximum number of runs to keep in history
+
+# Browser automation settings
 browser:
   mode: cdp                   # cdp (connect to local browser) or standalone (playwright launch)
   cdp_port: 9222              # Remote debugging port

@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-from .config import get_books_dir, get_roadbook_dir, CORE_DIR
+from .config import get_books_dir, get_roadbook_dir, CORE_DIR, load_config
 
 class RuntimeManager:
     @staticmethod
@@ -219,6 +219,49 @@ class RuntimeManager:
         last_link = runs_dir.parent / "last_run.json"
         with open(last_link, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
+            
+        # Clean old runs
+        RuntimeManager.clean_old_runs(rb_id, book_dir)
+
+    @staticmethod
+    def clean_old_runs(rb_id: str, book_dir: Optional[Path] = None):
+        try:
+            config = load_config()
+            run_history_config = config.get("run_history", {})
+            keep_days = run_history_config.get("keep_days", 7)
+            max_runs = run_history_config.get("max_runs", 100)
+            
+            runs = RuntimeManager.list_runs(rb_id, book_dir)
+            if not runs:
+                return
+                
+            runs_dir = RuntimeManager.get_runs_dir(rb_id, book_dir)
+            current_time = time.time()
+            
+            import shutil
+            
+            runs_to_delete = []
+            valid_runs = []
+            
+            for r in runs:
+                run_time = r.get("timestamp", 0)
+                if keep_days is not None and (current_time - run_time) > (keep_days * 24 * 3600):
+                    runs_to_delete.append(r)
+                else:
+                    valid_runs.append(r)
+                    
+            if max_runs is not None and len(valid_runs) > max_runs:
+                runs_to_delete.extend(valid_runs[max_runs:])
+                
+            for r in runs_to_delete:
+                run_id = r.get("id")
+                if not run_id:
+                    continue
+                run_dir = runs_dir / run_id
+                if run_dir.exists() and run_dir.is_dir():
+                    shutil.rmtree(run_dir, ignore_errors=True)
+        except Exception:
+            pass
 
     @staticmethod
     def list_runs(rb_id: str, book_dir: Optional[Path] = None) -> List[Dict[str, Any]]:
