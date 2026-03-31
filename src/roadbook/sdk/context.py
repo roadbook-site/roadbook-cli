@@ -1,4 +1,4 @@
-﻿# src/roadbook/sdk/context.py
+# src/roadbook/sdk/context.py
 import os
 import sys
 from pathlib import Path
@@ -12,6 +12,10 @@ from .storage import StorageManager
 from .logger import get_logger
 from .radar import Radar
 from .auth import Authenticator
+
+class AgentBreakpointInterrupt(Exception):
+    """Raised when execution needs to pause for Agent/Human intervention at a crossroads."""
+    pass
 
 class RoadbookContext:
     def __init__(self, rb_id: str = None, root_dir: str = None, run_dir: str = None, outputs_dir: str = None, cdp_url: str = None, site_overrides: dict = None):
@@ -67,11 +71,33 @@ class RoadbookContext:
         # 5. 载入统一配置
         self._load_config(cdp_url)
 
+        # 6. Breakpoint & State tracking
+        self.state = {}
+        self.resume_target_sheet = None
+        self.crossroads_file = self.rb_dir / "crossroads.json"
+        self._load_resume_state()
+
         # Playwright internals
         self._playwright: Playwright = None
         self._context: BrowserContext = None
         self.page: Page = None
         self.current_sheet = None
+
+    def _load_resume_state(self):
+        """Loads state from a previous crossroads pause if a reply exists."""
+        if self.crossroads_file.exists():
+            try:
+                import json
+                with open(self.crossroads_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                
+                # We only resume if the agent has provided a reply
+                if "reply" in data:
+                    self.resume_target_sheet = data.get("sheet_id")
+                    self.state = data.get("state", {})
+                    self.logger.info(f"Loaded resume state. Fast-forwarding to sheet: {self.resume_target_sheet}")
+            except Exception as e:
+                self.logger.warning(f"Failed to load crossroads resume state: {e}")
 
     @property
     def auth(self) -> Authenticator:
@@ -419,18 +445,133 @@ class RoadbookContext:
         else:
             self.pause_for_manual_action(message=message, debug=False)
 
+    def should_run(self, sheet_name: str) -> bool:
+        """
+        Determines whether the current sheet should be executed or skipped.
+        If we are resuming from a crossroads, we skip all sheets until we reach the target sheet.
+        """
+        if self.resume_target_sheet:
+            if sheet_name == self.resume_target_sheet:
+                self.logger.info(f"Reached resume target sheet: {sheet_name}. Resuming normal execution.")
+                self.resume_target_sheet = None  # Clear so subsequent sheets run
+                return True
+            else:
+                self.logger.info(f"Fast-forwarding (Skipping) sheet: {sheet_name}")
+                return False
+        return True
+
     @contextmanager
     def sheet(self, name: str):
         self.current_sheet = name
-        self.logger.info(f"--- Entering Sheet: {name} ---")
+        active = self.should_run(name)
+        
+        if active:
+            self.logger.info(f"--- Entering Sheet: {name} ---")
         try:
-            yield
-            self.logger.info(f"--- Completed Sheet: {name} ---")
+            yield active
+            if active:
+                self.logger.info(f"--- Completed Sheet: {name} ---")
+        except AgentBreakpointInterrupt:
+            # We don't want to log this as a standard error failure
+            raise
         except Exception as e:
-            self.logger.error(f"--- Failed in Sheet: {name} ---")
+            if active:
+                self.logger.error(f"--- Failed in Sheet: {name} ---")
             raise e
         finally:
             self.current_sheet = None
+
+    def crossroads(self, question: str, options: list = None) -> Any:
+        """
+        Pauses execution and hands off to the Agent (or Human) to make a decision.
+        It saves the current context (URL, state) and raises AgentBreakpointInterrupt.
+        When the script is re-run after a reply is provided, it fast-forwards to here and returns the reply.
+        """
+        import json
+        
+        # Check if we are resuming and have a reply
+        if self.crossroads_file.exists():
+            try:
+                with open(self.crossroads_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                
+                if data.get("sheet_id") == self.current_sheet and "reply" in data:
+                    reply = data["reply"]
+                    self.logger.info(f"Received reply from Agent: {reply}")
+                    
+                    # Navigate back to the saved URL before returning
+                    saved_url = data.get("url")
+                    if saved_url and self.page and self.page.url != saved_url:
+                        self.logger.info(f"Restoring page URL: {saved_url}")
+                        self.page.goto(saved_url)
+                        try:
+                            self.page.wait_for_load_state("networkidle", timeout=10000)
+                        except Exception:
+                            pass
+                    
+                    # Clean up the crossroads file so it doesn't trigger again
+                    self.crossroads_file.unlink()
+                    return reply
+            except Exception as e:
+                self.logger.warning(f"Error reading reply from crossroads: {e}")
+
+        # If no reply, we need to create the breakpoint
+        current_url = self.page.url if self.page else None
+        
+        # Save a debug screenshot for the agent
+        screenshot_path = ""
+        if self.page:
+            try:
+                screenshot_file = self.run_dir / "crossroads_snapshot.png"
+                self.page.screenshot(path=str(screenshot_file), full_page=True)
+                screenshot_path = str(screenshot_file.absolute())
+            except Exception:
+                pass
+
+        # Handle Pydantic state dumping if needed
+        state_dict = self.state
+        if hasattr(self.state, "model_dump"):
+            state_dict = self.state.model_dump()
+        elif hasattr(self.state, "dict"):
+            state_dict = self.state.dict()
+
+        crossroads_data = {
+            "status": "waiting_for_agent",
+            "sheet_id": self.current_sheet,
+            "url": current_url,
+            "question": question,
+            "options": options or [],
+            "state": state_dict,
+            "screenshot": screenshot_path,
+            "instructions_for_agent": "Please analyze the 'question' and 'screenshot'. Add your answer as a new field 'reply' (e.g., \"reply\": \"your answer\") to this JSON file and save it."
+        }
+
+        with open(self.crossroads_file, "w", encoding="utf-8") as f:
+            json.dump(crossroads_data, f, indent=2, ensure_ascii=False)
+            
+        # Ensure browser state is saved immediately
+        if self._context and hasattr(self, "state_file"):
+            try:
+                self._context.storage_state(path=str(self.state_file))
+            except Exception:
+                pass
+
+        print("\n" + "="*70)
+        print(" 🛑 CROSSROADS: AGENT HANDOFF REQUIRED 🛑 ".center(70, "="))
+        print("="*70)
+        print("Roadbook execution paused because a decision is needed.\n")
+        print(f"❓ Question: {question}")
+        if options:
+            print(f"👉 Options: {options}")
+        print("\n[ACTION REQUIRED]")
+        print(f"1. Agent: Read the file: {self.crossroads_file}")
+        if screenshot_path:
+            print(f"2. Agent: Review the screenshot: {screenshot_path}")
+        print("3. Agent: Add your answer by inserting a `\"reply\": \"...\"` field into the JSON file.")
+        print("4. Resume: Run `roadbook run` again. The script will automatically fast-forward to this exact spot and resume.")
+        print("="*70 + "\n")
+
+        raise AgentBreakpointInterrupt(f"Execution paused at Crossroads. Waiting for reply to: {question}")
 
     def get_input(self, key: str, default: Any = None) -> Any:
         """Helper to get input from InputManager."""

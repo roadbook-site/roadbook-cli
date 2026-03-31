@@ -15,7 +15,6 @@ class Sheet(BaseModel):
     type: str = "process" # setup | process | delivery
     description: str = ""
     url: str = ""
-    locators: str = ""
     reference: str = ""
     steps: List[Step] = Field(default_factory=list)
     constraints: Dict[str, Any] = Field(default_factory=dict)
@@ -106,8 +105,6 @@ class RoadbookParser:
                     sheet.description = value
                 elif key == "url":
                     sheet.url = value.strip('`') # Remove backticks if present
-                elif key == "locators":
-                    sheet.locators = value
                 elif key == "reference":
                     sheet.reference = value
                 elif key.startswith("constraints"):
@@ -212,8 +209,6 @@ class RoadbookParser:
                 output.append(f"**Description**: {sheet.description}")
             if sheet.url:
                 output.append(f"**URL**: `{sheet.url}`")
-            if sheet.locators:
-                output.append(f"**Locators**: {sheet.locators}")
             if sheet.reference:
                 output.append(f"**Reference**: {sheet.reference}")
             

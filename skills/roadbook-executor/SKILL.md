@@ -69,6 +69,7 @@ Use the `version` value in this file header as the single source of truth.
     - **Download Handling**: When a step involves downloading a file (e.g., `CLICK "Download"`):
         - **Intervene**: Use Playwright/Browser tools to intercept the download event (e.g., `with page.expect_download() as download_info:`).
         - **Verify**: Ensure the file is saved to the correct path using `download.save_as(rb.storage.get_download_path("filename.ext"))` and verify its existence. Do not rely solely on the browser's default behavior or hardcode paths.
+    - **Agent Handoff (Crossroads)**: When a script encounters an ambiguous decision point, it can pause execution by calling `rb.crossroads("question", ["options"])`. This saves the state to `.rb/crossroads.json` and raises `AgentBreakpointInterrupt`. The Agent must read the JSON file, add a `"reply": "..."` field, and run `roadbook run` again. The script will automatically fast-forward and resume from the exact breakpoint.
     - **Input Handling**: Inputs are passed programmatically through `rb.get_input()`. Avoid relying on CLI argument escaping when writing automated scripts.
 
 5.  **Error Handling & Script Generation**:

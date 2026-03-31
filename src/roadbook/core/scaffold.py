@@ -209,7 +209,8 @@ class ScaffoldManager:
                     
                     func_def = [
                         f"def phase_{func_name}(rb: RoadbookContext, inputs: TaskInput):",
-                        f'    with rb.sheet("{sheet.title}"):  # ID: {sheet.id}',
+                        f'    with rb.sheet("{sheet.title}") as active:  # ID: {sheet.id}',
+                        f'        if not active: return',
                         f'        page = rb.page'
                     ]
                     
@@ -233,7 +234,8 @@ class ScaffoldManager:
             # Default Template if no model
             func_def = [
                 "def phase_initialization(rb: RoadbookContext, inputs: TaskInput):",
-                '    with rb.sheet("Initialization"):',
+                '    with rb.sheet("Initialization") as active:',
+                '        if not active: return',
                 '        page = rb.page',
                 '        # page.goto("https://www.example.com")',
                 '        pass'

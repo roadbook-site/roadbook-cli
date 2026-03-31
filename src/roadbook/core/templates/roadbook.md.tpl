@@ -17,7 +17,6 @@ outputs: {}
 **Type**: setup
 **Description**: Verify browser environment (connection method), site constraints, and authentication state.
 **URL**: `{entry_url}`
-**Locators**: `body`
 
 **Constraints**:
 - `force_headful`: false
@@ -36,8 +35,6 @@ outputs: {}
 **ID**: {sheet_id_1}
 **Type**: process
 **Description**: [Describe the first sheet logic, e.g. "enter search query and submit"]
-**URL**: `{entry_url}`
-**Locators**: `role=main`, `text="Dashboard"`
 
 **Steps**:
 1. [Please fill in specific steps, e.g., `CLICK "role=button[name='Search']"`]
@@ -50,8 +47,6 @@ outputs: {}
 **ID**: {sheet_id_2}
 **Type**: process
 **Description**: [Describe the next sheet logic, e.g. "Process search results and extract data"]
-**URL**: `{entry_url}`
-**Locators**: `[Optional]`
 
 **Steps**:
 1. [Continue with the next part of the process]

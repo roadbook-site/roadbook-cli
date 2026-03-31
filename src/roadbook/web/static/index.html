@@ -122,8 +122,7 @@
                 'delete_sheet': 'Delete Sheet',
                 'url_optional': 'URL (Optional)',
                 'url_placeholder': 'Leave empty to inherit previous URL (for location)',
-                'locators_optional': 'Locators (Optional)',
-                'type_optional': 'Type (process/setup/delivery)',
+                'type_optional': 'Type (process/setup/delivery/crossroads)',
                 'description_goal': 'Description (Goal)',
                 'description_placeholder': 'Describe the main goal of this page...',
                 'reference_image': 'Reference Image (Optional)',
@@ -192,7 +191,6 @@
                 'delete_sheet': '删除此页',
                 'url_optional': 'URL (可选)',
                 'url_placeholder': '留空则继承上一页 URL (用于定位)',
-                'locators_optional': '定位器 (可选)',
                 'assertions_optional': '断言 (可选)',
                 'description_goal': '描述 (目标)',
                 'description_placeholder': '描述这一页的主要任务目标...',
@@ -970,6 +968,7 @@
                                             <option value="process">process</option>
                                             <option value="setup">setup</option>
                                             <option value="delivery">delivery</option>
+                                            <option value="crossroads">crossroads</option>
                                         </select>
                                         <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
                                             <i className="ph ph-caret-down"></i>
@@ -983,14 +982,6 @@
                                     onChange={v => updateField('url', v)} 
                                     placeholder={t('url_placeholder')}
                                     col="col-span-9"
-                                />
-                                
-                                <Field 
-                                    label={t('locators_optional')} 
-                                    value={sheet.locators} 
-                                    onChange={v => updateField('locators', v)} 
-                                    placeholder='text="Login"'
-                                    col="col-span-12"
                                 />
                                   
                                 {sheet.type === 'setup' && (
