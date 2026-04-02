@@ -1,7 +1,7 @@
 ---
 name: roadbook-creator
 version: "0.1.0"
-description: Trigger this skill when the user wants to "generate a roadbook" (生成一个路书), "crawl a webpage" (爬取网页), "crawl based on this screenshot" (按照截图爬取), or build an automation workflow from a visual/textual prompt. This skill guides the agent to interactively collect user intent, analyze provided screenshots, ask clarifying questions, and finally generate a rich and comprehensive `roadbook.md` and project scaffold.
+description: Trigger this skill when the user wants to "generate a roadbook" (生成一个路书), "crawl a webpage" (爬取网页), "crawl based on this screenshot" (按照截图爬取), or build an automation workflow from a visual/textual prompt. This skill guides the agent to interactively collect user intent, analyze provided screenshots, ask clarifying questions, and finally generate a rich and comprehensive `roadbook.md` and project scaffold. It also handles requests to "modify" or "update" an existing roadbook's name or attributes.
 ---
 
 # Roadbook Creator
@@ -50,6 +50,28 @@ After scaffolding, DO NOT leave `roadbook.md` in its default state.
 ### Step 5: Handoff to Explorer
 Once the rich `roadbook.md` and schema are generated, present the structure to the user.
 Explain what you have built and suggest that they can now use the `roadbook-explorer` skill to start writing the actual implementation code, or they can run `roadbook run <project-name>`.
+
+## Modifying an Existing Roadbook
+
+If the user wants to modify an already generated Roadbook project (e.g., change its name or update its login requirement), follow these specific modification logic guidelines:
+
+### 1. Renaming a Roadbook
+When the user wants to change the name of an existing Roadbook, ensure you update all relevant references:
+- **`roadbook.md`**: Update the `id:` and `name:` fields in the YAML frontmatter.
+- **`scripts/script.py`**: 
+  - Update the docstring at the top.
+  - Update the `rb_id` parameter where the context is initialized: `with RoadbookContext(rb_id="new-id", ...)`.
+- **Directory Name**: Suggest or automatically rename the root project directory to match the new `rb_id`.
+
+### 2. Changing Login Requirements
+When the user wants to change the `requires_login` attribute:
+- **From "No Login" to "Login Required"**:
+  - **`roadbook.md`**: Add `- requires_login: true` to the `Constraints` list under the `initialization` (setup) sheet.
+  - **`scripts/script.py`**: Update the `site_constraints` dictionary to include `"requires_login": True`. Add or uncomment the authentication logic (e.g., `rb.auth.ensure_login(...)`) in the appropriate phase function.
+  - **Inputs**: If explicit credentials are needed, update the `TaskInput` Pydantic model in `script.py` and the sample `.rb/INPUT.json` to include username/password fields.
+- **From "Login Required" to "No Login"**:
+  - **`roadbook.md`**: Remove `- requires_login: true` or change it to `false`.
+  - **`scripts/script.py`**: Remove `"requires_login": True` from `site_constraints` and comment out or remove the `rb.auth.ensure_login(...)` logic.
 
 ## DO's and DON'Ts
 - **DO** be highly conversational and enthusiastic. Show the user that you understand their visual inputs.
