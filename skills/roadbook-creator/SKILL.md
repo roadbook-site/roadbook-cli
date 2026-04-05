@@ -41,10 +41,13 @@ Once you have enough context and the user confirms the schema:
 After scaffolding, DO NOT leave `roadbook.md` in its default state.
 1. Read the newly created `<project-name>/roadbook.md`.
 2. Rewrite `roadbook.md` to be rich and detailed based on the user's intent and screenshot analysis:
+   - **Role**: If this is a reusable component (like "GitHub Login"), set `role: module` in the YAML Meta. Otherwise, leave it as `role: app`.
    - **Setup Sheet**: Add any constraints (e.g., `requires_login: true`, `stealth_mode: true`).
-   - **Interaction Sheets**: Break down the workflow into logical sheets (e.g., `Sheet: Search Product`, `Sheet: Extract List`, `Sheet: Pagination`).
+   - **Interaction Sheets**: Break down the workflow into logical sheets. Use `**Type**: routine` for micro-fragments (like closing a random popup or handling pagination) that are called multiple times.
+   - **Action Primitives**: Use `CALL "target-id" WITH {...} YIELDS "var"` for cross-roadbook module calls. Use `RUN_ROUTINE "sheet_id"` to call a routine. Use `IF "condition" JUMP_TO "sheet_id"` for conditional branching.
    - **Delivery Sheet**: Explicitly list the output JSON schema/fields that the user requested.
 3. Update `<project-name>/scripts/script.py` to include the appropriate `TaskInput` and `TaskOutput` Pydantic models based on the confirmed schema.
+   - **Code Generation for Primitives**: When encountering `CALL`, generate `result = rb.call_roadbook("target-id", inputs)`. When encountering `IF...JUMP_TO`, generate standard Python `if/else` blocks to call the target phase function.
 4. Update `<project-name>/.rb/INPUT.json` with sample inputs.
 
 ### Step 5: Handoff to Explorer

@@ -148,6 +148,17 @@ def validate_inputs_with_guidance(inputs: Dict[str, Any], book_dir: Path, rb_id:
 def get_inputs(args, book_dir: Path) -> Optional[Dict[str, Any]]:
     inputs = {}
     
+    # 0. Handle mock input first
+    if getattr(args, 'mock_input', None):
+        try:
+            mock_inputs = parse_inputs(args.mock_input)
+            inputs.update(mock_inputs)
+            print_info("[Mode] Running with --mock-input")
+            return inputs
+        except Exception:
+            print_error("Invalid JSON for --mock-input.")
+            return None
+            
     # 1. Load from file if provided
     if getattr(args, 'inputs_file', None):
         try:
@@ -330,6 +341,15 @@ def run_book(args):
         scope_str = "global" if global_scope else "local"
         print_error(f"Roadbook '{rb_id}' not found in {scope_str} scope.")
         print_info(f"[Action] Use 'roadbook list{ ' -g' if global_scope else ''}' to view installed roadbooks.")
+        return
+
+    # Block direct execution of role: module without mock-input
+    role = book.metadata.get("role", "app")
+    if role == "module" and not getattr(args, 'mock_input', None):
+        print_error(f"Roadbook '{rb_id}' is a reusable module (role: module).")
+        print_info("[Action] Modules should be called by other roadbooks via rb.call_roadbook().")
+        print_info(f"If you want to test it locally, you MUST provide mock inputs:")
+        print_info(f"  roadbook run {rb_id} --mock-input '{{\"key\": \"value\"}}'")
         return
 
     book_dir = book.path.parent

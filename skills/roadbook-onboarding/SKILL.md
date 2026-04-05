@@ -29,6 +29,11 @@ Roadbook balances efficiency and generalization using a "Script First, Semantic 
 1. **Fast Path (Script Channel):** Pre-compiled scripts run instantly for stable pages.
 2. **Slow Path (Semantic Channel):** If a script fails (e.g., UI changes) or doesn't exist, the Agent automatically takes over, reads the Roadbook, uses visual reasoning to navigate, and successfully completes the task before compiling a new script.
 
+### Composability (Building Blocks)
+Roadbook supports high-level composability:
+- **Macro-level (Modules):** Entire roadbooks can be marked as `role: module` (e.g., a "GitHub Login" module) and called by other roadbooks, perfectly sharing the browser context and login state.
+- **Micro-level (Routines):** Within a single roadbook, repetitive tasks (like handling pagination or closing popups) can be defined as `routine` sheets and called on demand like functions.
+
 ## 3. Browser Configuration: The Crucial Bridge
 
 The browser is the most important bridge between the human, the Agent, and the web. Roadbook uses a lightweight, SDK-driven architecture to interact with the browser directly via Playwright, supporting a **"CDP Browser Takeover mode"**. This allows Roadbook to share the same login state and browser session seamlessly with you.

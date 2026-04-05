@@ -75,6 +75,21 @@ class RoadbookContext:
         self.state = {}
         self.resume_target_sheet = None
         self.crossroads_file = self.rb_dir / "crossroads.json"
+        
+        # Load roadbook definition to know sheet types
+        self._book_def = None
+        if self.rb_id:
+            try:
+                from roadbook.core.roadbook import RoadbookManager
+                self._book_def = RoadbookManager.get_roadbook(self.rb_id)
+                if not self._book_def:
+                    self._book_def = RoadbookManager.get_roadbook(self.rb_id, global_scope=True)
+            except Exception:
+                pass
+
+        self._call_stack = []
+        self._jump_target = None
+
         self._load_resume_state()
 
         # Playwright internals
@@ -448,17 +463,64 @@ class RoadbookContext:
     def should_run(self, sheet_name: str) -> bool:
         """
         Determines whether the current sheet should be executed or skipped.
-        If we are resuming from a crossroads, we skip all sheets until we reach the target sheet.
+        Handles:
+        1. Resume fast-forwarding
+        2. JUMP_TO target fast-forwarding
+        3. Routine sheet skipping (lazy evaluation)
         """
+        # 1. Resume fast-forwarding
         if self.resume_target_sheet:
             if sheet_name == self.resume_target_sheet:
                 self.logger.info(f"Reached resume target sheet: {sheet_name}. Resuming normal execution.")
-                self.resume_target_sheet = None  # Clear so subsequent sheets run
+                self.resume_target_sheet = None
                 return True
             else:
-                self.logger.info(f"Fast-forwarding (Skipping) sheet: {sheet_name}")
+                self.logger.info(f"Fast-forwarding (Skipping) sheet for resume: {sheet_name}")
                 return False
+
+        # 2. State Machine JUMP
+        if self._jump_target:
+            if sheet_name == self._jump_target:
+                self.logger.info(f"Reached jump target sheet: {sheet_name}. Resuming normal execution.")
+                self._jump_target = None
+                return True
+            else:
+                self.logger.info(f"Jumping (Skipping) sheet: {sheet_name}")
+                return False
+
+        # 3. Routine Lazy Evaluation
+        if self._book_def:
+            sheet = next((s for s in self._book_def.sheets if s.id == sheet_name or s.title == sheet_name), None)
+            if sheet and sheet.type == "routine":
+                # Check if we are explicitly running this routine via run_routine
+                if not self._call_stack or self._call_stack[-1] != sheet_name:
+                    self.logger.info(f"Skipping routine sheet (lazy evaluation): {sheet_name}")
+                    return False
+
         return True
+
+    def jump_to(self, target_sheet_id: str):
+        """
+        Triggers a state machine JUMP. Execution will skip subsequent sheets until it reaches the target.
+        """
+        self.logger.info(f"JUMP_TO triggered: Target is {target_sheet_id}")
+        self._jump_target = target_sheet_id
+
+    @contextmanager
+    def run_routine(self, sheet_name: str):
+        """
+        Pushes a routine onto the call stack so it can be executed.
+        Usage in script.py:
+            with rb.run_routine("handle_pagination"):
+                phase_handle_pagination(rb)
+        """
+        self.logger.info(f"Pushing routine onto call stack: {sheet_name}")
+        self._call_stack.append(sheet_name)
+        try:
+            yield
+        finally:
+            self._call_stack.pop()
+            self.logger.info(f"Routine finished, popped from call stack: {sheet_name}")
 
     @contextmanager
     def sheet(self, name: str):
@@ -668,3 +730,105 @@ class RoadbookContext:
             data = data.model_dump()
 
         self.dataset_manager.emit_output(data, validate)
+
+    def call_roadbook(self, target_id: str, inputs: dict, target_tab: str = "new") -> dict:
+        """
+        Calls another roadbook as a module/sub-routine.
+        Shares the same Playwright context but maintains isolated inputs/outputs and state.
+        """
+        import sys
+        import importlib.util
+        
+        self.logger.info(f"Calling sub-roadbook: {target_id} with target_tab={target_tab}")
+        
+        try:
+            from roadbook.core.roadbook import RoadbookManager
+            from roadbook.core.runtime import RuntimeManager
+        except ImportError:
+            # If not installed via pip but run locally
+            from ..core.roadbook import RoadbookManager
+            from ..core.runtime import RuntimeManager
+            
+        book = RoadbookManager.get_roadbook(target_id)
+        if not book:
+            book = RoadbookManager.get_roadbook(target_id, global_scope=True)
+            
+        if not book:
+            raise ValueError(f"Target roadbook '{target_id}' not found.")
+            
+        book_dir = book.path.parent
+        script_path = RuntimeManager.find_script(target_id, book_dir=book_dir)
+        
+        if not script_path or not script_path.exists():
+            raise FileNotFoundError(f"Script for roadbook '{target_id}' not found.")
+            
+        # Handle dependencies (add to sys.path)
+        site_packages = book_dir / ".rb" / "site-packages"
+        added_to_path = False
+        if site_packages.exists() and str(site_packages) not in sys.path:
+            sys.path.insert(0, str(site_packages))
+            added_to_path = True
+            
+        try:
+            # Create a child context class dynamically
+            class ChildRoadbookContext(RoadbookContext):
+                def __init__(child_self, parent, target_id, inputs, target_tab):
+                    super().__init__(rb_id=target_id, root_dir=str(book_dir))
+                    child_self.parent = parent
+                    child_self.inputs = inputs
+                    child_self.target_tab = target_tab
+                    
+                    # Override input manager
+                    child_self.input_manager.get_all = lambda: child_self.inputs
+                    child_self.input_manager.get = lambda k, d=None: child_self.inputs.get(k, d)
+                    
+                    # We need to capture the output emitted by the child
+                    child_self._captured_output = {}
+                    
+                def emit_output(child_self, data: Any, validate: bool = True):
+                    # Call parent method to validate against child's model if bound
+                    super().emit_output(data, validate)
+                    # But also capture it for return
+                    if hasattr(data, "model_dump"):
+                        child_self._captured_output = data.model_dump()
+                    else:
+                        child_self._captured_output = data
+                    
+                def __enter__(child_self):
+                    child_self.logger.info(f"Starting Child Roadbook Context for {target_id}...")
+                    child_self._playwright = child_self.parent._playwright
+                    child_self._context = child_self.parent._context
+                    
+                    if child_self.target_tab == "new":
+                        child_self.page = child_self._context.new_page()
+                    else:
+                        child_self.page = child_self.parent.page
+                    return child_self
+                    
+                def __exit__(child_self, exc_type, exc_val, exc_tb):
+                    if child_self.target_tab == "new" and getattr(child_self, "page", None):
+                        try:
+                            child_self.page.close()
+                        except Exception:
+                            pass
+                            
+                    if getattr(child_self, "_input_model", None) or getattr(child_self, "_output_model", None):
+                        child_self.export_schemas()
+                        
+            # Load and execute the script
+            spec = importlib.util.spec_from_file_location(f"roadbook_script_{target_id}", script_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            
+            if not hasattr(module, "run"):
+                raise ValueError(f"Script {script_path} does not have a 'run(rb)' function.")
+                
+            child_rb = ChildRoadbookContext(self, target_id, inputs, target_tab)
+            with child_rb as rb:
+                module.run(rb)
+                
+            return child_rb._captured_output
+            
+        finally:
+            if added_to_path:
+                sys.path.remove(str(site_packages))

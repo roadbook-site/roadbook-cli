@@ -101,6 +101,7 @@ Command Categories:
     run_parser.add_argument("id", help="Roadbook ID")
     run_parser.add_argument("--inputs", help="JSON inputs (string)")
     run_parser.add_argument("--inputs-file", help="JSON inputs file path")
+    run_parser.add_argument("--mock-input", help="Mock JSON inputs (string) for testing 'role: module' roadbooks directly")
     run_parser.add_argument("--format", dest="output_format", choices=["jsonl", "json", "csv", "quick"], default="jsonl", help="Output format for dataset (default: jsonl). 'quick' mode prints concise result to stdout.")
     run_parser.add_argument("-g", "--global", dest="global_scope", action="store_true", help="Operate on global roadbooks")
     run_parser.set_defaults(func=executor.run_book)

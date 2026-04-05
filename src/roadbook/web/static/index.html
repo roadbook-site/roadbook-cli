@@ -1,1284 +1,1515 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Roadbook Explorer</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script
+      src="https://unpkg.com/react@18/umd/react.development.js"
+      crossorigin
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+      crossorigin
+    ></script>
     <!-- Babel -->
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
+
     <style>
-        /* Roadbook Theme Colors */
-        :root {
-            --bg-paper: #f8f5f0;
-            --bg-paper-dark: #eee8dc;
-            --text-ink: #2d2a26;
-            --accent-gold: #cfa562;
-            --accent-blue: #4f46e5;
-            --border-color: #e5e0d6;
-        }
-        
-        body {
-            background-color: var(--bg-paper);
-            color: var(--text-ink);
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
+      /* Roadbook Theme Colors */
+      :root {
+        --bg-paper: #f8f5f0;
+        --bg-paper-dark: #eee8dc;
+        --text-ink: #2d2a26;
+        --accent-gold: #cfa562;
+        --accent-blue: #4f46e5;
+        --border-color: #e5e0d6;
+      }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #d1d5db;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af;
-        }
+      body {
+        background-color: var(--bg-paper);
+        color: var(--text-ink);
+        font-family: "Segoe UI", system-ui, sans-serif;
+      }
 
-        .paper-shadow {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+      }
 
-        .notebook-line {
-            background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
-            background-size: 100% 2rem;
-        }
+      .paper-shadow {
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.05),
+          0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      }
+
+      .notebook-line {
+        background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
+        background-size: 100% 2rem;
+      }
     </style>
-</head>
-<body class="h-screen overflow-hidden flex flex-col">
+  </head>
+  <body class="h-screen overflow-hidden flex flex-col">
     <div id="root" class="h-full flex flex-col"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        const { MapTrifold, FloppyDisk, FolderOpen, Plus, Trash, ArrowRight, CaretRight, CaretDown, Image, Path } = window;
+      const { useState, useEffect, useRef } = React;
+      const {
+        MapTrifold,
+        FloppyDisk,
+        FolderOpen,
+        Plus,
+        Trash,
+        ArrowRight,
+        CaretRight,
+        CaretDown,
+        Image,
+        Path,
+      } = window;
 
-        // API Client
-        const api = {
-            getConfig: () => fetch('/api/config').then(res => res.json()),
-            changeDir: (path) => fetch('/api/chdir', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path })
-            }).then(res => res.json()),
-            list: () => fetch('/api/roadbooks').then(res => res.json()),
-            get: (filename) => fetch(`/api/roadbooks/${encodeURIComponent(filename)}`).then(res => res.json()),
-            save: (filename, data) => fetch(`/api/roadbooks/${encodeURIComponent(filename)}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).then(res => res.json()),
-            upload: async (file, currentFile) => {
-                const formData = new FormData();
-                formData.append('file', file);
-                const url = currentFile ? `/api/upload?path=${encodeURIComponent(currentFile)}` : '/api/upload';
-                const res = await fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                });
-                if (!res.ok) throw new Error('Upload failed');
-                return await res.json();
-            }
+      // API Client
+      const api = {
+        getConfig: () => fetch("/api/config").then((res) => res.json()),
+        changeDir: (path) =>
+          fetch("/api/chdir", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ path }),
+          }).then((res) => res.json()),
+        list: () => fetch("/api/roadbooks").then((res) => res.json()),
+        get: (filename) =>
+          fetch(`/api/roadbooks/${encodeURIComponent(filename)}`).then((res) =>
+            res.json(),
+          ),
+        save: (filename, data) =>
+          fetch(`/api/roadbooks/${encodeURIComponent(filename)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          }).then((res) => res.json()),
+        upload: async (file, currentFile) => {
+          const formData = new FormData();
+          formData.append("file", file);
+          const url = currentFile
+            ? `/api/upload?path=${encodeURIComponent(currentFile)}`
+            : "/api/upload";
+          const res = await fetch(url, {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) throw new Error("Upload failed");
+          return await res.json();
+        },
+      };
+
+      // Translations
+      const translations = {
+        en: {
+          title: "Roadbook Explorer",
+          workspace: "WORKSPACE",
+          no_roadbooks: "No Roadbooks",
+          create_via_cli: "(Create one via CLI)",
+          protocol: "AARP v4.0 Protocol",
+          welcome: "Welcome",
+          untitled: "Untitled Roadbook",
+          save: "Save",
+          saving: "Saving...",
+          saved: "Saved to local",
+          save_failed: "Save failed: ",
+          load_failed: "Load failed: ",
+          loading: "Reading roadbook...",
+          base_info: "Basic Info",
+          description: "Description",
+          sheets: "Sheets",
+          add_sheet: "Add Sheet",
+          continue_writing: "Continue writing journey...",
+          select_roadbook: "Select a roadbook from the shelf to start editing",
+          confirm_delete_sheet: "Are you sure you want to tear off this sheet?",
+          new_page_title: "New Page",
+          sheet_title_placeholder: "Scene Title (e.g. Login Page)",
+          delete_sheet: "Delete Sheet",
+          url_optional: "URL (Optional)",
+          url_placeholder: "Leave empty to inherit previous URL (for location)",
+          type_optional: "类型 Type (可选)",
+          description_goal: "Description (Goal)",
+          description_placeholder: "Describe the main goal of this page...",
+          reference_image: "Reference Image (Optional)",
+          uploading: "Uploading...",
+          paste_placeholder: "Support Markdown or Ctrl+V to paste image",
+          paste_hint:
+            "Support Ctrl+V / Cmd+V to paste screenshot with annotations or website screenshot.",
+          click_to_zoom: "Click to zoom",
+          close_preview: "Close Preview (Esc)",
+          action_steps: "Action Steps",
+          add_action_step: "Add Action Step",
+          drag_sort: "Drag to sort",
+          insert_before: "Insert step before",
+          delete_step: "Delete step",
+          step_placeholder: 'ACTION "Selector" "Value"',
+          directory_changed: "Directory changed",
+          image_upload_failed: "Image upload failed: ",
+          drag_to_sort: "Drag to sort",
+          language: "Language",
+          annotate: "Annotate",
+          tool_pencil: "Pencil",
+          tool_arrow: "Arrow",
+          tool_rect: "Rectangle",
+          tool_circle: "Circle",
+          tool_text: "Text",
+          tool_clear: "Clear",
+          tool_undo: "Undo",
+          color_red: "Red",
+          color_yellow: "Yellow",
+          color_blue: "Blue",
+          save_annotation: "Save Annotation",
+          annotation_saved: "Annotation saved successfully",
+          inputs: "Inputs (Run Parameters)",
+          outputs: "Outputs (Return Data)",
+          delete_image: "Delete Image",
+          move_sheet: "Move Sheet",
+          new_position: "Enter new position (1 to ",
+          expand_all: "Expand All",
+          collapse_all: "Collapse All",
+          insert_sheet_below: "Insert Sheet Below",
+          constraints: "Site Constraints",
+          copy_id: "Copy ID",
+          tooltip_type:
+            "process: Regular steps\nsetup: Environment prep\ndelivery: Output data\ncrossroads: Condition branch",
+          tooltip_url:
+            "The starting URL for this scene. Leave empty to inherit from previous sheet.",
+          tooltip_desc: "The main goal of this page.",
+          tooltip_ref: "Upload a screenshot of the target page for reference.",
+          tooltip_steps: "The actions to perform on this page.",
+          tooltip_title: "Name of the scene/page.",
+          tooltip_constraints: "Special constraints for the setup type.",
+          advanced_group: "Advanced",
+        },
+        zh: {
+          title: "Roadbook Explorer",
+          workspace: "工作区",
+          no_roadbooks: "暂无路书",
+          create_via_cli: "(请通过 CLI 创建)",
+          protocol: "AARP v4.0 Protocol",
+          welcome: "欢迎使用",
+          untitled: "未命名路书",
+          save: "保存",
+          saving: "保存中...",
+          saved: "已保存到本地",
+          save_failed: "保存失败: ",
+          load_failed: "加载失败: ",
+          loading: "正在翻阅手稿...",
+          base_info: "基础信息",
+          description: "描述",
+          sheets: "旅程手稿 (Sheets)",
+          add_sheet: "添加新页",
+          continue_writing: "继续书写旅程...",
+          select_roadbook: "从左侧书架选择一本路书开始编辑",
+          confirm_delete_sheet: "确定要撕掉这一页手稿吗？",
+          new_page_title: "新的一页",
+          sheet_title_placeholder: "场景标题 (例如: 登录页面)",
+          delete_sheet: "删除此页",
+          url_optional: "URL (可选)",
+          url_placeholder: "留空则继承上一页 URL (用于定位)",
+          assertions_optional: "断言 (可选)",
+          description_goal: "描述 (目标)",
+          description_placeholder: "描述这一页的主要任务目标...",
+          reference_image: "参考图片 (可选)",
+          uploading: "上传中...",
+          paste_placeholder: "支持 Markdown 语法或直接在此处 Ctrl+V 粘贴图片",
+          paste_hint:
+            "支持直接按 Ctrl+V / Cmd+V 粘贴带指引标注的截图、网页截图等。",
+          click_to_zoom: "点击放大预览",
+          close_preview: "关闭预览 (Esc)",
+          action_steps: "操作步骤",
+          add_action_step: "添加操作步骤",
+          drag_sort: "拖动排序",
+          insert_before: "在此前插入步骤",
+          delete_step: "删除步骤",
+          step_placeholder: 'ACTION "Selector" "Value"',
+          directory_changed: "目录已切换",
+          image_upload_failed: "图片上传失败: ",
+          drag_to_sort: "拖动排序",
+          language: "语言",
+          annotate: "标注",
+          tool_pencil: "画笔",
+          tool_arrow: "箭头",
+          tool_rect: "矩形",
+          tool_circle: "圆形",
+          tool_text: "文字",
+          tool_clear: "清空",
+          tool_undo: "撤销",
+          color_red: "红色",
+          color_yellow: "黄色",
+          color_blue: "蓝色",
+          save_annotation: "保存标注",
+          annotation_saved: "标注已保存",
+          inputs: "输入参数 (Inputs)",
+          outputs: "输出数据 (Outputs)",
+          delete_image: "删除图片",
+          move_sheet: "调换顺序",
+          new_position: "请输入该页面的新位置 (1 到 ",
+          expand_all: "全部展开",
+          collapse_all: "全部收起",
+          insert_sheet_below: "在下方插入新页",
+          constraints: "网站约束 (Constraints)",
+          copy_id: "复制 ID",
+          tooltip_type:
+            "process: 常规操作步骤\nsetup: 环境准备和前置条件\ndelivery: 结果输出或数据提取\nroutine: 微观复用片段 (高级)\ncrossroads: 条件分支或路由选择",
+          tooltip_url: "当前场景的起始URL，留空则代表在当前页面继续操作。",
+          tooltip_desc: "这个页面的主要任务目标是什么？",
+          tooltip_ref: "上传目标页面的截图作为参考。",
+          tooltip_steps: "在这个页面上需要执行的具体操作步骤。",
+          tooltip_title: "场景或页面的名称。",
+          tooltip_constraints: "setup 类型的特殊约束条件。",
+          advanced_group: "高级 (Advanced)",
+        },
+      };
+
+      const useLanguage = () => {
+        const [lang, setLang] = useState(() => {
+          const saved = localStorage.getItem("roadbook_lang");
+          if (saved) return saved;
+          const sys = navigator.language;
+          return sys.startsWith("zh") ? "zh" : "en";
+        });
+
+        useEffect(() => {
+          localStorage.setItem("roadbook_lang", lang);
+          document.documentElement.lang = lang;
+        }, [lang]);
+
+        const t = (key) => {
+          const dict = translations[lang] || translations["en"];
+          return dict[key] || key;
         };
 
-        // Translations
-        const translations = {
-            'en': {
-                'title': 'Roadbook Explorer',
-                'workspace': 'WORKSPACE',
-                'no_roadbooks': 'No Roadbooks',
-                'create_via_cli': '(Create one via CLI)',
-                'protocol': 'AARP v4.0 Protocol',
-                'welcome': 'Welcome',
-                'untitled': 'Untitled Roadbook',
-                'save': 'Save',
-                'saving': 'Saving...',
-                'saved': 'Saved to local',
-                'save_failed': 'Save failed: ',
-                'load_failed': 'Load failed: ',
-                'loading': 'Reading roadbook...',
-                'base_info': 'Basic Info',
-                'description': 'Description',
-                'sheets': 'Sheets',
-                'add_sheet': 'Add Sheet',
-                'continue_writing': 'Continue writing journey...',
-                'select_roadbook': 'Select a roadbook from the shelf to start editing',
-                'confirm_delete_sheet': 'Are you sure you want to tear off this sheet?',
-                'new_page_title': 'New Page',
-                'sheet_title_placeholder': 'Scene Title (e.g. Login Page)',
-                'delete_sheet': 'Delete Sheet',
-                'url_optional': 'URL (Optional)',
-                'url_placeholder': 'Leave empty to inherit previous URL (for location)',
-                'type_optional': 'Type (process/setup/delivery/crossroads)',
-                'description_goal': 'Description (Goal)',
-                'description_placeholder': 'Describe the main goal of this page...',
-                'reference_image': 'Reference Image (Optional)',
-                'uploading': 'Uploading...',
-                'paste_placeholder': 'Support Markdown or Ctrl+V to paste image',
-                'paste_hint': 'Support Ctrl+V / Cmd+V to paste screenshot with annotations or website screenshot.',
-                'click_to_zoom': 'Click to zoom',
-                'close_preview': 'Close Preview (Esc)',
-                'action_steps': 'Action Steps',
-                'add_action_step': 'Add Action Step',
-                'drag_sort': 'Drag to sort',
-                'insert_before': 'Insert step before',
-                'delete_step': 'Delete step',
-                'step_placeholder': 'ACTION "Selector" "Value"',
-                'directory_changed': 'Directory changed',
-                'image_upload_failed': 'Image upload failed: ',
-                'drag_to_sort': 'Drag to sort',
-                'language': 'Language',
-                'annotate': 'Annotate',
-                'tool_pencil': 'Pencil',
-                'tool_arrow': 'Arrow',
-                'tool_rect': 'Rectangle',
-                'tool_circle': 'Circle',
-                'tool_text': 'Text',
-                'tool_clear': 'Clear',
-                'tool_undo': 'Undo',
-                'color_red': 'Red',
-                'color_yellow': 'Yellow',
-                'color_blue': 'Blue',
-                'save_annotation': 'Save Annotation',
-                'annotation_saved': 'Annotation saved successfully',
-                'inputs': 'Inputs (Run Parameters)',
-                'outputs': 'Outputs (Return Data)',
-                'delete_image': 'Delete Image',
-                'move_sheet': 'Move Sheet',
-                'new_position': 'Enter new position (1 to ',
-                'expand_all': 'Expand All',
-                'collapse_all': 'Collapse All',
-                'insert_sheet_below': 'Insert Sheet Below',
-                'constraints': 'Site Constraints',
-                'copy_id': 'Copy ID',
-                'tooltip_type': 'process: Regular steps\nsetup: Environment prep\ndelivery: Output data\ncrossroads: Condition branch',
-                'tooltip_url': 'The starting URL for this scene. Leave empty to inherit from previous sheet.',
-                'tooltip_desc': 'The main goal of this page.',
-                'tooltip_ref': 'Upload a screenshot of the target page for reference.',
-                'tooltip_steps': 'The actions to perform on this page.',
-                'tooltip_title': 'Name of the scene/page.',
-                'tooltip_constraints': 'Special constraints for the setup type.'
-            },
-            'zh': {
-                'title': 'Roadbook Explorer',
-                'workspace': '工作区',
-                'no_roadbooks': '暂无路书',
-                'create_via_cli': '(请通过 CLI 创建)',
-                'protocol': 'AARP v4.0 Protocol',
-                'welcome': '欢迎使用',
-                'untitled': '未命名路书',
-                'save': '保存',
-                'saving': '保存中...',
-                'saved': '已保存到本地',
-                'save_failed': '保存失败: ',
-                'load_failed': '加载失败: ',
-                'loading': '正在翻阅手稿...',
-                'base_info': '基础信息',
-                'description': '描述',
-                'sheets': '旅程手稿 (Sheets)',
-                'add_sheet': '添加新页',
-                'continue_writing': '继续书写旅程...',
-                'select_roadbook': '从左侧书架选择一本路书开始编辑',
-                'confirm_delete_sheet': '确定要撕掉这一页手稿吗？',
-                'new_page_title': '新的一页',
-                'sheet_title_placeholder': '场景标题 (例如: 登录页面)',
-                'delete_sheet': '删除此页',
-                'url_optional': 'URL (可选)',
-                'url_placeholder': '留空则继承上一页 URL (用于定位)',
-                'assertions_optional': '断言 (可选)',
-                'description_goal': '描述 (目标)',
-                'description_placeholder': '描述这一页的主要任务目标...',
-                'reference_image': '参考图片 (可选)',
-                'uploading': '上传中...',
-                'paste_placeholder': '支持 Markdown 语法或直接在此处 Ctrl+V 粘贴图片',
-                'paste_hint': '支持直接按 Ctrl+V / Cmd+V 粘贴带指引标注的截图、网页截图等。',
-                'click_to_zoom': '点击放大预览',
-                'close_preview': '关闭预览 (Esc)',
-                'action_steps': '操作步骤',
-                'add_action_step': '添加操作步骤',
-                'drag_sort': '拖动排序',
-                'insert_before': '在此前插入步骤',
-                'delete_step': '删除步骤',
-                'step_placeholder': 'ACTION "Selector" "Value"',
-                'directory_changed': '目录已切换',
-                'image_upload_failed': '图片上传失败: ',
-                'drag_to_sort': '拖动排序',
-                'language': '语言',
-                'annotate': '标注',
-                'tool_pencil': '画笔',
-                'tool_arrow': '箭头',
-                'tool_rect': '矩形',
-                'tool_circle': '圆形',
-                'tool_text': '文字',
-                'tool_clear': '清空',
-                'tool_undo': '撤销',
-                'color_red': '红色',
-                'color_yellow': '黄色',
-                'color_blue': '蓝色',
-                'save_annotation': '保存标注',
-                'annotation_saved': '标注已保存',
-                'inputs': '输入参数 (Inputs)',
-                'outputs': '输出数据 (Outputs)',
-                'delete_image': '删除图片',
-                'move_sheet': '调换顺序',
-                'new_position': '请输入该页面的新位置 (1 到 ',
-                'expand_all': '全部展开',
-                'collapse_all': '全部收起',
-                'insert_sheet_below': '在下方插入新页',
-                'constraints': '网站约束 (Constraints)',
-                'copy_id': '复制 ID',
-                'tooltip_type': 'process: 常规操作步骤\nsetup: 环境准备和前置条件\ndelivery: 结果输出或数据提取\ncrossroads: 条件分支或路由选择',
-                'tooltip_url': '当前场景的起始URL，留空则代表在当前页面继续操作。',
-                'tooltip_desc': '这个页面的主要任务目标是什么？',
-                'tooltip_ref': '上传目标页面的截图作为参考。',
-                'tooltip_steps': '在这个页面上需要执行的具体操作步骤。',
-                'tooltip_title': '场景或页面的名称。',
-                'tooltip_constraints': 'setup 类型的特殊约束条件。'
-            }
-        };
+        return { lang, setLang, t };
+      };
 
-        const useLanguage = () => {
-            const [lang, setLang] = useState(() => {
-                const saved = localStorage.getItem('roadbook_lang');
-                if (saved) return saved;
-                const sys = navigator.language;
-                return sys.startsWith('zh') ? 'zh' : 'en';
+      function HelpIcon({ text }) {
+        const [isOpen, setIsOpen] = useState(false);
+        const tooltipRef = useRef(null);
+        const contentRef = useRef(null);
+        const [offset, setOffset] = useState(0);
+
+        useEffect(() => {
+          const handleClickOutside = (event) => {
+            if (
+              tooltipRef.current &&
+              !tooltipRef.current.contains(event.target)
+            ) {
+              setIsOpen(false);
+            }
+          };
+
+          if (isOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+
+            // Adjust position to prevent clipping by screen or scroll container
+            if (contentRef.current && tooltipRef.current) {
+              const rect = contentRef.current.getBoundingClientRect();
+              const scrollContainer =
+                tooltipRef.current.closest(".overflow-y-auto");
+
+              // Default bounds (viewport)
+              let minLeft = 10;
+              let maxRight = window.innerWidth - 10;
+
+              // If inside scroll container, use its bounds
+              if (scrollContainer) {
+                const containerRect = scrollContainer.getBoundingClientRect();
+                minLeft = Math.max(minLeft, containerRect.left + 10);
+                maxRight = Math.min(maxRight, containerRect.right - 10);
+              }
+
+              let newOffset = 0;
+              if (rect.left < minLeft) {
+                newOffset = minLeft - rect.left;
+              } else if (rect.right > maxRight) {
+                newOffset = maxRight - rect.right;
+              }
+              setOffset(newOffset);
+            }
+          } else {
+            setOffset(0);
+          }
+
+          return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+          };
+        }, [isOpen]);
+
+        if (!text) return null;
+        return (
+          <div
+            ref={tooltipRef}
+            className="relative inline-flex items-center ml-1 align-middle cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setIsOpen(!isOpen);
+            }}
+          >
+            <i
+              className={`ph ph-question text-sm transition-colors ${isOpen ? "text-blue-500" : "text-gray-400 hover:text-blue-500"}`}
+            ></i>
+            {isOpen && (
+              <div
+                ref={contentRef}
+                className="absolute top-full left-1/2 mt-2 w-max max-w-[260px] bg-gray-800 text-white text-xs rounded py-2 px-3 z-[100] whitespace-pre-wrap shadow-lg font-normal text-left leading-relaxed cursor-auto"
+                style={{ transform: `translateX(calc(-50% + ${offset}px))` }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className="absolute bottom-full border-[5px] border-transparent border-b-gray-800"
+                  style={{
+                    left: `calc(50% - ${offset}px)`,
+                    transform: "translateX(-50%)",
+                  }}
+                ></div>
+                {text}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      function App() {
+        const { lang, setLang, t } = useLanguage();
+        // config now includes 'mode'
+        const [config, setConfig] = useState({ work_dir: "", mode: "" });
+        const [files, setFiles] = useState([]);
+        const [currentFile, setCurrentFile] = useState(null);
+        const [roadbook, setRoadbook] = useState(null);
+        const [loading, setLoading] = useState(false);
+        const [saving, setSaving] = useState(false);
+        const [msg, setMsg] = useState(null);
+        const [editingDir, setEditingDir] = useState(false);
+        const [newDir, setNewDir] = useState("");
+
+        // Check URL params on mount
+        useEffect(() => {
+          const params = new URLSearchParams(window.location.search);
+          const fileToOpen = params.get("open");
+
+          api.getConfig().then((cfg) => {
+            setConfig(cfg);
+            setNewDir(cfg.work_dir);
+            if (cfg.language && !localStorage.getItem("roadbook_lang")) {
+              setLang(cfg.language);
+            }
+            loadFiles().then(() => {
+              if (fileToOpen) {
+                // If fileToOpen is a full path (from previous session or explicit URL),
+                // and listFiles only returns relative paths, we might need to match it.
+                // But usually listFiles output is what we care about.
+                // If the server was started with a different root, fileToOpen might be invalid now.
+                // But assuming the user just clicked a link, it's relative.
+                loadRoadbook(fileToOpen);
+              }
             });
+          });
+        }, []);
 
-            useEffect(() => {
-                localStorage.setItem('roadbook_lang', lang);
-                document.documentElement.lang = lang;
-            }, [lang]);
-
-            const t = (key) => {
-                const dict = translations[lang] || translations['en'];
-                return dict[key] || key;
-            };
-
-            return { lang, setLang, t };
+        const loadFiles = () => {
+          return api.list().then((data) => setFiles(data.files));
         };
 
-        function HelpIcon({ text }) {
-            const [isOpen, setIsOpen] = useState(false);
-            const tooltipRef = useRef(null);
-            const contentRef = useRef(null);
-            const [offset, setOffset] = useState(0);
+        const changeDirectory = () => {
+          if (!newDir) return;
+          api
+            .changeDir(newDir)
+            .then((res) => {
+              setConfig((prev) => ({ ...prev, work_dir: res.work_dir }));
+              setEditingDir(false);
+              setFiles([]);
+              setCurrentFile(null);
+              setRoadbook(null);
+              loadFiles();
+              setMsg({ type: "success", text: t("directory_changed") });
+            })
+            .catch((err) => {
+              setMsg({ type: "error", text: err.message });
+            });
+        };
 
-            useEffect(() => {
-                const handleClickOutside = (event) => {
-                    if (tooltipRef.current && !tooltipRef.current.contains(event.target)) {
-                        setIsOpen(false);
-                    }
-                };
-                
-                if (isOpen) {
-                    document.addEventListener('mousedown', handleClickOutside);
-                    
-                    // Adjust position to prevent clipping by screen or scroll container
-                    if (contentRef.current && tooltipRef.current) {
-                        const rect = contentRef.current.getBoundingClientRect();
-                        const scrollContainer = tooltipRef.current.closest('.overflow-y-auto');
-                        
-                        // Default bounds (viewport)
-                        let minLeft = 10;
-                        let maxRight = window.innerWidth - 10;
-                        
-                        // If inside scroll container, use its bounds
-                        if (scrollContainer) {
-                            const containerRect = scrollContainer.getBoundingClientRect();
-                            minLeft = Math.max(minLeft, containerRect.left + 10);
-                            maxRight = Math.min(maxRight, containerRect.right - 10);
-                        }
-                        
-                        let newOffset = 0;
-                        if (rect.left < minLeft) {
-                            newOffset = minLeft - rect.left;
-                        } else if (rect.right > maxRight) {
-                            newOffset = maxRight - rect.right;
-                        }
-                        setOffset(newOffset);
-                    }
-                } else {
-                    setOffset(0);
-                }
-                
-                return () => {
-                    document.removeEventListener('mousedown', handleClickOutside);
-                };
-            }, [isOpen]);
+        const loadRoadbook = (filename) => {
+          setLoading(true);
+          setCurrentFile(filename);
+          // Update URL without reload
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.set("open", filename);
+          window.history.pushState({}, "", newUrl);
 
-            if (!text) return null;
-            return (
-                <div 
-                    ref={tooltipRef}
-                    className="relative inline-flex items-center ml-1 align-middle cursor-pointer"
-                    onClick={(e) => { 
-                        e.stopPropagation(); 
-                        e.preventDefault();
-                        setIsOpen(!isOpen); 
-                    }}
-                >
-                    <i className={`ph ph-question text-sm transition-colors ${isOpen ? 'text-blue-500' : 'text-gray-400 hover:text-blue-500'}`}></i>
-                    {isOpen && (
-                        <div 
-                            ref={contentRef}
-                            className="absolute top-full left-1/2 mt-2 w-max max-w-[260px] bg-gray-800 text-white text-xs rounded py-2 px-3 z-[100] whitespace-pre-wrap shadow-lg font-normal text-left leading-relaxed cursor-auto"
-                            style={{ transform: `translateX(calc(-50% + ${offset}px))` }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div 
-                                className="absolute bottom-full border-[5px] border-transparent border-b-gray-800"
-                                style={{ left: `calc(50% - ${offset}px)`, transform: 'translateX(-50%)' }}
-                            ></div>
-                            {text}
-                        </div>
-                    )}
-                </div>
-            );
-        }
+          api
+            .get(filename)
+            .then((data) => {
+              setRoadbook(data);
+              setLoading(false);
+            })
+            .catch((err) => {
+              console.error(err);
+              setLoading(false);
+              setMsg({ type: "error", text: t("load_failed") + err.message });
+            });
+        };
 
-        function App() {
-            const { lang, setLang, t } = useLanguage();
-            // config now includes 'mode'
-            const [config, setConfig] = useState({ work_dir: '', mode: '' });
-            const [files, setFiles] = useState([]);
-            const [currentFile, setCurrentFile] = useState(null);
-            const [roadbook, setRoadbook] = useState(null);
-            const [loading, setLoading] = useState(false);
-            const [saving, setSaving] = useState(false);
-            const [msg, setMsg] = useState(null);
-            const [editingDir, setEditingDir] = useState(false);
-            const [newDir, setNewDir] = useState('');
+        const saveRoadbook = () => {
+          if (!currentFile || !roadbook) return;
+          setSaving(true);
+          api
+            .save(currentFile, roadbook)
+            .then(() => {
+              setSaving(false);
+              setMsg({ type: "success", text: t("saved") });
+              setTimeout(() => setMsg(null), 3000);
+            })
+            .catch((err) => {
+              setSaving(false);
+              setMsg({ type: "error", text: t("save_failed") + err.message });
+            });
+        };
 
-            // Check URL params on mount
-            useEffect(() => {
-                const params = new URLSearchParams(window.location.search);
-                const fileToOpen = params.get('open');
-                
-                api.getConfig().then(cfg => {
-                    setConfig(cfg);
-                    setNewDir(cfg.work_dir);
-                    if (cfg.language && !localStorage.getItem('roadbook_lang')) {
-                        setLang(cfg.language);
-                    }
-                    loadFiles().then(() => {
-                        if (fileToOpen) {
-                            // If fileToOpen is a full path (from previous session or explicit URL),
-                            // and listFiles only returns relative paths, we might need to match it.
-                            // But usually listFiles output is what we care about.
-                            // If the server was started with a different root, fileToOpen might be invalid now.
-                            // But assuming the user just clicked a link, it's relative.
-                            loadRoadbook(fileToOpen);
-                        }
-                    });
-                });
-            }, []);
+        const updateMeta = (key, value) => {
+          setRoadbook((prev) => ({
+            ...prev,
+            meta: { ...prev.meta, [key]: value },
+          }));
+        };
 
-            const loadFiles = () => {
-                return api.list().then(data => setFiles(data.files));
-            };
+        const updateSheet = (index, newSheet) => {
+          const newSheets = [...roadbook.sheets];
+          newSheets[index] = newSheet;
+          setRoadbook((prev) => ({ ...prev, sheets: newSheets }));
+        };
 
-            const changeDirectory = () => {
-                if (!newDir) return;
-                api.changeDir(newDir).then(res => {
-                    setConfig(prev => ({ ...prev, work_dir: res.work_dir }));
-                    setEditingDir(false);
-                    setFiles([]);
-                    setCurrentFile(null);
-                    setRoadbook(null);
-                    loadFiles();
-                    setMsg({ type: 'success', text: t('directory_changed') });
-                }).catch(err => {
-                    setMsg({ type: 'error', text: err.message });
-                });
-            };
+        const addSheet = (insertAfterIndex = null) => {
+          let newId;
+          do {
+            newId = Math.random().toString(36).substring(2, 7);
+          } while (roadbook.sheets.some((s) => s.id === newId));
 
-            const loadRoadbook = (filename) => {
-                setLoading(true);
-                setCurrentFile(filename);
-                // Update URL without reload
-                const newUrl = new URL(window.location);
-                newUrl.searchParams.set('open', filename);
-                window.history.pushState({}, '', newUrl);
+          const newSheet = {
+            title: t("new_page_title"),
+            id: newId,
+            steps: [],
+            extra_content: "",
+          };
 
-                api.get(filename).then(data => {
-                    setRoadbook(data);
-                    setLoading(false);
-                }).catch(err => {
-                    console.error(err);
-                    setLoading(false);
-                    setMsg({ type: 'error', text: t('load_failed') + err.message });
-                });
-            };
-
-            const saveRoadbook = () => {
-                if (!currentFile || !roadbook) return;
-                setSaving(true);
-                api.save(currentFile, roadbook).then(() => {
-                    setSaving(false);
-                    setMsg({ type: 'success', text: t('saved') });
-                    setTimeout(() => setMsg(null), 3000);
-                }).catch(err => {
-                    setSaving(false);
-                    setMsg({ type: 'error', text: t('save_failed') + err.message });
-                });
-            };
-
-            const updateMeta = (key, value) => {
-                setRoadbook(prev => ({
-                    ...prev,
-                    meta: { ...prev.meta, [key]: value }
-                }));
-            };
-
-            const updateSheet = (index, newSheet) => {
-                const newSheets = [...roadbook.sheets];
-                newSheets[index] = newSheet;
-                setRoadbook(prev => ({ ...prev, sheets: newSheets }));
-            };
-            
-            const addSheet = (insertAfterIndex = null) => {
-                let newId;
-                do {
-                    newId = Math.random().toString(36).substring(2, 7);
-                } while (roadbook.sheets.some(s => s.id === newId));
-
-                const newSheet = {
-                    title: t('new_page_title'),
-                    id: newId,
-                    steps: [],
-                    extra_content: ""
-                };
-                
-                setRoadbook(prev => {
-                    const newSheets = [...prev.sheets];
-                    if (insertAfterIndex !== null && insertAfterIndex >= 0 && insertAfterIndex < newSheets.length) {
-                        newSheets.splice(insertAfterIndex + 1, 0, newSheet);
-                    } else {
-                        newSheets.push(newSheet);
-                    }
-                    return { ...prev, sheets: newSheets };
-                });
-            };
-
-            const deleteSheet = (index) => {
-                if(!confirm(t('confirm_delete_sheet'))) return;
-                const newSheets = [...roadbook.sheets];
-                newSheets.splice(index, 1);
-                setRoadbook(prev => ({ ...prev, sheets: newSheets }));
-            };
-
-            const moveSheet = (fromIndex, toIndex) => {
-                if (fromIndex === toIndex || toIndex < 0 || toIndex >= roadbook.sheets.length) return;
-                setRoadbook(prev => {
-                    const newSheets = [...prev.sheets];
-                    const [draggedSheet] = newSheets.splice(fromIndex, 1);
-                    newSheets.splice(toIndex, 0, draggedSheet);
-                    return { ...prev, sheets: newSheets };
-                });
-            };
-
-            const [globalCollapseSignal, setGlobalCollapseSignal] = useState({ id: 0, collapsed: false });
-
-            const expandAll = () => setGlobalCollapseSignal({ id: Date.now(), collapsed: false });
-            const collapseAll = () => setGlobalCollapseSignal({ id: Date.now(), collapsed: true });
-
-            return (
-                <div className="flex h-full text-sm">
-                    {/* Sidebar */}
-                    <div className="w-64 bg-[#eee8dc] border-r border-[#e5e0d6] flex flex-col shadow-inner">
-                        <div className="p-4 border-b border-[#e5e0d6]">
-                            <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center space-x-2 text-[#2d2a26] font-bold text-lg">
-                                    <i className="ph ph-map-trifold text-xl"></i>
-                                    <span>{t('title')}</span>
-                                </div>
-                                <button 
-                                    onClick={() => setLang(lang === 'en' ? 'zh' : 'en')}
-                                    className="text-xs font-bold px-2 py-1 rounded bg-white/50 hover:bg-white border border-transparent hover:border-gray-200 transition-colors uppercase"
-                                    title={t('language')}
-                                >
-                                    {lang === 'en' ? 'EN' : '中'}
-                                </button>
-                            </div>
-                            
-                            {/* Directory Switcher / Mode Info */}
-                            <div className="mt-4">
-                                <div className="flex items-center justify-between mb-1">
-                                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">{t('workspace')}</div>
-                                    {config.mode && (
-                                        <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 truncate max-w-[100px]" title={config.mode}>
-                                            {config.mode}
-                                        </span>
-                                    )}
-                                </div>
-                                {editingDir ? (
-                                    <div className="flex items-center space-x-1">
-                                        <input 
-                                            type="text" 
-                                            value={newDir}
-                                            onChange={e => setNewDir(e.target.value)}
-                                            onKeyDown={e => e.key === 'Enter' && changeDirectory()}
-                                            className="w-full text-xs px-2 py-1 border rounded bg-white"
-                                            autoFocus
-                                        />
-                                        <button onClick={changeDirectory} className="text-blue-600">✓</button>
-                                        <button onClick={() => setEditingDir(false)} className="text-gray-500">✕</button>
-                                    </div>
-                                ) : (
-                                    <div 
-                                        className="text-xs text-gray-700 bg-white/50 px-2 py-1 rounded cursor-pointer hover:bg-white truncate border border-transparent hover:border-gray-300 transition-colors"
-                                        onClick={() => setEditingDir(true)}
-                                        title={config.work_dir}
-                                    >
-                                        {config.work_dir ? config.work_dir.split(/[\\/]/).pop() : '...'}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                            {files.length === 0 && (
-                                <div className="text-center text-gray-400 mt-10 text-xs">
-                                    {t('no_roadbooks')}<br/>{t('create_via_cli')}
-                                </div>
-                            )}
-                            {files.map(file => (
-                                <div 
-                                    key={file} 
-                                    onClick={() => loadRoadbook(file)}
-                                    className={`px-3 py-2 rounded-lg cursor-pointer flex items-center space-x-2 transition-all ${
-                                        currentFile === file 
-                                        ? 'bg-white shadow text-blue-600 font-medium' 
-                                        : 'hover:bg-white/60 text-gray-700'
-                                    }`}
-                                >
-                                    <i className="ph ph-book-bookmark text-lg opacity-70"></i>
-                                    <span className="truncate">{file}</span>
-                                </div>
-                            ))}
-                        </div>
-                        
-                        <div className="p-4 border-t border-[#e5e0d6] text-xs text-gray-400 text-center">
-                            {t('protocol')}
-                        </div>
-                    </div>
-
-                    {/* Main Content */}
-                    <div className="flex-1 flex flex-col bg-[#f8f5f0] h-full overflow-hidden relative">
-                        {/* Header */}
-                        <div className="h-16 bg-white/80 backdrop-blur border-b border-[#e5e0d6] px-8 flex items-center justify-between shadow-sm z-10 shrink-0">
-                            <div>
-                                <h1 className="font-serif font-bold text-xl text-[#2d2a26] flex items-center">
-                                    {roadbook ? roadbook.meta.name || t('untitled') : t('welcome')}
-                                </h1>
-                                {currentFile && (
-                                    <div className="text-xs text-gray-400 mt-0.5 font-mono" title={currentFile}>
-                                        {currentFile}
-                                    </div>
-                                )}
-                            </div>
-                            
-                            <div className="flex items-center space-x-4">
-                                {msg && (
-                                    <span className={`text-sm px-3 py-1 rounded-full ${msg.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                                        {msg.text}
-                                    </span>
-                                )}
-                                <button 
-                                    onClick={saveRoadbook} 
-                                    disabled={!currentFile || saving}
-                                    className={`flex items-center space-x-2 px-5 py-2 rounded-lg text-white font-medium transition-all shadow-md active:scale-95 ${
-                                        !currentFile ? 'bg-gray-300 cursor-not-allowed' : 
-                                        saving ? 'bg-blue-400' : 'bg-[#2d2a26] hover:bg-black'
-                                    }`}
-                                >
-                                    <i className="ph ph-floppy-disk text-lg"></i>
-                                    <span>{saving ? t('saving') : t('save')}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Editor Area - Fixed Scrolling */}
-                        <div className="flex-1 overflow-y-auto p-8 scroll-smooth">
-                            {loading ? (
-                                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400 mb-4"></div>
-                                    <span>{t('loading')}</span>
-                                </div>
-                            ) : roadbook ? (
-                                <div className="max-w-4xl mx-auto space-y-10 pb-32">
-                                    
-                                    {/* Meta Section */}
-                                    <div className="bg-white rounded-xl shadow-sm border border-[#e5e0d6] p-8 relative overflow-hidden group">
-                                        <div className="absolute top-0 left-0 w-1 h-full bg-[#2d2a26]"></div>
-                                        <div className="absolute top-4 right-4 opacity-10 text-6xl text-gray-400 font-serif font-bold pointer-events-none">META</div>
-                                        
-                                        <div className="grid grid-cols-12 gap-6">
-                                            <div className="col-span-12 mb-2">
-                                                <h2 className="text-lg font-bold text-gray-800 border-b-2 border-gray-100 pb-2 inline-block">{t('base_info')}</h2>
-                                            </div>
-                                            
-                                            <Field label="ID" value={roadbook.meta.id} onChange={v => updateMeta('id', v)} readOnly col="col-span-4" />
-                                            <Field label="Name" value={roadbook.meta.name} onChange={v => updateMeta('name', v)} required col="col-span-6" />
-                                            <Field label="Ver" value={roadbook.meta.version} onChange={v => updateMeta('version', v)} required col="col-span-2" />
-                                            
-                                            <Field label={t('description')} value={roadbook.meta.description} onChange={v => updateMeta('description', v)} col="col-span-12" textarea />
-                                            
-                                            <TextListEditor 
-                                                key={`inputs-${roadbook.meta.id}`}
-                                                label={t('inputs')} 
-                                                value={roadbook.meta.inputs} 
-                                                onChange={v => updateMeta('inputs', v)} 
-                                                col="col-span-12" 
-                                                placeholder="keyword: Search Keyword..."
-                                            />
-                                            <TextListEditor 
-                                                key={`outputs-${roadbook.meta.id}`}
-                                                label={t('outputs')} 
-                                                value={roadbook.meta.outputs} 
-                                                onChange={v => updateMeta('outputs', v)} 
-                                                col="col-span-12"
-                                                placeholder="order_id: The order ID..."
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Sheets Section */}
-                                    <div className="space-y-8">
-                                        <div className="flex items-center justify-between px-2 border-b border-gray-200 pb-4">
-                                            <h2 className="text-2xl font-serif font-bold text-[#2d2a26]">{t('sheets')}</h2>
-                                            <div className="flex items-center space-x-2">
-                                                <button 
-                                                    onClick={expandAll} 
-                                                    className="flex items-center space-x-1 text-gray-500 hover:text-gray-800 font-medium px-3 py-1.5 rounded hover:bg-gray-100 transition-colors"
-                                                    title={t('expand_all')}
-                                                >
-                                                    <i className="ph ph-arrows-out-line-vertical text-lg"></i>
-                                                    <span className="text-xs">{t('expand_all')}</span>
-                                                </button>
-                                                <button 
-                                                    onClick={collapseAll} 
-                                                    className="flex items-center space-x-1 text-gray-500 hover:text-gray-800 font-medium px-3 py-1.5 rounded hover:bg-gray-100 transition-colors"
-                                                    title={t('collapse_all')}
-                                                >
-                                                    <i className="ph ph-arrows-in-line-vertical text-lg"></i>
-                                                    <span className="text-xs">{t('collapse_all')}</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                        {roadbook.sheets.map((sheet, idx) => (
-                                            <SheetEditor 
-                                                key={sheet.id || idx} 
-                                                index={idx}
-                                                totalSheets={roadbook.sheets.length}
-                                                sheet={sheet} 
-                                                currentFile={currentFile}
-                                                onChange={(newSheet) => updateSheet(idx, newSheet)}
-                                                onDelete={() => deleteSheet(idx)}
-                                                onMove={(toIndex) => moveSheet(idx, toIndex)}
-                                                onInsertAfter={() => addSheet(idx)}
-                                                globalCollapseSignal={globalCollapseSignal}
-                                                t={t}
-                                            />
-                                        ))}
-                                        
-                                        <div className="py-10 text-center">
-                                            <button onClick={() => addSheet()} className="text-gray-400 hover:text-blue-600 transition-colors flex flex-col items-center mx-auto space-y-2 group">
-                                                <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 group-hover:border-blue-400 flex items-center justify-center">
-                                                    <i className="ph ph-plus text-xl"></i>
-                                                </div>
-                                                <span className="text-sm">{t('continue_writing')}</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                    <i className="ph ph-book-open text-6xl mb-4 opacity-20"></i>
-                                    <p>{t('select_roadbook')}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        function Field({ label, value, onChange, required, col, textarea, placeholder, readOnly, height, tooltip }) {
-            return (
-                <div className={`${col || 'col-span-12'}`}>
-                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                        <span>{label}</span>
-                        {required && <span className="text-red-400 ml-1">*</span>}
-                        {tooltip && <HelpIcon text={tooltip} />}
-                    </label>
-                    {textarea ? (
-                        <textarea 
-                            value={value || ''} 
-                            onChange={e => onChange(e.target.value)}
-                            readOnly={readOnly}
-                            className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none ${height || 'h-24'} ${readOnly ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-gray-50'}`}
-                            placeholder={placeholder}
-                        />
-                    ) : (
-                        <input 
-                            type="text" 
-                            value={value || ''} 
-                            onChange={e => onChange(e.target.value)}
-                            readOnly={readOnly}
-                            className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all ${readOnly ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-gray-50'}`}
-                            placeholder={placeholder}
-                        />
-                    )}
-                </div>
-            );
-        }
-
-        function TextListEditor({ label, value, onChange, col, placeholder, tooltip }) {
-            const format = (val) => {
-                if (!val) return '';
-                return Object.entries(val).map(([k, v]) => `${k}: ${v}`).join('\n');
-            };
-            
-            const parse = (str) => {
-                const res = {};
-                str.split('\n').forEach(line => {
-                    const idx = line.indexOf(':');
-                    if (idx > 0) {
-                        const k = line.substring(0, idx).trim();
-                        const v = line.substring(idx + 1).trim();
-                        if(k) res[k] = v;
-                    }
-                });
-                return res;
-            };
-
-            const [text, setText] = useState(() => format(value));
-            
-            return (
-                <div className={`${col || 'col-span-12'}`}>
-                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                        <span>{label}</span>
-                        {tooltip && <HelpIcon text={tooltip} />}
-                    </label>
-                    <textarea 
-                        value={text} 
-                        onChange={e => {
-                            setText(e.target.value);
-                            onChange(parse(e.target.value));
-                        }}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition-all resize-none h-24 font-mono leading-relaxed placeholder-gray-400"
-                        placeholder={placeholder || "key: description..."}
-                    />
-                </div>
-            );
-        }
-
-        function SheetEditor({ index, totalSheets, sheet, currentFile, onChange, onDelete, onMove, onInsertAfter, globalCollapseSignal, t }) {
-            const [isCollapsed, setIsCollapsed] = useState(false);
-            const [draggedIdx, setDraggedIdx] = useState(null);
-            const [dragOverIdx, setDragOverIdx] = useState(null);
-            const [uploadingImage, setUploadingImage] = useState(false);
-            const [showImageModal, setShowImageModal] = useState(false);
-
-            useEffect(() => {
-                if (globalCollapseSignal && globalCollapseSignal.id > 0) {
-                    setIsCollapsed(globalCollapseSignal.collapsed);
-                }
-            }, [globalCollapseSignal]);
-
-            useEffect(() => {
-                const handleKeyDown = (e) => {
-                    if (e.key === 'Escape' && showImageModal) {
-                        setShowImageModal(false);
-                    }
-                };
-                if (showImageModal) {
-                    document.addEventListener('keydown', handleKeyDown);
-                }
-                return () => document.removeEventListener('keydown', handleKeyDown);
-            }, [showImageModal]);
-
-            const updateField = (key, value) => {
-                onChange({ ...sheet, [key]: value });
-            };
-
-            const updateStep = (idx, newStep) => {
-                const newSteps = [...sheet.steps];
-                newSteps[idx] = newStep;
-                onChange({ ...sheet, steps: newSteps });
-            };
-
-            const addStep = () => {
-                onChange({
-                    ...sheet,
-                    steps: [...sheet.steps, { action: 'CLICK', selector: '', value: '', original_text: 'CLICK ""' }]
-                });
-            };
-
-            const insertStep = (idx) => {
-                const newSteps = [...sheet.steps];
-                newSteps.splice(idx + 1, 0, { action: 'CLICK', selector: '', value: '', original_text: 'CLICK ""' });
-                onChange({ ...sheet, steps: newSteps });
-            };
-            
-            const removeStep = (idx) => {
-                const newSteps = [...sheet.steps];
-                newSteps.splice(idx, 1);
-                onChange({ ...sheet, steps: newSteps });
-            };
-
-            const handleDragStart = (e, idx) => {
-                setDraggedIdx(idx);
-                e.dataTransfer.effectAllowed = "move";
-                // 使用 setTimeout 让拖拽的本体变半透明，而不是原地的元素
-                setTimeout(() => e.target.classList.add('opacity-40'), 0);
-            };
-
-            const handleDragEnd = (e) => {
-                e.target.classList.remove('opacity-40');
-                setDraggedIdx(null);
-                setDragOverIdx(null);
-            };
-
-            const handleDragOver = (e, idx) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-                if (draggedIdx === null || draggedIdx === idx) return;
-                
-                // 计算鼠标是在元素的上半部分还是下半部分
-                const rect = e.currentTarget.getBoundingClientRect();
-                const midY = rect.top + rect.height / 2;
-                const isBottomHalf = e.clientY > midY;
-                
-                // 决定插入的视觉位置
-                if (isBottomHalf) {
-                    setDragOverIdx(idx + 1);
-                } else {
-                    setDragOverIdx(idx);
-                }
-            };
-
-            const handleDragLeave = (e) => {
-                e.preventDefault();
-            };
-
-            const handleDrop = (e, idx) => {
-                e.preventDefault();
-                if (draggedIdx === null) return;
-                
-                const targetIdx = dragOverIdx !== null ? dragOverIdx : idx;
-                
-                if (draggedIdx === targetIdx || draggedIdx === targetIdx - 1) {
-                    setDraggedIdx(null);
-                    setDragOverIdx(null);
-                    return;
-                }
-                
-                const newSteps = [...sheet.steps];
-                const draggedStep = newSteps[draggedIdx];
-                newSteps.splice(draggedIdx, 1);
-                
-                // 调整插入位置，因为删除了一个元素后，后面的索引会前移
-                let finalInsertIdx = targetIdx;
-                if (draggedIdx < targetIdx) {
-                    finalInsertIdx -= 1;
-                }
-                
-                newSteps.splice(finalInsertIdx, 0, draggedStep);
-                
-                onChange({ ...sheet, steps: newSteps });
-                setDraggedIdx(null);
-                setDragOverIdx(null);
-            };
-
-            const handlePaste = async (e) => {
-                const items = e.clipboardData ? e.clipboardData.items : null;
-                if (!items) return;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        e.preventDefault();
-                        const file = items[i].getAsFile();
-                        const ext = file.name.split('.').pop() || 'png';
-                        const newName = `img_${Math.random().toString(36).substring(2, 8)}.${ext}`;
-                        const renamedFile = new File([file], newName, { type: file.type });
-                        
-                        setUploadingImage(true);
-                        try {
-                            const res = await api.upload(renamedFile, currentFile);
-                            updateField('reference', `![Image](${res.url})`);
-                        } catch (err) {
-                            alert(t('image_upload_failed') + err.message);
-                        } finally {
-                            setUploadingImage(false);
-                        }
-                        break;
-                    }
-                }
-            };
-
-            let previewUrl = '';
-            if (sheet.reference) {
-                const match = sheet.reference.match(/\((.*?)\)/);
-                if (match) {
-                    let extractedUrl = match[1];
-                    
-                    if (extractedUrl.startsWith('http://') || extractedUrl.startsWith('https://')) {
-                        previewUrl = extractedUrl;
-                    } else if (extractedUrl.startsWith('/')) {
-                        previewUrl = extractedUrl;
-                    } else {
-                        // Relative path logic
-                        // If currentFile is absolute (e.g. C:/Users/zds/...), baseDir is C:/Users/zds/...
-                        let baseDir = '';
-                        if (currentFile && currentFile.includes('/')) {
-                            baseDir = currentFile.substring(0, currentFile.lastIndexOf('/') + 1);
-                        }
-                        
-                        let cleanUrl = extractedUrl;
-                        if (cleanUrl.startsWith('./')) {
-                            cleanUrl = cleanUrl.substring(2);
-                        }
-                        
-                        // We use encodeURIComponent for the *whole* path after /api/files/ to be safe
-                        // BUT fastapi {filepath:path} expects raw slashes.
-                        // If we encode slashes (%2F), fastapi might treat it as single segment.
-                        // Standard practice: /api/files/path/to/file
-                        // So we should NOT encode slashes.
-                        // But we SHOULD encode special chars?
-                        // Browser automatically encodes spaces to %20.
-                        // Windows drive colon c: -> c: is valid in path usually.
-                        
-                        // Fix for absolute paths starting with drive letter (e.g. C:/...)
-                        // If we just concat, we get /api/files/C:/... 
-                        // This should work in modern browsers/servers.
-                        
-                        previewUrl = `/api/files/${baseDir}${cleanUrl}`;
-                    }
-                }
+          setRoadbook((prev) => {
+            const newSheets = [...prev.sheets];
+            if (
+              insertAfterIndex !== null &&
+              insertAfterIndex >= 0 &&
+              insertAfterIndex < newSheets.length
+            ) {
+              newSheets.splice(insertAfterIndex + 1, 0, newSheet);
+            } else {
+              newSheets.push(newSheet);
             }
+            return { ...prev, sheets: newSheets };
+          });
+        };
 
-            return (
-                <div className="bg-white rounded-xl shadow-sm border border-[#e5e0d6] transition-all hover:shadow-md group">
-                    {/* Sheet Header */}
-                    <div 
-                        className="bg-gradient-to-r from-gray-50 to-white rounded-t-xl px-6 py-4 border-b border-[#e5e0d6] flex justify-between items-center cursor-pointer select-none"
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                    >
-                        <div className="flex items-center space-x-4 flex-1">
-                            <select
-                                value={index}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
-                                    const newIdx = parseInt(e.target.value, 10);
-                                    if (!isNaN(newIdx) && newIdx >= 0 && newIdx < totalSheets) {
-                                        onMove(newIdx);
-                                    }
-                                }}
-                                className="w-8 h-8 rounded-full bg-[#2d2a26] hover:bg-blue-600 text-white flex items-center justify-center font-serif font-bold shrink-0 transition-colors appearance-none cursor-pointer outline-none"
-                                title={t('move_sheet')}
-                                style={{ textAlignLast: 'center' }}
-                            >
-                                {Array.from({ length: totalSheets }, (_, i) => (
-                                    <option key={i} value={i} className="bg-white text-black text-center">{i + 1}</option>
-                                ))}
-                            </select>
-                            <div className="flex-1 flex flex-col">
-                                <div className="flex items-center w-full pr-4">
-                                    <input 
-                                        type="text" 
-                                        value={sheet.title} 
-                                        onChange={e => { e.stopPropagation(); updateField('title', e.target.value); }}
-                                        className="flex-1 font-bold text-lg bg-transparent border-none focus:ring-0 p-0 placeholder-gray-400 text-[#2d2a26]"
-                                        placeholder={t('sheet_title_placeholder')}
-                                        onClick={e => e.stopPropagation()}
-                                    />
-                                    <HelpIcon text={t('tooltip_title')} />
-                                </div>
-                                <div className="text-xs text-gray-400 mt-0.5 font-mono flex items-center">
-                                    <span>ID: {sheet.id || 'N/A'}</span>
-                                    {sheet.id && (
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                navigator.clipboard.writeText(sheet.id);
-                                                // Optional: provide some visual feedback? 
-                                                // For now, simple copy is fine.
-                                            }}
-                                            className="ml-2 hover:text-blue-500 transition-colors focus:outline-none"
-                                            title={t('copy_id')}
-                                        >
-                                            <i className="ph ph-copy"></i>
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onDelete(); }} 
-                                className="w-8 h-8 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500 flex items-center justify-center transition-colors"
-                                title={t('delete_sheet')}
-                            >
-                                <i className="ph ph-trash text-lg"></i>
-                            </button>
-                            <i className={`ph ph-caret-down text-gray-400 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}></i>
-                        </div>
+        const deleteSheet = (index) => {
+          if (!confirm(t("confirm_delete_sheet"))) return;
+          const newSheets = [...roadbook.sheets];
+          newSheets.splice(index, 1);
+          setRoadbook((prev) => ({ ...prev, sheets: newSheets }));
+        };
+
+        const moveSheet = (fromIndex, toIndex) => {
+          if (
+            fromIndex === toIndex ||
+            toIndex < 0 ||
+            toIndex >= roadbook.sheets.length
+          )
+            return;
+          setRoadbook((prev) => {
+            const newSheets = [...prev.sheets];
+            const [draggedSheet] = newSheets.splice(fromIndex, 1);
+            newSheets.splice(toIndex, 0, draggedSheet);
+            return { ...prev, sheets: newSheets };
+          });
+        };
+
+        const [globalCollapseSignal, setGlobalCollapseSignal] = useState({
+          id: 0,
+          collapsed: false,
+        });
+
+        const expandAll = () =>
+          setGlobalCollapseSignal({ id: Date.now(), collapsed: false });
+        const collapseAll = () =>
+          setGlobalCollapseSignal({ id: Date.now(), collapsed: true });
+
+        return (
+          <div className="flex h-full text-sm">
+            {/* Sidebar */}
+            <div className="w-64 bg-[#eee8dc] border-r border-[#e5e0d6] flex flex-col shadow-inner">
+              <div className="p-4 border-b border-[#e5e0d6]">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center space-x-2 text-[#2d2a26] font-bold text-lg">
+                    <i className="ph ph-map-trifold text-xl"></i>
+                    <span>{t("title")}</span>
+                  </div>
+                  <button
+                    onClick={() => setLang(lang === "en" ? "zh" : "en")}
+                    className="text-xs font-bold px-2 py-1 rounded bg-white/50 hover:bg-white border border-transparent hover:border-gray-200 transition-colors uppercase"
+                    title={t("language")}
+                  >
+                    {lang === "en" ? "EN" : "中"}
+                  </button>
+                </div>
+
+                {/* Directory Switcher / Mode Info */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">
+                      {t("workspace")}
                     </div>
-
-                    {/* Sheet Body */}
-                    {!isCollapsed && (
-                        <div className="p-6 space-y-6">
-                            <div className="grid grid-cols-12 gap-6">
-                                <div className="col-span-3">
-                                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                                        <span>{t('type_optional')}</span>
-                                        <HelpIcon text={t('tooltip_type')} />
-                                    </label>
-                                    <div className="relative">
-                                        <select 
-                                            value={sheet.type || 'process'} 
-                                            onChange={e => updateField('type', e.target.value)}
-                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-800 bg-gray-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
-                                        >
-                                            <option value="process">process</option>
-                                            <option value="setup">setup</option>
-                                            <option value="delivery">delivery</option>
-                                            <option value="crossroads">crossroads</option>
-                                        </select>
-                                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
-                                            <i className="ph ph-caret-down"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <Field 
-                                    label={t('url_optional')} 
-                                    value={sheet.url} 
-                                    onChange={v => updateField('url', v)} 
-                                    placeholder={t('url_placeholder')}
-                                    col="col-span-9"
-                                    tooltip={t('tooltip_url')}
-                                />
-                                  
-                                {sheet.type === 'setup' && (
-                                    <TextListEditor
-                                        key={`constraints-${sheet.id}`}
-                                        label={t('constraints')}
-                                        value={sheet.constraints || {}}
-                                        onChange={v => updateField('constraints', v)}
-                                        col="col-span-12"
-                                        placeholder="force_headful: true&#10;stealth_mode: true&#10;viewport: 1920x1080"
-                                        tooltip={t('tooltip_constraints')}
-                                    />
-                                )}
-                            </div>
-
-                            <Field
-                                label={t('description_goal')}
-                                value={sheet.description}
-                                onChange={v => updateField('description', v)}
-                                textarea
-                                placeholder={t('description_placeholder')}
-                                tooltip={t('tooltip_desc')}
-                            />
-                            
-                            {/* Reference Image */}
-                            <div className="bg-gray-50 rounded-lg p-4 border border-dashed border-gray-300" onPaste={handlePaste}>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center justify-between">
-                                    <div className="flex items-center">
-                                        <span>{t('reference_image')}</span>
-                                        <HelpIcon text={t('tooltip_ref')} />
-                                    </div>
-                                    {uploadingImage && <span className="text-blue-500 normal-case text-xs"><i className="ph ph-spinner animate-spin inline-block mr-1"></i>{t('uploading')}</span>}
-                                </label>
-                                <div className="flex flex-col space-y-3">
-                                    {previewUrl && (
-                                        <div className="w-full bg-white rounded overflow-hidden relative border border-gray-300 shadow-sm transition-all hover:shadow-md group text-center">
-                                            <img 
-                                                src={previewUrl} 
-                                                className="max-h-80 mx-auto object-contain cursor-zoom-in"
-                                                onError={(e) => e.target.style.display = 'none'} 
-                                                onClick={() => setShowImageModal(true)}
-                                                title={t('click_to_zoom')}
-                                            />
-                                            {/* Delete Button Overlay */}
-                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); updateField('reference', ''); }}
-                                                    className="bg-black/50 hover:bg-red-600/80 text-white p-1.5 rounded backdrop-blur-sm shadow-sm"
-                                                    title={t('delete_image')}
-                                                >
-                                                    <i className="ph ph-trash text-lg"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <div className="w-full">
-                                        <input 
-                                            type="text" 
-                                            value={sheet.reference || ''} 
-                                            onChange={e => updateField('reference', e.target.value)}
-                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono text-gray-600 mb-1"
-                                            placeholder={t('paste_placeholder')}
-                                        />
-                                        <p className="text-xs text-gray-400">{t('paste_hint')}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Fullscreen Image Modal */}
-                            {showImageModal && previewUrl && (
-                                <div 
-                                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-8"
-                                    onClick={() => setShowImageModal(false)}
-                                >
-                                    <div className="relative max-w-full max-h-full">
-                                        <img 
-                                            src={previewUrl} 
-                                            className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                        <button 
-                                            className="absolute -top-12 right-0 text-white/70 hover:text-white transition-colors"
-                                            onClick={() => setShowImageModal(false)}
-                                            title={t('close_preview')}
-                                        >
-                                            <i className="ph ph-x text-3xl"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Steps */}
-                            <div>
-                                <div className="flex items-center justify-between mb-3">
-                                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                        <span>{t('action_steps')}</span>
-                                        <HelpIcon text={t('tooltip_steps')} />
-                                    </label>
-                                </div>
-                                <div className="space-y-2 relative">
-                                    {sheet.steps.map((step, idx) => (
-                                        <React.Fragment key={idx}>
-                                            {/* 拖拽时的顶部占位符 */}
-                                            {dragOverIdx === idx && (
-                                                <div className="h-1 bg-blue-400 rounded-full my-1 transition-all"></div>
-                                            )}
-                                            <StepEditor 
-                                                index={idx} 
-                                                step={step} 
-                                                isDragging={draggedIdx === idx}
-                                                onChange={(s) => updateStep(idx, s)} 
-                                                onRemove={() => removeStep(idx)}
-                                                onInsert={() => insertStep(idx)}
-                                                onDragStart={(e) => handleDragStart(e, idx)}
-                                                onDragOver={(e) => handleDragOver(e, idx)}
-                                                onDragLeave={handleDragLeave}
-                                                onDrop={(e) => handleDrop(e, idx)}
-                                                onDragEnd={handleDragEnd}
-                                                t={t}
-                                            />
-                                        </React.Fragment>
-                                    ))}
-                                    {/* 拖拽到最后的底部占位符 */}
-                                    {dragOverIdx === sheet.steps.length && (
-                                        <div className="h-1 bg-blue-400 rounded-full my-1 transition-all"></div>
-                                    )}
-                                    
-                                    <button 
-                                        onClick={addStep}
-                                        className="w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium transition-all flex items-center justify-center space-x-2"
-                                    >
-                                        <i className="ph ph-plus"></i>
-                                        <span>{t('add_action_step')}</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end pt-4 border-t border-gray-100 mt-6">
-                                <button 
-                                    onClick={onInsertAfter}
-                                    className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition-colors"
-                                >
-                                    <i className="ph ph-plus-circle text-lg"></i>
-                                    <span>{t('insert_sheet_below')}</span>
-                                </button>
-                            </div>
-                        </div>
+                    {config.mode && (
+                      <span
+                        className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 truncate max-w-[100px]"
+                        title={config.mode}
+                      >
+                        {config.mode}
+                      </span>
                     )}
-                </div>
-            );
-        }
-
-        function StepEditor({ index, step, isDragging, onChange, onRemove, onInsert, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd, t }) {
-            const [draggable, setDraggable] = useState(false);
-            return (
-                <div 
-                    draggable={draggable}
-                    onDragStart={onDragStart}
-                    onDragOver={onDragOver}
-                    onDragLeave={onDragLeave}
-                    onDrop={onDrop}
-                    onDragEnd={(e) => {
-                        setDraggable(false);
-                        if (onDragEnd) onDragEnd(e);
-                    }}
-                    className={`flex items-center space-x-3 group bg-white border rounded-lg p-2 transition-all ${
-                        isDragging ? 'opacity-40 border-dashed border-gray-400 scale-[0.98]' : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
-                    }`}
-                >
-                    <div 
-                        onMouseEnter={() => setDraggable(true)}
-                        onMouseLeave={() => setDraggable(false)}
-                        className="cursor-grab text-gray-300 hover:text-gray-600 px-1 opacity-0 group-hover:opacity-100" 
-                        title={t('drag_sort')}
+                  </div>
+                  {editingDir ? (
+                    <div className="flex items-center space-x-1">
+                      <input
+                        type="text"
+                        value={newDir}
+                        onChange={(e) => setNewDir(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && changeDirectory()
+                        }
+                        className="w-full text-xs px-2 py-1 border rounded bg-white"
+                        autoFocus
+                      />
+                      <button
+                        onClick={changeDirectory}
+                        className="text-blue-600"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => setEditingDir(false)}
+                        className="text-gray-500"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className="text-xs text-gray-700 bg-white/50 px-2 py-1 rounded cursor-pointer hover:bg-white truncate border border-transparent hover:border-gray-300 transition-colors"
+                      onClick={() => setEditingDir(true)}
+                      title={config.work_dir}
                     >
-                        <i className="ph ph-dots-six-vertical text-lg"></i>
+                      {config.work_dir
+                        ? config.work_dir.split(/[\\/]/).pop()
+                        : "..."}
                     </div>
-                    <span className="text-gray-400 font-mono w-4 text-center text-xs">{index + 1}.</span>
-                    <input 
-                        type="text" 
-                        value={step.original_text || ''} 
-                        onChange={e => onChange({ ...step, original_text: e.target.value })}
-                        className="flex-1 bg-transparent border-none p-0 font-mono text-sm text-[#2d2a26] focus:ring-0 placeholder-gray-300"
-                        placeholder={t('step_placeholder')}
-                    />
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-1 px-1">
-                        <button 
-                            onClick={onInsert}
-                            className="text-gray-300 hover:text-blue-500 transition-colors p-1"
-                            title={t('insert_before')}
-                        >
-                            <i className="ph ph-plus"></i>
-                        </button>
-                        <button 
-                            onClick={onRemove}
-                            className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                            title={t('delete_step')}
-                        >
-                            <i className="ph ph-x"></i>
-                        </button>
-                    </div>
+                  )}
                 </div>
-            );
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {files.length === 0 && (
+                  <div className="text-center text-gray-400 mt-10 text-xs">
+                    {t("no_roadbooks")}
+                    <br />
+                    {t("create_via_cli")}
+                  </div>
+                )}
+                {files.map((file) => (
+                  <div
+                    key={file}
+                    onClick={() => loadRoadbook(file)}
+                    className={`px-3 py-2 rounded-lg cursor-pointer flex items-center space-x-2 transition-all ${
+                      currentFile === file
+                        ? "bg-white shadow text-blue-600 font-medium"
+                        : "hover:bg-white/60 text-gray-700"
+                    }`}
+                  >
+                    <i className="ph ph-book-bookmark text-lg opacity-70"></i>
+                    <span className="truncate">{file}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-4 border-t border-[#e5e0d6] text-xs text-gray-400 text-center">
+                {t("protocol")}
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col bg-[#f8f5f0] h-full overflow-hidden relative">
+              {/* Header */}
+              <div className="h-16 bg-white/80 backdrop-blur border-b border-[#e5e0d6] px-8 flex items-center justify-between shadow-sm z-10 shrink-0">
+                <div>
+                  <h1 className="font-serif font-bold text-xl text-[#2d2a26] flex items-center">
+                    {roadbook
+                      ? roadbook.meta.name || t("untitled")
+                      : t("welcome")}
+                  </h1>
+                  {currentFile && (
+                    <div
+                      className="text-xs text-gray-400 mt-0.5 font-mono"
+                      title={currentFile}
+                    >
+                      {currentFile}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-4">
+                  {msg && (
+                    <span
+                      className={`text-sm px-3 py-1 rounded-full ${msg.type === "error" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
+                    >
+                      {msg.text}
+                    </span>
+                  )}
+                  <button
+                    onClick={saveRoadbook}
+                    disabled={!currentFile || saving}
+                    className={`flex items-center space-x-2 px-5 py-2 rounded-lg text-white font-medium transition-all shadow-md active:scale-95 ${
+                      !currentFile
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : saving
+                          ? "bg-blue-400"
+                          : "bg-[#2d2a26] hover:bg-black"
+                    }`}
+                  >
+                    <i className="ph ph-floppy-disk text-lg"></i>
+                    <span>{saving ? t("saving") : t("save")}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Editor Area - Fixed Scrolling */}
+              <div className="flex-1 overflow-y-auto p-8 scroll-smooth">
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400 mb-4"></div>
+                    <span>{t("loading")}</span>
+                  </div>
+                ) : roadbook ? (
+                  <div className="max-w-4xl mx-auto space-y-10 pb-32">
+                    {/* Meta Section */}
+                    <div className="bg-white rounded-xl shadow-sm border border-[#e5e0d6] p-8 relative overflow-hidden group">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-[#2d2a26]"></div>
+                      <div className="absolute top-4 right-4 opacity-10 text-6xl text-gray-400 font-serif font-bold pointer-events-none">
+                        META
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-6">
+                        <div className="col-span-12 mb-2">
+                          <h2 className="text-lg font-bold text-gray-800 border-b-2 border-gray-100 pb-2 inline-block">
+                            {t("base_info")}
+                          </h2>
+                        </div>
+
+                        <Field
+                          label="ID"
+                          value={roadbook.meta.id}
+                          onChange={(v) => updateMeta("id", v)}
+                          readOnly
+                          col="col-span-4"
+                        />
+                        <Field
+                          label="Name"
+                          value={roadbook.meta.name}
+                          onChange={(v) => updateMeta("name", v)}
+                          required
+                          col="col-span-6"
+                        />
+                        <Field
+                          label="Ver"
+                          value={roadbook.meta.version}
+                          onChange={(v) => updateMeta("version", v)}
+                          required
+                          col="col-span-2"
+                        />
+
+                        <Field
+                          label={t("description")}
+                          value={roadbook.meta.description}
+                          onChange={(v) => updateMeta("description", v)}
+                          col="col-span-12"
+                          textarea
+                        />
+
+                        <TextListEditor
+                          key={`inputs-${roadbook.meta.id}`}
+                          label={t("inputs")}
+                          value={roadbook.meta.inputs}
+                          onChange={(v) => updateMeta("inputs", v)}
+                          col="col-span-12"
+                          placeholder="keyword: Search Keyword..."
+                        />
+                        <TextListEditor
+                          key={`outputs-${roadbook.meta.id}`}
+                          label={t("outputs")}
+                          value={roadbook.meta.outputs}
+                          onChange={(v) => updateMeta("outputs", v)}
+                          col="col-span-12"
+                          placeholder="order_id: The order ID..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sheets Section */}
+                    <div className="space-y-8">
+                      <div className="flex items-center justify-between px-2 border-b border-gray-200 pb-4">
+                        <h2 className="text-2xl font-serif font-bold text-[#2d2a26]">
+                          {t("sheets")}
+                        </h2>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={expandAll}
+                            className="flex items-center space-x-1 text-gray-500 hover:text-gray-800 font-medium px-3 py-1.5 rounded hover:bg-gray-100 transition-colors"
+                            title={t("expand_all")}
+                          >
+                            <i className="ph ph-arrows-out-line-vertical text-lg"></i>
+                            <span className="text-xs">{t("expand_all")}</span>
+                          </button>
+                          <button
+                            onClick={collapseAll}
+                            className="flex items-center space-x-1 text-gray-500 hover:text-gray-800 font-medium px-3 py-1.5 rounded hover:bg-gray-100 transition-colors"
+                            title={t("collapse_all")}
+                          >
+                            <i className="ph ph-arrows-in-line-vertical text-lg"></i>
+                            <span className="text-xs">{t("collapse_all")}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {roadbook.sheets.map((sheet, idx) => (
+                        <SheetEditor
+                          key={sheet.id || idx}
+                          index={idx}
+                          totalSheets={roadbook.sheets.length}
+                          sheet={sheet}
+                          currentFile={currentFile}
+                          onChange={(newSheet) => updateSheet(idx, newSheet)}
+                          onDelete={() => deleteSheet(idx)}
+                          onMove={(toIndex) => moveSheet(idx, toIndex)}
+                          onInsertAfter={() => addSheet(idx)}
+                          globalCollapseSignal={globalCollapseSignal}
+                          t={t}
+                        />
+                      ))}
+
+                      <div className="py-10 text-center">
+                        <button
+                          onClick={() => addSheet()}
+                          className="text-gray-400 hover:text-blue-600 transition-colors flex flex-col items-center mx-auto space-y-2 group"
+                        >
+                          <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 group-hover:border-blue-400 flex items-center justify-center">
+                            <i className="ph ph-plus text-xl"></i>
+                          </div>
+                          <span className="text-sm">
+                            {t("continue_writing")}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                    <i className="ph ph-book-open text-6xl mb-4 opacity-20"></i>
+                    <p>{t("select_roadbook")}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function Field({
+        label,
+        value,
+        onChange,
+        required,
+        col,
+        textarea,
+        placeholder,
+        readOnly,
+        height,
+        tooltip,
+      }) {
+        return (
+          <div className={`${col || "col-span-12"}`}>
+            <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+              <span>{label}</span>
+              {required && <span className="text-red-400 ml-1">*</span>}
+              {tooltip && <HelpIcon text={tooltip} />}
+            </label>
+            {textarea ? (
+              <textarea
+                value={value || ""}
+                onChange={(e) => onChange(e.target.value)}
+                readOnly={readOnly}
+                className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none ${height || "h-24"} ${readOnly ? "bg-gray-100 cursor-not-allowed text-gray-500" : "bg-gray-50"}`}
+                placeholder={placeholder}
+              />
+            ) : (
+              <input
+                type="text"
+                value={value || ""}
+                onChange={(e) => onChange(e.target.value)}
+                readOnly={readOnly}
+                className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all ${readOnly ? "bg-gray-100 cursor-not-allowed text-gray-500" : "bg-gray-50"}`}
+                placeholder={placeholder}
+              />
+            )}
+          </div>
+        );
+      }
+
+      function TextListEditor({
+        label,
+        value,
+        onChange,
+        col,
+        placeholder,
+        tooltip,
+      }) {
+        const format = (val) => {
+          if (!val) return "";
+          return Object.entries(val)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join("\n");
+        };
+
+        const parse = (str) => {
+          const res = {};
+          str.split("\n").forEach((line) => {
+            const idx = line.indexOf(":");
+            if (idx > 0) {
+              const k = line.substring(0, idx).trim();
+              const v = line.substring(idx + 1).trim();
+              if (k) res[k] = v;
+            }
+          });
+          return res;
+        };
+
+        const [text, setText] = useState(() => format(value));
+
+        return (
+          <div className={`${col || "col-span-12"}`}>
+            <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+              <span>{label}</span>
+              {tooltip && <HelpIcon text={tooltip} />}
+            </label>
+            <textarea
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                onChange(parse(e.target.value));
+              }}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition-all resize-none h-24 font-mono leading-relaxed placeholder-gray-400"
+              placeholder={placeholder || "key: description..."}
+            />
+          </div>
+        );
+      }
+
+      function SheetEditor({
+        index,
+        totalSheets,
+        sheet,
+        currentFile,
+        onChange,
+        onDelete,
+        onMove,
+        onInsertAfter,
+        globalCollapseSignal,
+        t,
+      }) {
+        const [isCollapsed, setIsCollapsed] = useState(false);
+        const [draggedIdx, setDraggedIdx] = useState(null);
+        const [dragOverIdx, setDragOverIdx] = useState(null);
+        const [uploadingImage, setUploadingImage] = useState(false);
+        const [showImageModal, setShowImageModal] = useState(false);
+
+        useEffect(() => {
+          if (globalCollapseSignal && globalCollapseSignal.id > 0) {
+            setIsCollapsed(globalCollapseSignal.collapsed);
+          }
+        }, [globalCollapseSignal]);
+
+        useEffect(() => {
+          const handleKeyDown = (e) => {
+            if (e.key === "Escape" && showImageModal) {
+              setShowImageModal(false);
+            }
+          };
+          if (showImageModal) {
+            document.addEventListener("keydown", handleKeyDown);
+          }
+          return () => document.removeEventListener("keydown", handleKeyDown);
+        }, [showImageModal]);
+
+        const updateField = (key, value) => {
+          onChange({ ...sheet, [key]: value });
+        };
+
+        const updateStep = (idx, newStep) => {
+          const newSteps = [...sheet.steps];
+          newSteps[idx] = newStep;
+          onChange({ ...sheet, steps: newSteps });
+        };
+
+        const addStep = () => {
+          onChange({
+            ...sheet,
+            steps: [
+              ...sheet.steps,
+              {
+                action: "CLICK",
+                selector: "",
+                value: "",
+                original_text: 'CLICK ""',
+              },
+            ],
+          });
+        };
+
+        const insertStep = (idx) => {
+          const newSteps = [...sheet.steps];
+          newSteps.splice(idx + 1, 0, {
+            action: "CLICK",
+            selector: "",
+            value: "",
+            original_text: 'CLICK ""',
+          });
+          onChange({ ...sheet, steps: newSteps });
+        };
+
+        const removeStep = (idx) => {
+          const newSteps = [...sheet.steps];
+          newSteps.splice(idx, 1);
+          onChange({ ...sheet, steps: newSteps });
+        };
+
+        const handleDragStart = (e, idx) => {
+          setDraggedIdx(idx);
+          e.dataTransfer.effectAllowed = "move";
+          // 使用 setTimeout 让拖拽的本体变半透明，而不是原地的元素
+          setTimeout(() => e.target.classList.add("opacity-40"), 0);
+        };
+
+        const handleDragEnd = (e) => {
+          e.target.classList.remove("opacity-40");
+          setDraggedIdx(null);
+          setDragOverIdx(null);
+        };
+
+        const handleDragOver = (e, idx) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          if (draggedIdx === null || draggedIdx === idx) return;
+
+          // 计算鼠标是在元素的上半部分还是下半部分
+          const rect = e.currentTarget.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          const isBottomHalf = e.clientY > midY;
+
+          // 决定插入的视觉位置
+          if (isBottomHalf) {
+            setDragOverIdx(idx + 1);
+          } else {
+            setDragOverIdx(idx);
+          }
+        };
+
+        const handleDragLeave = (e) => {
+          e.preventDefault();
+        };
+
+        const handleDrop = (e, idx) => {
+          e.preventDefault();
+          if (draggedIdx === null) return;
+
+          const targetIdx = dragOverIdx !== null ? dragOverIdx : idx;
+
+          if (draggedIdx === targetIdx || draggedIdx === targetIdx - 1) {
+            setDraggedIdx(null);
+            setDragOverIdx(null);
+            return;
+          }
+
+          const newSteps = [...sheet.steps];
+          const draggedStep = newSteps[draggedIdx];
+          newSteps.splice(draggedIdx, 1);
+
+          // 调整插入位置，因为删除了一个元素后，后面的索引会前移
+          let finalInsertIdx = targetIdx;
+          if (draggedIdx < targetIdx) {
+            finalInsertIdx -= 1;
+          }
+
+          newSteps.splice(finalInsertIdx, 0, draggedStep);
+
+          onChange({ ...sheet, steps: newSteps });
+          setDraggedIdx(null);
+          setDragOverIdx(null);
+        };
+
+        const handlePaste = async (e) => {
+          const items = e.clipboardData ? e.clipboardData.items : null;
+          if (!items) return;
+          for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+              e.preventDefault();
+              const file = items[i].getAsFile();
+              const ext = file.name.split(".").pop() || "png";
+              const newName = `img_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+              const renamedFile = new File([file], newName, {
+                type: file.type,
+              });
+
+              setUploadingImage(true);
+              try {
+                const res = await api.upload(renamedFile, currentFile);
+                updateField("reference", `![Image](${res.url})`);
+              } catch (err) {
+                alert(t("image_upload_failed") + err.message);
+              } finally {
+                setUploadingImage(false);
+              }
+              break;
+            }
+          }
+        };
+
+        let previewUrl = "";
+        if (sheet.reference) {
+          const match = sheet.reference.match(/\((.*?)\)/);
+          if (match) {
+            let extractedUrl = match[1];
+
+            if (
+              extractedUrl.startsWith("http://") ||
+              extractedUrl.startsWith("https://")
+            ) {
+              previewUrl = extractedUrl;
+            } else if (extractedUrl.startsWith("/")) {
+              previewUrl = extractedUrl;
+            } else {
+              // Relative path logic
+              // If currentFile is absolute (e.g. C:/Users/zds/...), baseDir is C:/Users/zds/...
+              let baseDir = "";
+              if (currentFile && currentFile.includes("/")) {
+                baseDir = currentFile.substring(
+                  0,
+                  currentFile.lastIndexOf("/") + 1,
+                );
+              }
+
+              let cleanUrl = extractedUrl;
+              if (cleanUrl.startsWith("./")) {
+                cleanUrl = cleanUrl.substring(2);
+              }
+
+              // We use encodeURIComponent for the *whole* path after /api/files/ to be safe
+              // BUT fastapi {filepath:path} expects raw slashes.
+              // If we encode slashes (%2F), fastapi might treat it as single segment.
+              // Standard practice: /api/files/path/to/file
+              // So we should NOT encode slashes.
+              // But we SHOULD encode special chars?
+              // Browser automatically encodes spaces to %20.
+              // Windows drive colon c: -> c: is valid in path usually.
+
+              // Fix for absolute paths starting with drive letter (e.g. C:/...)
+              // If we just concat, we get /api/files/C:/...
+              // This should work in modern browsers/servers.
+
+              previewUrl = `/api/files/${baseDir}${cleanUrl}`;
+            }
+          }
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-[#e5e0d6] transition-all hover:shadow-md group">
+            {/* Sheet Header */}
+            <div
+              className="bg-gradient-to-r from-gray-50 to-white rounded-t-xl px-6 py-4 border-b border-[#e5e0d6] flex justify-between items-center cursor-pointer select-none"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+              <div className="flex items-center space-x-4 flex-1">
+                <select
+                  value={index}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    const newIdx = parseInt(e.target.value, 10);
+                    if (!isNaN(newIdx) && newIdx >= 0 && newIdx < totalSheets) {
+                      onMove(newIdx);
+                    }
+                  }}
+                  className="w-8 h-8 rounded-full bg-[#2d2a26] hover:bg-blue-600 text-white flex items-center justify-center font-serif font-bold shrink-0 transition-colors appearance-none cursor-pointer outline-none"
+                  title={t("move_sheet")}
+                  style={{ textAlignLast: "center" }}
+                >
+                  {Array.from({ length: totalSheets }, (_, i) => (
+                    <option
+                      key={i}
+                      value={i}
+                      className="bg-white text-black text-center"
+                    >
+                      {i + 1}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex-1 flex flex-col">
+                  <div className="flex items-center w-full pr-4">
+                    <input
+                      type="text"
+                      value={sheet.title}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        updateField("title", e.target.value);
+                      }}
+                      className="flex-1 font-bold text-lg bg-transparent border-none focus:ring-0 p-0 placeholder-gray-400 text-[#2d2a26]"
+                      placeholder={t("sheet_title_placeholder")}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <HelpIcon text={t("tooltip_title")} />
+                  </div>
+                  <div className="text-xs text-gray-400 mt-0.5 font-mono flex items-center">
+                    <span>ID: {sheet.id || "N/A"}</span>
+                    {sheet.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(sheet.id);
+                          // Optional: provide some visual feedback?
+                          // For now, simple copy is fine.
+                        }}
+                        className="ml-2 hover:text-blue-500 transition-colors focus:outline-none"
+                        title={t("copy_id")}
+                      >
+                        <i className="ph ph-copy"></i>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="w-8 h-8 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500 flex items-center justify-center transition-colors"
+                  title={t("delete_sheet")}
+                >
+                  <i className="ph ph-trash text-lg"></i>
+                </button>
+                <i
+                  className={`ph ph-caret-down text-gray-400 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                ></i>
+              </div>
+            </div>
+
+            {/* Sheet Body */}
+            {!isCollapsed && (
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-12 gap-6">
+                  <div className="col-span-3">
+                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                      <span>{t("type_optional")}</span>
+                      <HelpIcon text={t("tooltip_type")} />
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={sheet.type || "process"}
+                        onChange={(e) => updateField("type", e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-800 bg-gray-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                      >
+                        <option value="process">process</option>
+                        <option value="setup">setup</option>
+                        <option value="delivery">delivery</option>
+                        <optgroup label={t("advanced_group")}>
+                          <option value="routine">routine</option>
+                          <option value="crossroads">crossroads</option>
+                        </optgroup>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+                        <i className="ph ph-caret-down"></i>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Field
+                    label={t("url_optional")}
+                    value={sheet.url}
+                    onChange={(v) => updateField("url", v)}
+                    placeholder={t("url_placeholder")}
+                    col="col-span-9"
+                    tooltip={t("tooltip_url")}
+                  />
+
+                  {sheet.type === "setup" && (
+                    <TextListEditor
+                      key={`constraints-${sheet.id}`}
+                      label={t("constraints")}
+                      value={sheet.constraints || {}}
+                      onChange={(v) => updateField("constraints", v)}
+                      col="col-span-12"
+                      placeholder="force_headful: true&#10;stealth_mode: true&#10;viewport: 1920x1080"
+                      tooltip={t("tooltip_constraints")}
+                    />
+                  )}
+                </div>
+
+                <Field
+                  label={t("description_goal")}
+                  value={sheet.description}
+                  onChange={(v) => updateField("description", v)}
+                  textarea
+                  placeholder={t("description_placeholder")}
+                  tooltip={t("tooltip_desc")}
+                />
+
+                {/* Reference Image */}
+                <div
+                  className="bg-gray-50 rounded-lg p-4 border border-dashed border-gray-300"
+                  onPaste={handlePaste}
+                >
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <span>{t("reference_image")}</span>
+                      <HelpIcon text={t("tooltip_ref")} />
+                    </div>
+                    {uploadingImage && (
+                      <span className="text-blue-500 normal-case text-xs">
+                        <i className="ph ph-spinner animate-spin inline-block mr-1"></i>
+                        {t("uploading")}
+                      </span>
+                    )}
+                  </label>
+                  <div className="flex flex-col space-y-3">
+                    {previewUrl && (
+                      <div className="w-full bg-white rounded overflow-hidden relative border border-gray-300 shadow-sm transition-all hover:shadow-md group text-center">
+                        <img
+                          src={previewUrl}
+                          className="max-h-80 mx-auto object-contain cursor-zoom-in"
+                          onError={(e) => (e.target.style.display = "none")}
+                          onClick={() => setShowImageModal(true)}
+                          title={t("click_to_zoom")}
+                        />
+                        {/* Delete Button Overlay */}
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateField("reference", "");
+                            }}
+                            className="bg-black/50 hover:bg-red-600/80 text-white p-1.5 rounded backdrop-blur-sm shadow-sm"
+                            title={t("delete_image")}
+                          >
+                            <i className="ph ph-trash text-lg"></i>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="w-full">
+                      <input
+                        type="text"
+                        value={sheet.reference || ""}
+                        onChange={(e) =>
+                          updateField("reference", e.target.value)
+                        }
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono text-gray-600 mb-1"
+                        placeholder={t("paste_placeholder")}
+                      />
+                      <p className="text-xs text-gray-400">{t("paste_hint")}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fullscreen Image Modal */}
+                {showImageModal && previewUrl && (
+                  <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-8"
+                    onClick={() => setShowImageModal(false)}
+                  >
+                    <div className="relative max-w-full max-h-full">
+                      <img
+                        src={previewUrl}
+                        className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <button
+                        className="absolute -top-12 right-0 text-white/70 hover:text-white transition-colors"
+                        onClick={() => setShowImageModal(false)}
+                        title={t("close_preview")}
+                      >
+                        <i className="ph ph-x text-3xl"></i>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Steps */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      <span>{t("action_steps")}</span>
+                      <HelpIcon text={t("tooltip_steps")} />
+                    </label>
+                  </div>
+                  <div className="space-y-2 relative">
+                    {sheet.steps.map((step, idx) => (
+                      <React.Fragment key={idx}>
+                        {/* 拖拽时的顶部占位符 */}
+                        {dragOverIdx === idx && (
+                          <div className="h-1 bg-blue-400 rounded-full my-1 transition-all"></div>
+                        )}
+                        <StepEditor
+                          index={idx}
+                          step={step}
+                          isDragging={draggedIdx === idx}
+                          onChange={(s) => updateStep(idx, s)}
+                          onRemove={() => removeStep(idx)}
+                          onInsert={() => insertStep(idx)}
+                          onDragStart={(e) => handleDragStart(e, idx)}
+                          onDragOver={(e) => handleDragOver(e, idx)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, idx)}
+                          onDragEnd={handleDragEnd}
+                          t={t}
+                        />
+                      </React.Fragment>
+                    ))}
+                    {/* 拖拽到最后的底部占位符 */}
+                    {dragOverIdx === sheet.steps.length && (
+                      <div className="h-1 bg-blue-400 rounded-full my-1 transition-all"></div>
+                    )}
+
+                    <button
+                      onClick={addStep}
+                      className="w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium transition-all flex items-center justify-center space-x-2"
+                    >
+                      <i className="ph ph-plus"></i>
+                      <span>{t("add_action_step")}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-gray-100 mt-6">
+                  <button
+                    onClick={onInsertAfter}
+                    className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition-colors"
+                  >
+                    <i className="ph ph-plus-circle text-lg"></i>
+                    <span>{t("insert_sheet_below")}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      function StepEditor({
+        index,
+        step,
+        isDragging,
+        onChange,
+        onRemove,
+        onInsert,
+        onDragStart,
+        onDragOver,
+        onDragLeave,
+        onDrop,
+        onDragEnd,
+        t,
+      }) {
+        const [draggable, setDraggable] = useState(false);
+        return (
+          <div
+            draggable={draggable}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            onDragEnd={(e) => {
+              setDraggable(false);
+              if (onDragEnd) onDragEnd(e);
+            }}
+            className={`flex items-center space-x-3 group bg-white border rounded-lg p-2 transition-all ${
+              isDragging
+                ? "opacity-40 border-dashed border-gray-400 scale-[0.98]"
+                : "border-gray-200 hover:border-blue-300 hover:shadow-sm"
+            }`}
+          >
+            <div
+              onMouseEnter={() => setDraggable(true)}
+              onMouseLeave={() => setDraggable(false)}
+              className="cursor-grab text-gray-300 hover:text-gray-600 px-1 opacity-0 group-hover:opacity-100"
+              title={t("drag_sort")}
+            >
+              <i className="ph ph-dots-six-vertical text-lg"></i>
+            </div>
+            <span className="text-gray-400 font-mono w-4 text-center text-xs">
+              {index + 1}.
+            </span>
+            <input
+              type="text"
+              value={step.original_text || ""}
+              onChange={(e) =>
+                onChange({ ...step, original_text: e.target.value })
+              }
+              className="flex-1 bg-transparent border-none p-0 font-mono text-sm text-[#2d2a26] focus:ring-0 placeholder-gray-300"
+              placeholder={t("step_placeholder")}
+            />
+            <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-1 px-1">
+              <button
+                onClick={onInsert}
+                className="text-gray-300 hover:text-blue-500 transition-colors p-1"
+                title={t("insert_before")}
+              >
+                <i className="ph ph-plus"></i>
+              </button>
+              <button
+                onClick={onRemove}
+                className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                title={t("delete_step")}
+              >
+                <i className="ph ph-x"></i>
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
     </script>
-</body>
+  </body>
 </html>

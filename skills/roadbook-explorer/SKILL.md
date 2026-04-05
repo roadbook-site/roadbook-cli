@@ -54,6 +54,7 @@ Use the `version` value in this file header as the single source of truth.
 4. **Site Constraints**: Support special execution environments (like captchas, stealth mode, or specific viewports) by accurately documenting and extracting `**Constraints**:` from `roadbook.md` and passing them via the `site_overrides` parameter to `RoadbookContext` in `script.py`.
 5. **Script Sheet Workflow**: Before finalizing the markdown, structure your script's outputs programmatically (Script Sheet). Review, clean, and then sync to `roadbook.md` as the Single Source of Truth.
 6. **Fast Fail**: If sophisticated login/captcha is encountered, pause and ask for human help.
+7. **Composability & Modules**: If the roadbook has `role: module`, it's a reusable component. During exploration, ensure you are testing it with appropriate mock inputs. If it's a main app (`role: app`), look out for opportunities to extract reusable logic into separate `routine` sheets or external `module` roadbooks using `rb.call_roadbook()`.
 
 ## DO's and DON'Ts
 **✓ Do:**
